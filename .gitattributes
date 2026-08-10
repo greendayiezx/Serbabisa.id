@@ -1,0 +1,13 @@
+# GitHub Linguist Configuration
+*.vue linguist-detectable=true
+*.ts linguist-detectable=true
+*.js linguist-detectable=true
+
+# Mark markdown files as documentation
+*.md linguist-documentation
+
+# Exclude assets, fonts, and generated storage from language statistics
+frontend/src/assets/** linguist-vendored
+backend/storage/** linguist-vendored
+backend/vendor/** linguist-vendored
+frontend/node_modules/** linguist-vendored
