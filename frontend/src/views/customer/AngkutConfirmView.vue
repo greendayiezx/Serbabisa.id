@@ -77,6 +77,10 @@ function goBackOrHome() {
 // Editing the pin stays on this page (a fullscreen picker overlay), instead of
 // navigating back to the separate location-picking route.
 const pickerOpen = ref(false)
+// Bumped every time the picker opens; bound to :key on the map div so Vue always
+// throws away the old DOM node and mounts a brand new one — no element, and
+// therefore no Leaflet instance, can ever be reused or left behind.
+const pickerInstanceKey = ref(0)
 const pickerMapEl = ref<HTMLDivElement | null>(null)
 let pickerMap: L.Map | null = null
 let pickerMarker: L.Marker | null = null
@@ -113,35 +117,42 @@ async function openPicker() {
   if (openingPicker) return
   openingPicker = true
   try {
+    // Force a brand new DOM node for the map (old one, and anything Leaflet
+    // attached to it, gets fully destroyed by Vue — nothing to leak or reuse).
+    pickerInstanceKey.value += 1
     pickerOpen.value = true
-    await nextTick()
-    if (!pickerMapEl.value) return
-
     if (pickerMap) {
       pickerMap.remove()
       pickerMap = null
       pickerMarker = null
     }
+    await nextTick()
+    if (!pickerMapEl.value) return
     resetStaleLeafletContainer(pickerMapEl.value)
 
     const center: L.LatLngTuple = [lat.value, lng.value]
-    pickerMap = L.map(pickerMapEl.value, {
+    const thisMap = L.map(pickerMapEl.value, {
       center,
       zoom: 16,
       zoomControl: false,
       attributionControl: true,
     })
-    L.tileLayer(TILE_URL, TILE_OPTIONS).addTo(pickerMap)
+    pickerMap = thisMap
+    L.tileLayer(TILE_URL, TILE_OPTIONS).addTo(thisMap)
     // autoPan makes Leaflet itself pan the map when the dragged pin nears/exits
     // the visible edge — it stays put while the pin is still comfortably in view.
-    pickerMarker = L.marker(center, { icon: pinIcon, draggable: true, autoPan: true }).addTo(pickerMap)
+    pickerMarker = L.marker(center, { icon: pinIcon, draggable: true, autoPan: true }).addTo(thisMap)
 
-    pickerMap.on('click', (e: L.LeafletMouseEvent) => {
+    thisMap.on('click', (e: L.LeafletMouseEvent) => {
       pickerMarker?.setLatLng(e.latlng)
-      pickerMap?.panTo(e.latlng, { animate: true, duration: 0.3 })
+      thisMap.panTo(e.latlng, { animate: true, duration: 0.3 })
     })
 
-    requestAnimationFrame(() => pickerMap?.invalidateSize())
+    // The flex layout can take a frame or two to settle into its final size,
+    // so re-measure a few times instead of trusting a single early snapshot.
+    requestAnimationFrame(() => thisMap.invalidateSize())
+    setTimeout(() => thisMap.invalidateSize(), 150)
+    setTimeout(() => thisMap.invalidateSize(), 400)
   } finally {
     openingPicker = false
   }
