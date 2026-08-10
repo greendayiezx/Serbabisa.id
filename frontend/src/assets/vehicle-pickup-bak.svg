@@ -1,0 +1,356 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 600 420"
+     width="600"
+     height="420"
+     fill="none">
+
+  <defs>
+    <linearGradient id="bodyBlue"
+      x1="100" y1="100"
+      x2="500" y2="330"
+      gradientUnits="userSpaceOnUse">
+      <stop stop-color="#168BFF"/>
+      <stop offset="1" stop-color="#0057D9"/>
+    </linearGradient>
+
+    <linearGradient id="lime"
+      x1="0" y1="0"
+      x2="1" y2="1">
+      <stop stop-color="#E5FF45"/>
+      <stop offset="1" stop-color="#A8E900"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Ground Shadow -->
+  <ellipse cx="300" cy="365"
+           rx="230" ry="18"
+           fill="#000"
+           opacity=".10"/>
+
+  <!-- ================================================= -->
+  <!-- PICKUP BODY — SATU BENTUK UTUH -->
+  <!-- ================================================= -->
+
+  <path
+    d="M55 190
+       Q55 178 68 178
+       H285
+       L315 135
+       Q325 120 345 120
+       H440
+       Q470 120 482 148
+       L530 275
+       Q535 290 535 305
+       V325
+       H55
+       Z"
+    fill="url(#bodyBlue)"/>
+
+  <!-- ================================================= -->
+  <!-- BAK PICKUP -->
+  <!-- ================================================= -->
+
+  <!-- Bak bagian dalam -->
+  <path
+    d="M72 200
+       H278
+       V285
+       H72
+       Z"
+    fill="#075CC8"/>
+
+  <!-- Bak atas -->
+  <path
+    d="M65 178
+       H285
+       V200
+       H65
+       Q55 200 55 190
+       Q55 178 65 178Z"
+    fill="#0874E8"/>
+
+  <!-- Garis panel bak -->
+  <path
+    d="M120 185V285
+       M175 185V285
+       M230 185V285"
+    stroke="#168BFF"
+    stroke-width="5"
+    opacity=".75"/>
+
+  <!-- Garis bawah bak -->
+  <path
+    d="M65 285H285"
+    stroke="#004DAF"
+    stroke-width="9"
+    stroke-linecap="round"/>
+
+  <!-- ================================================= -->
+  <!-- BARANG DI DALAM BAK -->
+  <!-- ================================================= -->
+
+  <!-- Box 1 -->
+  <path
+    d="M105 150
+       H155
+       L165 160
+       V190
+       H105Z"
+    fill="#C8FF00"/>
+
+  <!-- Box 2 -->
+  <path
+    d="M165 135
+       H220
+       L230 145
+       V190
+       H165Z"
+    fill="#39A5FF"/>
+
+  <!-- Box 3 -->
+  <path
+    d="M225 153
+       H270
+       V190
+       H225Z"
+    fill="#E5FF45"/>
+
+  <!-- ================================================= -->
+  <!-- KABIN -->
+  <!-- ================================================= -->
+
+  <!-- Kaca depan -->
+  <path
+    d="M335 140
+       H430
+       Q450 140 458 160
+       L470 195
+       H315
+       L330 150
+       Q332 140 335 140Z"
+    fill="#BFEAFF"/>
+
+  <!-- Refleksi kaca -->
+  <path
+    d="M345 147
+       H385
+       L350 190
+       H320
+       L335 150
+       Q337 147 345 147Z"
+    fill="white"
+    opacity=".45"/>
+
+  <!-- Kaca samping -->
+  <path
+    d="M315 205
+       H380
+       V270
+       H305
+       V225
+       Q305 205 315 205Z"
+    fill="#BFEAFF"/>
+
+  <!-- Kaca kanan -->
+  <path
+    d="M390 205
+       H455
+       L480 270
+       H390Z"
+    fill="#AEE5FF"/>
+
+  <!-- Divider kaca -->
+  <path
+    d="M385 200V275"
+    stroke="#075CC8"
+    stroke-width="8"/>
+
+  <!-- Refleksi -->
+  <path
+    d="M320 212H350
+       L325 260
+       H310Z"
+    fill="white"
+    opacity=".38"/>
+
+  <!-- ================================================= -->
+  <!-- PINTU + BRAND SERBABISA.ID -->
+  <!-- ================================================= -->
+
+  <!-- Door -->
+  <path
+    d="M300 270
+       V325
+       H385
+       V200"
+    stroke="#075CC8"
+    stroke-width="5"/>
+
+  <!-- Brand panel -->
+  <rect
+    x="310"
+    y="278"
+    width="65"
+    height="42"
+    rx="10"
+    fill="#0057D9"
+    opacity=".9"/>
+
+  <!-- Logo Serbabisa -->
+  <g transform="translate(320 283) scale(.36)">
+
+    <path
+      d="M35 0
+         L70 28
+         L42 53
+         L22 37
+         L42 20
+         L36 16
+         L10 38
+         L37 63
+         L70 35"
+      stroke="white"
+      stroke-width="13"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+    <path
+      d="M38 28
+         L60 46
+         L37 65
+         L20 51"
+      stroke="url(#lime)"
+      stroke-width="13"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+  </g>
+
+  <!-- Brand text -->
+  <text
+    x="352"
+    y="312"
+    text-anchor="middle"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="9"
+    font-weight="700"
+    fill="white">
+    Serbabisa<tspan fill="#C8FF00">.id</tspan>
+  </text>
+
+  <!-- ================================================= -->
+  <!-- HANDLE PINTU -->
+  <!-- ================================================= -->
+
+  <rect
+    x="355"
+    y="225"
+    width="25"
+    height="6"
+    rx="3"
+    fill="#C8FF00"/>
+
+  <!-- ================================================= -->
+  <!-- DEPAN PICKUP -->
+  <!-- ================================================= -->
+
+  <!-- Grille -->
+  <path
+    d="M475 280
+       H525"
+    stroke="#004DAF"
+    stroke-width="10"
+    stroke-linecap="round"/>
+
+  <!-- Headlight -->
+  <path
+    d="M475 235
+       Q485 225 500 235
+       V260
+       H475Z"
+    fill="#FFE45C"/>
+
+  <path
+    d="M481 237
+       Q490 232 496 239
+       V252
+       H481Z"
+    fill="white"
+    opacity=".8"/>
+
+  <!-- Front bumper -->
+  <path
+    d="M475 325H535"
+    stroke="#263342"
+    stroke-width="14"
+    stroke-linecap="round"/>
+
+  <!-- ================================================= -->
+  <!-- RODA -->
+  <!-- ================================================= -->
+
+  <!-- Rear -->
+  <circle cx="150" cy="325" r="43"
+          fill="#17202B"/>
+
+  <circle cx="150" cy="325" r="29"
+          fill="#68737E"/>
+
+  <circle cx="150" cy="325" r="15"
+          fill="#DCE2E7"/>
+
+  <circle cx="150" cy="325" r="6"
+          fill="#505A65"/>
+
+  <!-- Front -->
+  <circle cx="430" cy="325" r="43"
+          fill="#17202B"/>
+
+  <circle cx="430" cy="325" r="29"
+          fill="#68737E"/>
+
+  <circle cx="430" cy="325" r="15"
+          fill="#DCE2E7"/>
+
+  <circle cx="430" cy="325" r="6"
+          fill="#505A65"/>
+
+  <!-- Wheel arches -->
+  <path
+    d="M105 320
+       Q150 270 195 320"
+    stroke="#0057D9"
+    stroke-width="13"
+    stroke-linecap="round"/>
+
+  <path
+    d="M385 320
+       Q430 270 475 320"
+    stroke="#0057D9"
+    stroke-width="13"
+    stroke-linecap="round"/>
+
+  <!-- ================================================= -->
+  <!-- AKSEN LIME -->
+  <!-- ================================================= -->
+
+  <path
+    d="M75 285
+       H270"
+    stroke="url(#lime)"
+    stroke-width="7"
+    stroke-linecap="round"/>
+
+  <!-- Small service accent -->
+  <circle cx="285" cy="105"
+          r="8"
+          fill="#C8FF00"/>
+
+  <path
+    d="M275 95V115
+       M265 105H285"
+    stroke="#C8FF00"
+    stroke-width="5"
+    stroke-linecap="round"/>
+
+</svg>

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Message;
+use App\Models\Task;
 use Illuminate\Http\Request;
 
 class MessageController extends Controller
@@ -11,40 +11,27 @@ class MessageController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Task $task)
     {
-        //
+        return response()->json(
+            $task->messages()->with('sender:id,name')->orderBy('created_at')->get()
+        );
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, Task $task)
     {
-        //
-    }
+        $validated = $request->validate([
+            'isi' => ['required', 'string'],
+        ]);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Message $message)
-    {
-        //
-    }
+        $message = $task->messages()->create([
+            ...$validated,
+            'sender_id' => $request->user()->id,
+        ]);
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Message $message)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Message $message)
-    {
-        //
+        return response()->json($message->load('sender:id,name'), 201);
     }
 }

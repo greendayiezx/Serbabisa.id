@@ -1,0 +1,297 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 600 420"
+     width="600"
+     height="420"
+     fill="none">
+
+  <defs>
+    <linearGradient id="blue"
+      x1="90" y1="110"
+      x2="510" y2="350"
+      gradientUnits="userSpaceOnUse">
+      <stop stop-color="#168BFF"/>
+      <stop offset="1" stop-color="#0057D9"/>
+    </linearGradient>
+
+    <linearGradient id="lime"
+      x1="0" y1="0"
+      x2="1" y2="1">
+      <stop stop-color="#E5FF45"/>
+      <stop offset="1" stop-color="#A8E900"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shadow -->
+  <ellipse cx="300" cy="370"
+           rx="225" ry="17"
+           fill="#000"
+           opacity=".10"/>
+
+  <!-- ================= VAN BODY ================= -->
+
+  <path
+    d="M65 165
+       Q65 145 85 145
+       H395
+       Q430 145 450 175
+       L520 285
+       Q530 300 530 320
+       V335
+       H65
+       Z"
+    fill="url(#blue)"/>
+
+  <!-- ================= CARGO BODY ================= -->
+
+  <path
+    d="M80 165
+       H365
+       Q380 165 380 185
+       V290
+       H80Z"
+    fill="#0874E8"/>
+
+  <!-- Cargo panel -->
+  <path
+    d="M95 180
+       H360
+       V275
+       H95Z"
+    fill="#075CC8"/>
+
+  <!-- Cargo panel lines -->
+  <path
+    d="M150 180V275
+       M215 180V275
+       M280 180V275
+       M345 180V275"
+    stroke="#0874E8"
+    stroke-width="5"
+    opacity=".8"/>
+
+  <!-- Cargo top highlight -->
+  <path
+    d="M80 165H370"
+    stroke="#54B8FF"
+    stroke-width="9"
+    stroke-linecap="round"/>
+
+  <!-- ================= CARGO BOX ================= -->
+
+  <!-- Large Serbabisa cargo door -->
+  <rect x="105" y="195"
+        width="230"
+        height="65"
+        rx="12"
+        fill="#0057D9"/>
+
+  <!-- Logo -->
+  <g transform="translate(125 208) scale(.58)">
+
+    <path
+      d="M35 0
+         L70 28
+         L42 53
+         L22 37
+         L42 20
+         L36 16
+         L10 38
+         L37 63
+         L70 35"
+      stroke="white"
+      stroke-width="13"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+    <path
+      d="M38 28
+         L60 46
+         L37 65
+         L20 51"
+      stroke="url(#lime)"
+      stroke-width="13"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+  </g>
+
+  <!-- Brand -->
+  <text
+    x="240"
+    y="244"
+    text-anchor="middle"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="20"
+    font-weight="700"
+    fill="white">
+    Serbabisa<tspan fill="#C8FF00">.id</tspan>
+  </text>
+
+  <!-- Cargo door divider -->
+  <path
+    d="M335 195V260"
+    stroke="#168BFF"
+    stroke-width="5"/>
+
+  <!-- Door handle -->
+  <rect x="315" y="220"
+        width="14"
+        height="28"
+        rx="5"
+        fill="#C8FF00"/>
+
+  <!-- ================= FRONT CABIN ================= -->
+
+  <!-- Windshield -->
+  <path
+    d="M395 160
+       Q420 160 435 182
+       L470 235
+       H390
+       V180
+       Q390 160 395 160Z"
+    fill="#BFEAFF"/>
+
+  <!-- Windshield reflection -->
+  <path
+    d="M405 168
+       H425
+       L395 218
+       V185
+       Q395 172 405 168Z"
+    fill="white"
+    opacity=".45"/>
+
+  <!-- Side window -->
+  <path
+    d="M390 245
+       H475
+       L500 285
+       H390Z"
+    fill="#AEE5FF"/>
+
+  <!-- Side window divider -->
+  <path
+    d="M445 242V290"
+    stroke="#075CC8"
+    stroke-width="7"/>
+
+  <!-- Window reflection -->
+  <path
+    d="M400 250H430
+       L410 280
+       H395Z"
+    fill="white"
+    opacity=".4"/>
+
+  <!-- Door -->
+  <path
+    d="M390 285V335"
+    stroke="#075CC8"
+    stroke-width="6"/>
+
+  <!-- Door handle -->
+  <rect x="420" y="300"
+        width="28"
+        height="6"
+        rx="3"
+        fill="#C8FF00"/>
+
+  <!-- ================= FRONT ================= -->
+
+  <!-- Front grille -->
+  <path
+    d="M475 300H525"
+    stroke="#004DAF"
+    stroke-width="10"
+    stroke-linecap="round"/>
+
+  <!-- Headlight -->
+  <path
+    d="M478 260
+       Q490 250 505 260
+       V285
+       H478Z"
+    fill="#FFE45C"/>
+
+  <path
+    d="M484 261
+       Q493 257 499 263
+       V277
+       H484Z"
+    fill="white"
+    opacity=".8"/>
+
+  <!-- Front bumper -->
+  <path
+    d="M475 335H535"
+    stroke="#263342"
+    stroke-width="14"
+    stroke-linecap="round"/>
+
+  <!-- ================= WHEELS ================= -->
+
+  <!-- Rear wheel -->
+  <circle cx="150" cy="335" r="43"
+          fill="#17202B"/>
+
+  <circle cx="150" cy="335" r="29"
+          fill="#68737E"/>
+
+  <circle cx="150" cy="335" r="15"
+          fill="#DCE2E7"/>
+
+  <circle cx="150" cy="335" r="6"
+          fill="#505A65"/>
+
+  <!-- Front wheel -->
+  <circle cx="430" cy="335" r="43"
+          fill="#17202B"/>
+
+  <circle cx="430" cy="335" r="29"
+          fill="#68737E"/>
+
+  <circle cx="430" cy="335" r="15"
+          fill="#DCE2E7"/>
+
+  <circle cx="430" cy="335" r="6"
+          fill="#505A65"/>
+
+  <!-- Wheel arches -->
+  <path
+    d="M105 330
+       Q150 280 195 330"
+    stroke="#0057D9"
+    stroke-width="13"
+    stroke-linecap="round"/>
+
+  <path
+    d="M385 330
+       Q430 280 475 330"
+    stroke="#0057D9"
+    stroke-width="13"
+    stroke-linecap="round"/>
+
+  <!-- ================= LIME ACCENT ================= -->
+
+  <path
+    d="M80 275H365"
+    stroke="url(#lime)"
+    stroke-width="7"
+    stroke-linecap="round"/>
+
+  <!-- Loading indicator -->
+  <path
+    d="M105 125H155"
+    stroke="url(#lime)"
+    stroke-width="7"
+    stroke-linecap="round"/>
+
+  <path
+    d="M145 115L155 125L145 135"
+    stroke="url(#lime)"
+    stroke-width="7"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+</svg>

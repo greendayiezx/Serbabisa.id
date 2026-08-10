@@ -1,0 +1,251 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 512 512"
+     width="512"
+     height="512"
+     fill="none">
+
+  <defs>
+    <linearGradient id="blue"
+      x1="100" y1="100"
+      x2="410" y2="410"
+      gradientUnits="userSpaceOnUse">
+      <stop stop-color="#168BFF"/>
+      <stop offset="1" stop-color="#0057D9"/>
+    </linearGradient>
+
+    <linearGradient id="lime"
+      x1="0" y1="0"
+      x2="1" y2="1">
+      <stop stop-color="#E5FF45"/>
+      <stop offset="1" stop-color="#A8E900"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shadow -->
+  <ellipse cx="256" cy="430"
+           rx="155" ry="16"
+           fill="#000"
+           opacity=".10"/>
+
+  <!-- ================= CENTRAL CIRCLE ================= -->
+
+  <circle cx="256" cy="270"
+          r="105"
+          fill="url(#blue)"/>
+
+  <circle cx="256" cy="270"
+          r="88"
+          fill="#0874E8"/>
+
+  <!-- Serbabisa Logo -->
+  <g transform="translate(220 230) scale(.8)">
+
+    <path
+      d="M35 0
+         L70 28
+         L42 53
+         L22 37
+         L42 20
+         L36 16
+         L10 38
+         L37 63
+         L70 35"
+      stroke="white"
+      stroke-width="13"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+    <path
+      d="M38 28
+         L60 46
+         L37 65
+         L20 51"
+      stroke="url(#lime)"
+      stroke-width="13"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+  </g>
+
+  <!-- Brand -->
+  <text
+    x="256"
+    y="320"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="18"
+    font-weight="700"
+    fill="white">
+    Serbabisa<tspan fill="#C8FF00">.id</tspan>
+  </text>
+
+  <!-- ================= SERVICE ORBS ================= -->
+
+  <!-- Delivery -->
+  <circle cx="105" cy="145"
+          r="48"
+          fill="#EAF7FF"/>
+
+  <!-- Motorcycle -->
+  <circle cx="90" cy="153"
+          r="13"
+          fill="#263342"/>
+  <circle cx="125" cy="153"
+          r="13"
+          fill="#263342"/>
+
+  <path
+    d="M90 153L103 135H119L125 153
+       M103 135L110 153
+       M110 153H125"
+    stroke="#168BFF"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+  <!-- Box -->
+  <rect x="95" y="113"
+        width="28"
+        height="25"
+        rx="4"
+        fill="#C8FF00"/>
+
+  <!-- ================= SHOPPING ================= -->
+
+  <circle cx="405" cy="145"
+          r="48"
+          fill="#F4FFE0"/>
+
+  <!-- Cart -->
+  <path
+    d="M375 128H386
+       L394 157
+       H425
+       L432 135
+       H390"
+    stroke="#168BFF"
+    stroke-width="7"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+  <circle cx="399" cy="168"
+          r="6"
+          fill="#263342"/>
+
+  <circle cx="422" cy="168"
+          r="6"
+          fill="#263342"/>
+
+  <!-- ================= CLEANING ================= -->
+
+  <circle cx="105" cy="365"
+          r="48"
+          fill="#EAF7FF"/>
+
+  <!-- Mop -->
+  <path
+    d="M125 330L95 395"
+    stroke="#68737E"
+    stroke-width="8"
+    stroke-linecap="round"/>
+
+  <path
+    d="M88 392
+       H118
+       L112 407
+       H94Z"
+    fill="#C8FF00"/>
+
+  <!-- Sparkles -->
+  <path
+    d="M90 330V343
+       M84 336H96"
+    stroke="#168BFF"
+    stroke-width="5"
+    stroke-linecap="round"/>
+
+  <!-- ================= TOOLS ================= -->
+
+  <circle cx="405" cy="365"
+          r="48"
+          fill="#F4FFE0"/>
+
+  <!-- Wrench -->
+  <path
+    d="M385 390L420 350"
+    stroke="#68737E"
+    stroke-width="10"
+    stroke-linecap="round"/>
+
+  <path
+    d="M415 350
+       Q428 340 438 350
+       L427 362"
+    stroke="#168BFF"
+    stroke-width="9"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+  <!-- ================= MOVING ================= -->
+
+  <circle cx="256" cy="105"
+          r="45"
+          fill="#F4FFE0"/>
+
+  <!-- Moving Box -->
+  <path
+    d="M232 92L256 80L280 92L256 105Z"
+    fill="#E6A85C"/>
+
+  <path
+    d="M232 92V119L256 132V105Z"
+    fill="#C9823C"/>
+
+  <path
+    d="M280 92V119L256 132V105Z"
+    fill="#D99348"/>
+
+  <!-- ================= PEOPLE / HELP ================= -->
+
+  <circle cx="256" cy="400"
+          r="45"
+          fill="#EAF7FF"/>
+
+  <!-- Person -->
+  <circle cx="256" cy="385"
+          r="14"
+          fill="#FFC995"/>
+
+  <path
+    d="M232 420
+       Q236 397 256 397
+       Q276 397 280 420Z"
+    fill="url(#blue)"/>
+
+  <!-- Plus / Help Symbol -->
+  <path
+    d="M256 360V372
+       M250 366H262"
+    stroke="#C8FF00"
+    stroke-width="5"
+    stroke-linecap="round"/>
+
+  <!-- ================= CONNECTING DOTS ================= -->
+
+  <circle cx="155" cy="205"
+          r="6"
+          fill="#C8FF00"/>
+
+  <circle cx="357" cy="205"
+          r="6"
+          fill="#C8FF00"/>
+
+  <circle cx="155" cy="315"
+          r="6"
+          fill="#168BFF"/>
+
+  <circle cx="357" cy="315"
+          r="6"
+          fill="#168BFF"/>
+
+</svg>

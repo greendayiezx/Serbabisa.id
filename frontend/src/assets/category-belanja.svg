@@ -1,0 +1,325 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 512 512"
+     width="512"
+     height="512"
+     fill="none">
+
+  <defs>
+    <linearGradient id="blue"
+                    x1="120" y1="120"
+                    x2="400" y2="400"
+                    gradientUnits="userSpaceOnUse">
+      <stop stop-color="#168BFF"/>
+      <stop offset="1" stop-color="#0057D9"/>
+    </linearGradient>
+
+    <linearGradient id="lime"
+                    x1="0" y1="0"
+                    x2="1" y2="1">
+      <stop stop-color="#E5FF45"/>
+      <stop offset="1" stop-color="#A8E900"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shadow -->
+  <ellipse
+    cx="260"
+    cy="425"
+    rx="155"
+    ry="17"
+    fill="#000"
+    opacity=".10"/>
+
+  <!-- ================= PERSON ================= -->
+
+  <!-- Body -->
+  <path
+    d="M215 220
+       Q240 190 275 205
+       L315 285
+       L295 345
+       L205 330
+       L190 255Z"
+    fill="url(#blue)"/>
+
+  <!-- Shirt Highlight -->
+  <path
+    d="M235 215
+       Q255 205 275 215
+       L295 280"
+    stroke="#54B8FF"
+    stroke-width="9"
+    stroke-linecap="round"
+    opacity=".65"/>
+
+  <!-- Head -->
+  <circle
+    cx="245"
+    cy="165"
+    r="38"
+    fill="#FFC995"/>
+
+  <!-- Hair -->
+  <path
+    d="M210 160
+       Q212 120 247 120
+       Q280 120 285 157
+       Q270 143 250 143
+       Q230 143 210 160Z"
+    fill="#25303D"/>
+
+  <!-- Eye -->
+  <circle
+    cx="258"
+    cy="166"
+    r="3.5"
+    fill="#1B2430"/>
+
+  <!-- Smile -->
+  <path
+    d="M254 182
+       Q264 190 274 181"
+    stroke="#8C4D36"
+    stroke-width="3"
+    stroke-linecap="round"/>
+
+  <!-- Arm Holding Bag -->
+  <path
+    d="M285 230
+       L330 285
+       L365 295"
+    stroke="#0872E8"
+    stroke-width="23"
+    stroke-linecap="round"/>
+
+  <!-- Hand -->
+  <circle
+    cx="365"
+    cy="295"
+    r="11"
+    fill="#FFC995"/>
+
+  <!-- Other Arm -->
+  <path
+    d="M205 235
+       L175 280
+       L145 305"
+    stroke="#0872E8"
+    stroke-width="23"
+    stroke-linecap="round"/>
+
+  <!-- Other Hand -->
+  <circle
+    cx="145"
+    cy="305"
+    r="11"
+    fill="#FFC995"/>
+
+  <!-- Pants -->
+  <path
+    d="M205 320
+       L295 330
+       L315 380
+       H275
+       L250 345
+       L235 385
+       H195
+       L190 340Z"
+    fill="#1B2A3A"/>
+
+  <!-- Shoes -->
+  <path
+    d="M190 375
+       H238
+       Q248 384 238 394
+       H185
+       Q178 385 190 375Z"
+    fill="white"/>
+
+  <path
+    d="M270 372
+       H315
+       Q325 382 315 392
+       H268
+       Q260 382 270 372Z"
+    fill="white"/>
+
+  <!-- ================= SHOPPING BAG ================= -->
+
+  <path
+    d="M335 285
+       H425
+       L415 395
+       H345Z"
+    fill="url(#blue)"/>
+
+  <!-- Bag Top -->
+  <path
+    d="M345 285
+       Q350 260 380 260
+       Q410 260 415 285"
+    stroke="#0872E8"
+    stroke-width="10"
+    stroke-linecap="round"/>
+
+  <!-- Bag Handle -->
+  <path
+    d="M360 280
+       Q380 245 400 280"
+    stroke="white"
+    stroke-width="7"
+    stroke-linecap="round"/>
+
+  <!-- Bag Logo -->
+  <g transform="translate(365 315) scale(.55)">
+
+    <path
+      d="M35 0
+         L70 28
+         L42 53
+         L22 37
+         L42 20
+         L36 16
+         L10 38
+         L37 63
+         L70 35"
+      stroke="white"
+      stroke-width="13"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+    <path
+      d="M38 28
+         L60 46
+         L37 65
+         L20 51"
+      stroke="url(#lime)"
+      stroke-width="13"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+  </g>
+
+  <!-- Brand -->
+  <text
+    x="380"
+    y="385"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-size="12"
+    font-weight="700"
+    fill="white">
+    Serbabisa<tspan fill="#C8FF00">.id</tspan>
+  </text>
+
+  <!-- ================= SHOPPING CART ================= -->
+
+  <!-- Cart Handle -->
+  <path
+    d="M85 270
+       H125
+       L145 350"
+    stroke="#263342"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+
+  <!-- Cart Basket -->
+  <path
+    d="M125 290
+       H225
+       L210 350
+       H145Z"
+    fill="#C8FF00"/>
+
+  <!-- Basket Lines -->
+  <path
+    d="M140 305H220
+       M145 325H215
+       M150 345H210"
+    stroke="#9BC900"
+    stroke-width="4"
+    stroke-linecap="round"/>
+
+  <!-- Cart Wheels -->
+  <circle
+    cx="155"
+    cy="365"
+    r="13"
+    fill="#263342"/>
+
+  <circle
+    cx="205"
+    cy="365"
+    r="13"
+    fill="#263342"/>
+
+  <circle
+    cx="155"
+    cy="365"
+    r="5"
+    fill="#DCE2E7"/>
+
+  <circle
+    cx="205"
+    cy="365"
+    r="5"
+    fill="#DCE2E7"/>
+
+  <!-- ================= GROCERIES ================= -->
+
+  <!-- Apple -->
+  <circle
+    cx="160"
+    cy="275"
+    r="15"
+    fill="#FF4A4A"/>
+
+  <path
+    d="M160 260
+       Q165 252 172 255"
+    stroke="#348A3C"
+    stroke-width="5"
+    stroke-linecap="round"/>
+
+  <!-- Milk -->
+  <path
+    d="M180 265
+       H200
+       V295
+       H180Z"
+    fill="white"/>
+
+  <path
+    d="M180 265L185 258H195L200 265"
+    fill="#168BFF"/>
+
+  <!-- Vegetable -->
+  <path
+    d="M205 280
+       Q220 265 232 280
+       Q220 295 205 280Z"
+    fill="#39B85A"/>
+
+  <path
+    d="M215 270L220 260"
+    stroke="#24853B"
+    stroke-width="4"
+    stroke-linecap="round"/>
+
+  <!-- Shopping Sparkles -->
+  <path
+    d="M105 215V235
+       M95 225H115"
+    stroke="url(#lime)"
+    stroke-width="6"
+    stroke-linecap="round"/>
+
+  <path
+    d="M405 215V230
+       M398 222H412"
+    stroke="url(#lime)"
+    stroke-width="5"
+    stroke-linecap="round"/>
+
+</svg>

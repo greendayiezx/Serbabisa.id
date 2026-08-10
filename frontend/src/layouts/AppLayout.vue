@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import Icon from '@/components/icons/Icon.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -9,42 +10,37 @@ const auth = useAuthStore()
 const navItems = computed(() => {
   if (auth.user?.role === 'mitra') {
     return [
-      { to: { name: 'mitra-task-list' }, label: 'Tugas' },
-      { to: { name: 'wallet' }, label: 'Dompet' },
-      { to: { name: 'home' }, label: 'Akun' },
+      { to: { name: 'mitra-task-list' }, label: 'Tugas', icon: 'clipboard' },
+      { to: { name: 'wallet' }, label: 'Dompet', icon: 'wallet' },
+      { to: { name: 'profile' }, label: 'Profil', icon: 'user' },
     ]
   }
-  if (auth.user?.role === 'admin') {
-    return [{ to: { name: 'admin-dashboard' }, label: 'Dashboard' }]
-  }
   return [
-    { to: { name: 'home' }, label: 'Beranda' },
-    { to: { name: 'task-create' }, label: 'Buat Tugas' },
+    { to: { name: 'home' }, label: 'Beranda', icon: 'home' },
+    { to: { name: 'task-list' }, label: 'Tugas Saya', icon: 'clipboard' },
+    { to: { name: 'profile' }, label: 'Profil', icon: 'user' },
   ]
 })
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col pb-16 md:pb-0">
-    <header class="bg-brand text-white px-4 py-3 sticky top-0 z-10">
-      <h1 class="text-lg font-semibold">Tugasin</h1>
-    </header>
-
-    <main class="flex-1 max-w-screen-md mx-auto w-full p-4">
+  <div class="min-h-screen flex flex-col bg-(--color-surface) text-(--color-on-surface)">
+    <main class="flex-1 max-w-screen-md mx-auto w-full pb-24 md:pb-0">
       <slot />
     </main>
 
     <nav
       v-if="auth.user"
-      class="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex md:hidden"
+      class="fixed bottom-0 inset-x-0 bg-(--color-surface-0) border-t border-(--color-outline) flex md:hidden pb-[env(safe-area-inset-bottom)]"
     >
       <RouterLink
         v-for="item in navItems"
         :key="item.label"
         :to="item.to"
-        class="flex-1 text-center py-3 text-sm"
-        :class="route.name === item.to.name ? 'text-brand font-medium' : 'text-gray-500'"
+        class="flex-1 flex flex-col items-center gap-1 py-2.5 text-[10.5px] font-bold"
+        :class="route.name === item.to.name ? 'text-(--color-azure)' : 'text-(--color-on-surface-variant)'"
       >
+        <Icon :name="item.icon" class="w-[21px] h-[21px]" />
         {{ item.label }}
       </RouterLink>
     </nav>

@@ -1,0 +1,271 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 512 512"
+     width="512"
+     height="512"
+     fill="none">
+
+  <defs>
+    <linearGradient id="blue" x1="120" y1="120" x2="390" y2="390"
+                    gradientUnits="userSpaceOnUse">
+      <stop stop-color="#168BFF"/>
+      <stop offset="1" stop-color="#0057D9"/>
+    </linearGradient>
+
+    <linearGradient id="lime" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#E5FF45"/>
+      <stop offset="1" stop-color="#A8E900"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shadow -->
+  <ellipse cx="256" cy="425" rx="165" ry="16"
+           fill="#000" opacity=".10"/>
+
+  <!-- Delivery Box -->
+  <rect x="105" y="205" width="135" height="125"
+        rx="14" fill="url(#blue)"/>
+
+  <!-- Box Top -->
+  <path d="M105 225L172 195L240 225L172 255Z"
+        fill="#0874E8"/>
+
+  <!-- Box Side -->
+  <path d="M172 255V330"
+        stroke="#54B8FF"
+        stroke-width="4"
+        opacity=".7"/>
+
+  <!-- Logo on Box -->
+  <g transform="translate(140 245) scale(.55)">
+    <path
+      d="M35 0
+         L70 28
+         L42 53
+         L22 37
+         L42 20
+         L36 16
+         L10 38
+         L37 63
+         L70 35"
+      stroke="white"
+      stroke-width="13"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+    <path
+      d="M38 28
+         L60 46
+         L37 65
+         L20 51"
+      stroke="url(#lime)"
+      stroke-width="13"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+  </g>
+
+  <!-- Brand -->
+  <text x="172" y="315"
+        text-anchor="middle"
+        font-family="Arial, sans-serif"
+        font-size="14"
+        font-weight="700"
+        fill="white">
+    Serbabisa<tspan fill="#C8FF00">.id</tspan>
+  </text>
+
+  <!-- Rider Body -->
+  <path
+    d="M255 185
+       Q275 160 305 175
+       L335 245
+       L305 300
+       L245 280
+       L235 225Z"
+    fill="url(#blue)"/>
+
+  <!-- Rider Head -->
+  <circle cx="280" cy="145" r="38"
+          fill="#FFC995"/>
+
+  <!-- Helmet -->
+  <path
+    d="M243 145
+       Q243 105 280 105
+       Q318 105 322 145
+       H300
+       Q288 125 258 130
+       V145Z"
+    fill="url(#blue)"/>
+
+  <!-- Helmet Accent -->
+  <path
+    d="M248 130Q275 118 303 125"
+    stroke="#C8FF00"
+    stroke-width="6"
+    stroke-linecap="round"/>
+
+  <!-- Visor -->
+  <path
+    d="M299 124
+       Q320 128 320 145
+       Q311 158 295 151"
+    fill="#DFF6FF"
+    opacity=".8"/>
+
+  <!-- Eye -->
+  <circle cx="291" cy="145" r="3.5" fill="#1B2430"/>
+
+  <!-- Smile -->
+  <path
+    d="M287 160Q297 167 306 159"
+    stroke="#8C4D36"
+    stroke-width="3"
+    stroke-linecap="round"/>
+
+  <!-- Arm -->
+  <path
+    d="M250 205L310 235L350 220"
+    stroke="#0872E8"
+    stroke-width="24"
+    stroke-linecap="round"/>
+
+  <!-- Hand -->
+  <circle cx="350" cy="220" r="11"
+          fill="#FFC995"/>
+
+  <!-- Motorcycle Rear -->
+  <path
+    d="M205 300
+       Q230 275 275 290
+       L330 325
+       H190Z"
+    fill="#0065D8"/>
+
+  <!-- Motorcycle Front -->
+  <path
+    d="M315 275
+       Q345 250 370 275
+       L395 335
+       H340
+       L315 310Z"
+    fill="url(#blue)"/>
+
+  <!-- Front Shield -->
+  <path
+    d="M345 270
+       Q365 255 383 275
+       L392 320
+       L355 325
+       L335 295Z"
+    fill="#0878EA"/>
+
+  <!-- Headlight -->
+  <ellipse cx="378" cy="278"
+           rx="13" ry="17"
+           fill="#FFE45C"/>
+
+  <ellipse cx="378" cy="278"
+           rx="7" ry="10"
+           fill="white"
+           opacity=".8"/>
+
+  <!-- Handle -->
+  <path
+    d="M320 255L342 235L380 245"
+    stroke="#1B2430"
+    stroke-width="9"
+    stroke-linecap="round"/>
+
+  <!-- Mirrors -->
+  <path d="M340 237L328 215"
+        stroke="#1B2430"
+        stroke-width="6"
+        stroke-linecap="round"/>
+
+  <path d="M376 244L390 220"
+        stroke="#1B2430"
+        stroke-width="6"
+        stroke-linecap="round"/>
+
+  <ellipse cx="326" cy="212"
+           rx="9" ry="13"
+           fill="#252D38"/>
+
+  <ellipse cx="393" cy="217"
+           rx="9" ry="13"
+           fill="#252D38"/>
+
+  <!-- Rear Wheel -->
+  <circle cx="235" cy="350" r="42"
+          fill="#17202B"/>
+  <circle cx="235" cy="350" r="27"
+          fill="#68737E"/>
+  <circle cx="235" cy="350" r="14"
+          fill="#DCE2E7"/>
+  <circle cx="235" cy="350" r="6"
+          fill="#505A65"/>
+
+  <!-- Front Wheel -->
+  <circle cx="370" cy="350" r="42"
+          fill="#17202B"/>
+  <circle cx="370" cy="350" r="27"
+          fill="#68737E"/>
+  <circle cx="370" cy="350" r="14"
+          fill="#DCE2E7"/>
+  <circle cx="370" cy="350" r="6"
+          fill="#505A65"/>
+
+  <!-- Rider Pants -->
+  <path
+    d="M245 275
+       L305 290
+       L335 345
+       H295
+       L270 315
+       L255 350
+       H215
+       L230 295Z"
+    fill="#182535"/>
+
+  <!-- Shoes -->
+  <path
+    d="M210 342
+       H260
+       Q270 350 260 360
+       H205
+       Q198 350 210 342Z"
+    fill="white"/>
+
+  <path
+    d="M292 340
+       H335
+       Q345 350 335 360
+       H290
+       Q282 350 292 340Z"
+    fill="white"/>
+
+  <!-- Tail Light -->
+  <path
+    d="M190 300L175 310L190 320L205 312Z"
+    fill="#FF3D3D"/>
+
+  <!-- Speed Lines -->
+  <path
+    d="M90 365H145"
+    stroke="url(#lime)"
+    stroke-width="7"
+    stroke-linecap="round"/>
+
+  <path
+    d="M75 385H125"
+    stroke="#168BFF"
+    stroke-width="7"
+    stroke-linecap="round"/>
+
+  <path
+    d="M400 390H450"
+    stroke="url(#lime)"
+    stroke-width="7"
+    stroke-linecap="round"/>
+
+</svg>

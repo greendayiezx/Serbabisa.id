@@ -30,6 +30,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // FR-03/04/05/07/16: Task management (kategori tetap & custom, radius search, status)
     Route::apiResource('tasks', TaskController::class);
 
+    // Riwayat lokasi (Tersimpan / Baru-Baru Ini) untuk form pembuatan tugas
+    Route::get('/locations/recent', [TaskController::class, 'recentLocations']);
+
     // FR-06: Bidding pada permintaan custom
     Route::apiResource('tasks.bids', BidController::class)->shallow();
 

@@ -1,13 +1,132 @@
 @import "tailwindcss";
 
-@theme {
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./assets/fonts/inter-latin.woff2") format("woff2");
+}
+
+:root {
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* brand accents — fixed across themes, only their container tints move */
+  --color-azure: #1e9bf0;
+  --color-lime: #aaee00;
+  --color-gold: #ffd600;
+
+  /* light scheme (default) */
+  --color-on-primary-container: #00629d;
+  --color-primary-container: #dceffd;
+  --color-on-secondary-container: #486800;
+  --color-secondary-container: #edfac0;
+  --color-on-tertiary-container: #705d00;
+  --color-tertiary-container: #fff3b3;
+  --color-on-surface: #1a1a1a;
+  --color-on-surface-variant: #5b6066;
+  --color-surface: #fcf9f8;
+  --color-surface-0: #ffffff;
+  --color-surface-container: #f0eded;
+  --color-surface-container-high: #e7e3e2;
+  --color-outline: #dad6d4;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --shadow-float: 0 20px 60px rgba(0, 0, 0, 0.1);
+  --shadow-lift: 0 10px 28px rgba(26, 26, 26, 0.08);
+}
+
+/* Site defaults to the light scheme regardless of OS preference; dark is opt-in via data-theme="dark". */
+:root[data-theme="dark"] {
+  --color-on-primary-container: #a9d9ff;
+  --color-primary-container: #0b3a57;
+  --color-on-secondary-container: #c7ee7e;
+  --color-secondary-container: #263b00;
+  --color-on-tertiary-container: #ffe08a;
+  --color-tertiary-container: #3a2f00;
+  --color-on-surface: #ece9e8;
+  --color-on-surface-variant: #a8adb3;
+  --color-surface: #14181c;
+  --color-surface-0: #1b2126;
+  --color-surface-container: #1d2328;
+  --color-surface-container-high: #262d33;
+  --color-outline: #383f45;
+  --color-error: #ffb4ab;
+  --color-error-container: #680003;
+  --color-on-error-container: #ffdad4;
+  --glass-bg: rgba(24, 29, 34, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --shadow-float: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --shadow-lift: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+:root[data-theme="light"] {
+  --color-on-primary-container: #00629d;
+  --color-primary-container: #dceffd;
+  --color-on-secondary-container: #486800;
+  --color-secondary-container: #edfac0;
+  --color-on-tertiary-container: #705d00;
+  --color-tertiary-container: #fff3b3;
+  --color-on-surface: #1a1a1a;
+  --color-on-surface-variant: #5b6066;
+  --color-surface: #fcf9f8;
+  --color-surface-0: #ffffff;
+  --color-surface-container: #f0eded;
+  --color-surface-container-high: #e7e3e2;
+  --color-outline: #dad6d4;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --shadow-float: 0 20px 60px rgba(0, 0, 0, 0.1);
+  --shadow-lift: 0 10px 28px rgba(26, 26, 26, 0.08);
+}
+
+@theme inline {
   /* Breakpoint utama sesuai PRD bab 7: 360px, 768px, 1024px+ */
   --breakpoint-sm: 360px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
 
-  --color-brand: #0f766e;
-  --color-brand-dark: #115e59;
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+
+  --color-azure: var(--color-azure);
+  --color-lime: var(--color-lime);
+  --color-gold: var(--color-gold);
+  --color-on-primary-container: var(--color-on-primary-container);
+  --color-primary-container: var(--color-primary-container);
+  --color-on-secondary-container: var(--color-on-secondary-container);
+  --color-secondary-container: var(--color-secondary-container);
+  --color-on-tertiary-container: var(--color-on-tertiary-container);
+  --color-tertiary-container: var(--color-tertiary-container);
+  --color-on-surface: var(--color-on-surface);
+  --color-on-surface-variant: var(--color-on-surface-variant);
+  --color-surface: var(--color-surface);
+  --color-surface-0: var(--color-surface-0);
+  --color-surface-container: var(--color-surface-container);
+  --color-surface-container-high: var(--color-surface-container-high);
+  --color-outline: var(--color-outline);
+  --color-error: var(--color-error);
+  --color-error-container: var(--color-error-container);
+  --color-on-error-container: var(--color-on-error-container);
+
+  --radius-card: 24px;
+  --radius-input: 16px;
+  --shadow-float: var(--shadow-float);
+  --shadow-lift: var(--shadow-lift);
 }
 
 html,
@@ -17,5 +136,90 @@ body,
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+
+:focus-visible:not(input):not(textarea):not(select) {
+  outline: 2.5px solid var(--color-azure);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input,
+textarea,
+select {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* reusable glass panel, per PRD design system: white 85% + blur(12px) + thin border */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+/* decorative blur blobs for hero corners */
+.blob {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(50px);
+  pointer-events: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* simulated map backdrop (road grid + soft glow), mirrors the location picker mock */
+.map-bg {
+  background-color: var(--color-surface-container);
+  background-image:
+    linear-gradient(45deg, var(--color-surface-container-high) 25%, transparent 25%, transparent 75%, var(--color-surface-container-high) 75%, var(--color-surface-container-high)),
+    linear-gradient(45deg, var(--color-surface-container-high) 25%, transparent 25%, transparent 75%, var(--color-surface-container-high) 75%, var(--color-surface-container-high));
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+}
+
+.map-overlay {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(30, 155, 240, 0.08) 0%, transparent 42%),
+    linear-gradient(to right, transparent 48%, rgba(255, 255, 255, 0.75) 48%, rgba(255, 255, 255, 0.75) 52%, transparent 52%),
+    linear-gradient(to bottom, transparent 48%, rgba(255, 255, 255, 0.75) 48%, rgba(255, 255, 255, 0.75) 52%, transparent 52%);
+  background-size: 100% 100%, 140px 140px, 140px 140px;
 }

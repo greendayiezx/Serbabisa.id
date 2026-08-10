@@ -41,6 +41,9 @@ export interface Task {
   budget: number | null
   catatan: string | null
   created_at: string
+  category?: Category | null
+  mitra?: Pick<User, 'id' | 'name'> | null
+  customer?: Pick<User, 'id' | 'name'>
 }
 
 export interface Bid {

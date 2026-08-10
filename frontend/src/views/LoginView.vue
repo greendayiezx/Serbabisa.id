@@ -26,45 +26,48 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4">
+  <div class="min-h-screen flex items-center justify-center p-5 bg-(--color-surface)">
     <form class="w-full max-w-sm space-y-4" @submit.prevent="handleSubmit">
-      <h1 class="text-2xl font-semibold text-center">Masuk ke Tugasin</h1>
+      <div class="flex items-center justify-center gap-2 font-display font-extrabold text-lg mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-(--color-lime)"></span>Tugasin
+      </div>
+      <h1 class="text-2xl font-extrabold text-center font-display">Masuk ke akunmu</h1>
 
-      <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+      <p v-if="error" class="text-sm font-semibold text-(--color-error) text-center">{{ error }}</p>
 
       <div>
-        <label class="block text-sm font-medium mb-1" for="email">Email</label>
+        <label class="block text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide mb-1.5" for="email">Email</label>
         <input
           id="email"
           v-model="email"
           type="email"
           required
-          class="w-full rounded-lg border border-gray-300 px-3 py-2 min-h-11"
+          class="w-full rounded-(--radius-input) bg-(--color-surface-container) px-3.5 py-3 text-sm outline-none min-h-11"
         />
       </div>
 
       <div>
-        <label class="block text-sm font-medium mb-1" for="password">Password</label>
+        <label class="block text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide mb-1.5" for="password">Password</label>
         <input
           id="password"
           v-model="password"
           type="password"
           required
-          class="w-full rounded-lg border border-gray-300 px-3 py-2 min-h-11"
+          class="w-full rounded-(--radius-input) bg-(--color-surface-container) px-3.5 py-3 text-sm outline-none min-h-11"
         />
       </div>
 
       <button
         type="submit"
         :disabled="loading"
-        class="w-full bg-brand text-white rounded-lg py-2.5 font-medium min-h-11 disabled:opacity-50"
+        class="w-full rounded-full bg-(--color-azure) text-white font-bold text-[15px] py-3.5 min-h-11 disabled:opacity-50"
       >
         {{ loading ? 'Memproses...' : 'Masuk' }}
       </button>
 
-      <p class="text-center text-sm text-gray-600">
+      <p class="text-center text-sm text-(--color-on-surface-variant)">
         Belum punya akun?
-        <RouterLink :to="{ name: 'register' }" class="text-brand font-medium">Daftar</RouterLink>
+        <RouterLink :to="{ name: 'register' }" class="text-(--color-on-primary-container) font-bold">Daftar</RouterLink>
       </p>
     </form>
   </div>
