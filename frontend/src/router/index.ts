@@ -42,6 +42,18 @@ const router = createRouter({
       meta: { roles: ['customer'] as Role[] },
     },
     {
+      path: '/tasks/new/angkut/delivery',
+      name: 'task-angkut-delivery',
+      component: () => import('@/views/customer/AngkutDeliveryDetailView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/belanja/detail',
+      name: 'task-belanja-detail',
+      component: () => import('@/views/customer/BelanjaDetailView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
       path: '/tasks/new/location',
       name: 'task-location',
       component: () => import('@/views/customer/LocationView.vue'),
@@ -90,6 +102,12 @@ const router = createRouter({
       meta: { roles: ['admin'] as Role[] },
     },
   ],
+  // Tanpa ini, Vue Router membiarkan posisi scroll halaman sebelumnya terbawa,
+  // sehingga halaman baru terbuka di tengah/bawah. Selalu mulai dari atas,
+  // kecuali saat tombol back/forward browser (pakai posisi tersimpan).
+  scrollBehavior(_to, _from, savedPosition) {
+    return savedPosition ?? { top: 0 }
+  },
 })
 
 router.beforeEach(async (to) => {

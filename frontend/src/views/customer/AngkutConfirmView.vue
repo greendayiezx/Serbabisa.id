@@ -8,6 +8,11 @@ import { useLocationStore } from '@/stores/location'
 import { useAngkutDraftStore } from '@/stores/angkutDraft'
 import { useAuthStore } from '@/stores/auth'
 import { TILE_URL, TILE_OPTIONS } from '@/lib/mapTiles'
+import LottieIcon from '@/components/LottieIcon.vue'
+import lottieSilver from '@/assets/lottie/protection-silver.json'
+import lottieGold from '@/assets/lottie/protection-gold.json'
+import lottiePlatinum from '@/assets/lottie/protection-platinum.json'
+import BisaAngkutNavbar from '@/components/angkut/BisaAngkutNavbar.vue'
 
 const router = useRouter()
 const locationStore = useLocationStore()
@@ -31,6 +36,31 @@ const jadwalLabel = computed(() => {
   const tanggalFmt = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
   return draft.value.waktu ? `${tanggalFmt}, ${draft.value.waktu} WIB` : tanggalFmt
 })
+
+const hargaFormatted = computed(() => {
+  const total = draft.value?.total
+  if (typeof total === 'number') {
+    return `Rp${total.toLocaleString('id-ID')}`
+  }
+  return 'Rp70.000'
+})
+
+interface ProtectionTier {
+  id: 'silver' | 'gold' | 'platinum'
+  label: string
+  price: number
+  coverage: string
+  lottie: object
+  badge?: string
+}
+
+const protectionTiers: ProtectionTier[] = [
+  { id: 'silver', label: 'Perlindungan Silver', price: 1000, coverage: 'Rp5 jt', lottie: lottieSilver },
+  { id: 'gold', label: 'Perlindungan Gold', price: 2000, coverage: 'Rp10 jt', lottie: lottieGold, badge: 'Banyak dipilih' },
+  { id: 'platinum', label: 'Perlindungan Platinum', price: 5000, coverage: 'Rp50 jt', lottie: lottiePlatinum },
+]
+
+const selectedProtection = ref<ProtectionTier['id']>('silver')
 
 const pinIcon = L.divIcon({
   className: '',
@@ -66,13 +96,6 @@ function initMap() {
   requestAnimationFrame(() => map?.invalidateSize())
 }
 
-function goBackOrHome() {
-  if (window.history.state?.back) {
-    router.back()
-  } else {
-    router.push({ name: 'home' })
-  }
-}
 
 // Editing the pin stays on this page (a fullscreen picker overlay), instead of
 // navigating back to the separate location-picking route.
@@ -84,6 +107,7 @@ const pickerInstanceKey = ref(0)
 const pickerMapEl = ref<HTMLDivElement | null>(null)
 let pickerMap: L.Map | null = null
 let pickerMarker: L.Marker | null = null
+let pickerResizeObserver: ResizeObserver | null = null
 
 function coordsLabel(latv: number, lngv: number) {
   return `Lokasi pada ${latv.toFixed(5)}, ${lngv.toFixed(5)}`
@@ -121,6 +145,8 @@ async function openPicker() {
     // attached to it, gets fully destroyed by Vue — nothing to leak or reuse).
     pickerInstanceKey.value += 1
     pickerOpen.value = true
+    pickerResizeObserver?.disconnect()
+    pickerResizeObserver = null
     if (pickerMap) {
       pickerMap.remove()
       pickerMap = null
@@ -148,11 +174,11 @@ async function openPicker() {
       thisMap.panTo(e.latlng, { animate: true, duration: 0.3 })
     })
 
-    // The flex layout can take a frame or two to settle into its final size,
-    // so re-measure a few times instead of trusting a single early snapshot.
+    // Same approach as the preview map: let ResizeObserver tell us exactly when
+    // the flex layout has settled, instead of guessing with a fixed delay.
+    pickerResizeObserver = new ResizeObserver(() => thisMap.invalidateSize())
+    pickerResizeObserver.observe(pickerMapEl.value)
     requestAnimationFrame(() => thisMap.invalidateSize())
-    setTimeout(() => thisMap.invalidateSize(), 150)
-    setTimeout(() => thisMap.invalidateSize(), 400)
   } finally {
     openingPicker = false
   }
@@ -160,6 +186,8 @@ async function openPicker() {
 
 function closePicker() {
   pickerOpen.value = false
+  pickerResizeObserver?.disconnect()
+  pickerResizeObserver = null
   if (pickerMap) {
     pickerMap.remove()
     pickerMap = null
@@ -216,6 +244,15 @@ function selectCountry(country: CountryOption) {
 }
 
 function handleSaveAddress() {
+  if (alamatSaved.value) {
+    alamatSaved.value = false
+    if (alamatSavedTimer) {
+      clearTimeout(alamatSavedTimer)
+      alamatSavedTimer = null
+    }
+    return
+  }
+
   if (locationStore.draft) {
     locationStore.savePlace('home', locationStore.draft)
     locationStore.addSearchHistory(locationStore.draft)
@@ -257,14 +294,17 @@ function pakaiDetailSaya() {
 
 const canConfirm = computed(() => namaPenerima.value.trim() !== '' && teleponPenerima.value.trim() !== '')
 
-function konfirmasiPesanan() {
+function lanjutkan() {
   if (!canConfirm.value || submitting.value) return
   submitting.value = true
-  // Backend untuk submit pesanan BisaAngkut belum tersedia — alur ini masih
-  // sebatas UI. Bersihkan draft lalu kembali ke Home.
-  locationStore.clearDraft()
-  angkutDraftStore.clearDraft()
-  router.push({ name: 'home' })
+  const tier = protectionTiers.find((t) => t.id === selectedProtection.value)
+  angkutDraftStore.patchDraft({
+    namaPenerima: namaPenerima.value,
+    teleponPenerima: `${selectedCountry.value.code}${teleponPenerima.value}`,
+    protectionLabel: tier?.label,
+    protectionPrice: tier?.price,
+  })
+  router.push({ name: 'task-angkut-delivery' })
 }
 
 onMounted(async () => {
@@ -288,22 +328,18 @@ onBeforeUnmount(() => {
 <template>
   <div class="min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-28">
     <!-- Header -->
-    <div class="flex items-center gap-3 px-5 pt-5 pb-2">
-      <button
-        type="button"
-        class="w-10 h-10 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0"
-        @click="goBackOrHome"
-      >
-        <Icon name="arrow-left" class="w-5 h-5" />
-      </button>
-      <h1 class="font-extrabold text-[16px] text-(--color-on-surface)">Konfirmasi Pesanan</h1>
-    </div>
+    <BisaAngkutNavbar />
+
 
     <div class="px-5 pt-4 flex flex-col gap-5">
       <!-- Map + location -->
       <section class="bg-(--color-surface-0) rounded-(--radius-card) shadow-(--shadow-lift) border border-(--color-outline)/40 overflow-hidden">
         <button type="button" class="block w-full text-left" @click="openPicker">
-          <div ref="mapEl" class="w-full h-40 bg-(--color-surface-container) pointer-events-none"></div>
+          <div
+            ref="mapEl"
+            class="w-full h-40 bg-(--color-surface-container) pointer-events-none"
+            :style="{ visibility: pickerOpen ? 'hidden' : 'visible' }"
+          ></div>
         </button>
         <div class="p-4 flex flex-col gap-3">
           <div class="flex items-start justify-between gap-3">
@@ -418,14 +454,63 @@ onBeforeUnmount(() => {
             <img v-if="draft?.vehicleImage" :src="draft.vehicleImage" alt="" class="w-full h-full object-contain" />
             <Icon v-else name="truck" class="w-6 h-6 text-(--color-on-surface)" />
           </span>
-          <div class="min-w-0">
-            <h3 class="text-sm font-bold text-(--color-on-surface)">BisaAngkut</h3>
-            <p class="text-[12.5px] text-(--color-on-surface-variant) mt-0.5">Kendaraan: {{ draft?.vehicleLabel }} &middot; {{ draft?.deliveryLabel }}</p>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-(--color-on-surface)">BisaAngkut</h3>
+              <span class="text-sm font-extrabold text-(--color-on-surface) shrink-0">{{ hargaFormatted }}</span>
+            </div>
+            <p class="text-[12.5px] text-(--color-on-surface-variant) mt-0.5">Kendaraan: {{ draft?.vehicleLabel || 'Pickup Bak' }} &middot; {{ draft?.deliveryLabel || 'Instant Hemat' }}</p>
             <div v-if="jadwalLabel" class="flex items-center gap-1.5 mt-1.5 text-(--color-on-surface-variant)">
               <Icon name="clock" class="w-3.5 h-3.5" />
               <span class="text-[12px]">{{ jadwalLabel }}</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Protection / insurance add-on -->
+      <section class="bg-(--color-surface-0) rounded-(--radius-card) shadow-(--shadow-lift) border border-(--color-outline)/40 p-4">
+        <h2 class="text-sm font-bold text-(--color-on-surface)">Perlindungan barang rusak atau hilang</h2>
+        <p class="text-[12.5px] text-(--color-on-surface-variant) mt-1 leading-relaxed">
+          Jaminan s.d. Rp5jt ditambahkan ke pengiriman ini. Berlaku untuk semua pengiriman, batalin kapan aja.
+        </p>
+        <span class="inline-block text-[12.5px] font-bold text-(--color-gold) mt-1.5">Cari tahu</span>
+
+        <div class="flex gap-3 mt-3.5 -mx-4 px-4 pt-2.5 pb-1 overflow-x-auto no-scrollbar">
+          <button
+            v-for="tier in protectionTiers"
+            :key="tier.id"
+            type="button"
+            class="relative shrink-0 w-[132px] rounded-(--radius-input) border p-3 text-left transition-colors"
+            :class="
+              selectedProtection === tier.id
+                ? 'border-(--color-azure) bg-(--color-primary-container)/40'
+                : 'border-(--color-outline)/50 bg-(--color-surface-0)'
+            "
+            @click="selectedProtection = tier.id"
+          >
+            <span
+              v-if="tier.badge"
+              class="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-(--color-error) text-white text-[9.5px] font-extrabold px-2.5 py-0.5 whitespace-nowrap shadow-xs uppercase tracking-wider text-center"
+            >
+              {{ tier.badge }}
+            </span>
+
+            <div class="flex items-start justify-between">
+              <LottieIcon :data="tier.lottie" :size="40" />
+              <span
+                class="w-5 h-5 rounded-full border flex items-center justify-center shrink-0"
+                :class="selectedProtection === tier.id ? 'bg-(--color-azure) border-(--color-azure)' : 'border-(--color-outline)'"
+              >
+                <Icon v-if="selectedProtection === tier.id" name="check" class="w-3 h-3 text-white" />
+              </span>
+            </div>
+
+            <h3 class="text-[12.5px] font-bold text-(--color-on-surface) mt-2.5 leading-tight">{{ tier.label }}</h3>
+            <p class="text-[13px] font-bold text-(--color-on-surface) mt-0.5">Rp{{ tier.price.toLocaleString('id-ID') }}</p>
+            <p class="text-[11px] text-(--color-on-surface-variant) mt-1.5">Perlindungan s.d.</p>
+            <p class="text-[11.5px] font-bold text-black">{{ tier.coverage }}</p>
+          </button>
         </div>
       </section>
     </div>
@@ -436,10 +521,10 @@ onBeforeUnmount(() => {
         type="button"
         class="w-full flex items-center justify-center gap-2 rounded-full bg-(--color-azure) text-white font-bold text-[15px] py-3.5 min-h-11 shadow-(--shadow-lift) disabled:opacity-50"
         :disabled="!canConfirm || submitting"
-        @click="konfirmasiPesanan"
+        @click="lanjutkan"
       >
-        <Icon name="check-circle" class="w-[18px] h-[18px]" />
-        Konfirmasi Pesanan
+        Lanjutkan
+        <Icon name="chevron-right" class="w-[18px] h-[18px]" />
       </button>
     </div>
 

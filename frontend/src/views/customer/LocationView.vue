@@ -14,6 +14,8 @@ import cardBorderLocationMalam from '@/assets/card-border-location-malam.png'
 import cardBorderBisaAngkutPagi from '@/assets/card-border-BisaAngkut-pagi.png'
 import cardBorderBisaAngkutSore from '@/assets/card-border-BisaAngkut-sore.png'
 import cardBorderBisaAngkutMalam from '@/assets/card-border-BisaAngkut-malam.png'
+import AngkutHeroArt from '@/components/angkut/AngkutHeroArt.vue'
+import BisaBelanjaHeroArt from '@/components/belanja/BisaBelanjaHeroArt.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -28,6 +30,9 @@ const selectedPlace = ref<TaskLocation | null>(locationStore.draft ? { ...locati
 const inputRef = ref<HTMLInputElement | null>(null)
 const locating = ref(false)
 const mapOpen = ref(false)
+// Bumped every time the fullscreen picker opens; bound to :key on the map div so
+// Vue always throws away the old DOM node and mounts a brand new one.
+const mapInstanceKey = ref(0)
 const mapEl = ref<HTMLDivElement | null>(null)
 const previewMapEl = ref<HTMLDivElement | null>(null)
 const selectedId = ref<string | null>(null)
@@ -206,6 +211,18 @@ const cardBorderLocationImg = computed(() =>
     : headerBorderImages[timeOfDay.value],
 )
 
+const subtitleText = computed(() => {
+  if (route.query.category === 'bisaangkut') return 'Mau angkut barang ke mana hari ini?'
+  if (route.query.category === 'bisabelanja') return 'Mau belanja apa hari ini?'
+  return 'Mau anter tugas ke mana hari ini?'
+})
+
+const contentSheetMarginClass = computed(() => {
+  if (route.query.category === 'bisaangkut') return '-mt-3'
+  if (route.query.category === 'bisabelanja') return '-mt-14'
+  return '-mt-1'
+})
+
 const firstName = computed(() => authStore.user?.name?.split(' ')[0] ?? '')
 
 function coordsLabel(latv: number, lngv: number) {
@@ -330,6 +347,7 @@ function onFieldBlur() {
   setTimeout(() => { fieldFocused.value = false }, 150)
 }
 
+
 function initPreviewMap() {
   if (!previewMapEl.value) return
   if (previewMap) {
@@ -391,6 +409,21 @@ function sameLocation(a: TaskLocation, b: TaskLocation) {
   return a.alamat === b.alamat && Number(a.lat) === Number(b.lat) && Number(a.lng) === Number(b.lng)
 }
 
+const showClearAllConfirm = ref(false)
+
+function confirmClearAll() {
+  showClearAllConfirm.value = true
+}
+
+function clearAllPlaces() {
+  locationStore.clearAll()
+  savedPlaces.value = locationStore.loadSavedPlaces()
+  searchHistory.value = locationStore.loadSearchHistory()
+  selectedId.value = null
+  selectedPlace.value = null
+  showClearAllConfirm.value = false
+}
+
 function handleQuickSave(key: SavedPlaceKey) {
   const savedPlace = savedPlaces.value[key]
   const current: TaskLocation = { alamat: alamat.value, lat: lat.value, lng: lng.value }
@@ -425,10 +458,24 @@ function clearAddress() {
   selectedPlace.value = null
 }
 
+// Re-entry guard: openMap() awaits nextTick() before touching the DOM, so a
+// second call fired before the first one resumes (e.g. a double tap) must not
+// race past this point and create two map instances in the same container.
+let openingMap = false
+
 async function openMap() {
-  mapOpen.value = true
-  await nextTick()
-  initMap()
+  if (openingMap) return
+  openingMap = true
+  try {
+    mapOpen.value = true
+    // Force a brand new DOM node for the map (old one, and anything Leaflet
+    // attached to it, gets fully destroyed by Vue — nothing to leak or reuse).
+    mapInstanceKey.value += 1
+    await nextTick()
+    initMap()
+  } finally {
+    openingMap = false
+  }
 }
 
 function initMap() {
@@ -448,11 +495,14 @@ function initMap() {
   })
   L.tileLayer(TILE_URL, TILE_OPTIONS).addTo(map)
 
-  marker = L.marker(center, { icon: pinIcon, draggable: true }).addTo(map)
+  // autoPan makes Leaflet itself pan the map when the dragged pin nears/exits
+  // the visible edge — it stays put while the pin is still comfortably in view.
+  marker = L.marker(center, { icon: pinIcon, draggable: true, autoPan: true }).addTo(map)
   mapDriverLayer = addDriversToMap(map)
 
   map.on('click', (e: L.LeafletMouseEvent) => {
     marker?.setLatLng(e.latlng)
+    map?.panTo(e.latlng, { animate: true, duration: 0.3 })
   })
 
   mapResizeObserver?.disconnect()
@@ -530,6 +580,11 @@ function finishLocationSelection() {
     return
   }
 
+  if (route.query.category === 'bisabelanja') {
+    router.push({ name: 'task-belanja-detail' })
+    return
+  }
+
   goBackOrHome()
 }
 
@@ -560,8 +615,64 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-6 overflow-x-hidden">
-    <!-- Full-Width Header: card-border-location illustration, shown in full (no crop) -->
-    <div class="relative w-full overflow-hidden bg-[#155b0e]">
+    <!-- Full-Width Header: BisaAngkut = ilustrasi flat vector + wave lime (pola Gojek) -->
+    <div
+      v-if="route.query.category === 'bisaangkut'"
+      class="relative w-full overflow-hidden bg-[#060f29] rounded-b-[2rem]"
+    >
+      <AngkutHeroArt />
+
+      <!-- Floating Back Button (White circle, Gojek style) -->
+      <button
+        type="button"
+        class="absolute top-4 left-4 z-30 w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-md transition-transform active:scale-95"
+        @click="goBackOrHome"
+      >
+        <Icon name="arrow-left" class="w-5 h-5 text-slate-800" />
+      </button>
+
+      <!-- Greeting & Subtitle floats directly on the illustration's own wave
+           (no separate flat-color box), so there's no green seam/edge against it -->
+      <div class="absolute inset-x-5 bottom-8 z-10 flex flex-col items-center justify-center text-center">
+        <h1 class="font-display font-extrabold text-[14px] sm:text-[16px] leading-tight text-white text-center drop-shadow-sm">
+          {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
+        </h1>
+        <p class="text-white/95 text-[10.5px] sm:text-[12px] font-bold text-center mt-0.5">
+          {{ subtitleText }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Full-Width Header: BisaBelanja = ilustrasi flat vector + wave lime (pola Gojek) -->
+    <div
+      v-else-if="route.query.category === 'bisabelanja'"
+      class="relative w-full overflow-hidden bg-[#060f29] rounded-b-[2rem]"
+    >
+      <BisaBelanjaHeroArt />
+
+      <!-- Floating Back Button (White circle, Gojek style) -->
+      <button
+        type="button"
+        class="absolute top-4 left-4 z-30 w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-md transition-transform active:scale-95"
+        @click="goBackOrHome"
+      >
+        <Icon name="arrow-left" class="w-5 h-5 text-slate-800" />
+      </button>
+
+      <!-- Greeting & Subtitle: floats directly on the illustration's own wave
+           (no separate flat-color box), so there's no seam/edge against it -->
+      <div class="absolute inset-x-5 bottom-16 z-10 flex flex-col items-center justify-center text-center">
+        <h1 class="font-display font-extrabold text-[16px] sm:text-[18px] leading-tight text-white text-center drop-shadow-sm">
+          {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
+        </h1>
+        <p class="text-white/95 text-[12px] sm:text-[13.5px] font-bold text-center mt-0.5">
+          {{ subtitleText }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Full-Width Header: ilustrasi PNG lokasi lainnya (pagi/sore/malam) -->
+    <div v-else class="relative w-full overflow-hidden bg-[#155b0e]">
       <div class="relative w-full">
         <img :src="cardBorderLocationImg" alt="Tugasin" class="w-full h-auto block" />
 
@@ -577,19 +688,22 @@ onBeforeUnmount(() => {
         </button>
 
         <!-- Greeting & Subtitle, anchored right in the green band at the bottom of the artwork -->
-        <div class="absolute inset-x-5 bottom-0 z-10 flex flex-col items-center justify-center text-center text-white">
+        <div class="absolute inset-x-5 bottom-1 z-10 flex flex-col items-center justify-center text-center text-white">
           <h1 class="font-display font-extrabold text-[13px] sm:text-[15px] leading-tight text-white text-center drop-shadow-md">
             {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
           </h1>
           <p class="text-white/95 text-[10px] sm:text-[11px] font-semibold text-center mt-0.5 drop-shadow-sm">
-            Mau anter tugas ke mana hari ini?
+            {{ subtitleText }}
           </p>
         </div>
       </div>
     </div>
 
-    <!-- Floating White Content Sheet (lowered so the green hill text stays clearly visible) -->
-    <div class="px-4 mt-0 relative z-20">
+    <!-- Floating White Content Sheet (raised slightly for maps) -->
+    <div
+      class="px-4 relative z-20"
+      :class="contentSheetMarginClass"
+    >
       <div class="bg-(--color-surface-0) rounded-3xl shadow-(--shadow-float) p-4 flex flex-col gap-4">
         <!-- map preview: real Leaflet map, centered on the device's live GPS position -->
         <button
@@ -597,7 +711,11 @@ onBeforeUnmount(() => {
           class="relative w-full h-40 rounded-2xl overflow-hidden bg-(--color-surface-container) text-left shadow-inner"
           @click="openMap"
         >
-          <div ref="previewMapEl" class="absolute inset-0 pointer-events-none"></div>
+          <div
+            ref="previewMapEl"
+            class="absolute inset-0 pointer-events-none"
+            :style="{ visibility: mapOpen ? 'hidden' : 'visible' }"
+          ></div>
           <span class="absolute top-2.5 left-2.5 glass-panel rounded-full text-[11px] font-bold px-2.5 py-1 flex items-center gap-1 text-(--color-on-surface)">
             <Icon name="map" class="w-3 h-3" />Pilih di Peta
           </span>
@@ -662,8 +780,8 @@ onBeforeUnmount(() => {
         <div class="flex gap-2.5">
           <button
             type="button"
-            class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-[12.5px] font-bold text-(--color-on-surface)"
-            :class="savedPlaces.home ? 'bg-(--color-primary-container)' : 'bg-(--color-surface-container)'"
+            class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-[12.5px] font-bold text-(--color-on-surface) border-0 border-transparent transition-colors"
+            :class="savedPlaces.home ? 'bg-(--color-primary-container)' : 'bg-white'"
             @click="handleQuickSave('home')"
           >
             <Icon name="home" class="w-4 h-4 text-(--color-on-primary-container)" />
@@ -671,8 +789,8 @@ onBeforeUnmount(() => {
           </button>
           <button
             type="button"
-            class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-[12.5px] font-bold text-(--color-on-surface)"
-            :class="savedPlaces.office ? 'bg-(--color-primary-container)' : 'bg-(--color-surface-container)'"
+            class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-[12.5px] font-bold text-(--color-on-surface) border-0 border-transparent transition-colors"
+            :class="savedPlaces.office ? 'bg-(--color-primary-container)' : 'bg-white'"
             @click="handleQuickSave('office')"
           >
             <Icon name="business" class="w-4 h-4 text-(--color-on-primary-container)" />
@@ -692,11 +810,22 @@ onBeforeUnmount(() => {
         <div class="h-px w-full bg-(--color-outline)/40"></div>
 
         <!-- saved / recent places -->
-        <div>
-          <div class="text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide mb-1">Tersimpan / Baru-Baru Ini</div>
-          <div v-if="placeList.length" class="flex flex-col">
-            <button
-              v-for="place in placeList"
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide">Tersimpan / Baru-Baru Ini</div>
+              <button
+                v-if="placeList.length"
+                type="button"
+                class="flex items-center gap-1 text-[11px] font-semibold text-(--color-on-surface-variant) hover:text-(--color-error) transition-colors"
+                @click="confirmClearAll"
+              >
+                <Icon name="trash" class="w-3.5 h-3.5" />
+                Hapus Semua
+              </button>
+            </div>
+            <div v-if="placeList.length" class="flex flex-col">
+              <button
+                v-for="place in placeList"
               :key="place.id"
               type="button"
               class="flex items-center gap-3.5 py-3 border-b border-(--color-outline)/30 last:border-b-0 text-left"
@@ -723,12 +852,42 @@ onBeforeUnmount(() => {
           <p v-else class="text-[12.5px] text-(--color-on-surface-variant) py-2">
             Belum ada alamat tersimpan. Pilih lokasi lalu klik &ldquo;Simpan Rumah&rdquo; atau &ldquo;Simpan Kantor&rdquo;.
           </p>
+          </div>
         </div>
       </div>
-    </div>
+    <!-- Clear All confirmation dialog: sibling of the content sheet, not nested
+         inside it — otherwise its fixed z-50 overlay inherits the sheet's own
+         (lower) stacking context and ends up hit-testing BELOW the header's
+         z-30 back button instead of on top of it. Same reasoning applies to
+         the fullscreen map picker overlay just below. -->
+        <div v-if="showClearAllConfirm" class="fixed inset-0 z-50 flex items-end bg-black/30">
+         <div class="w-full bg-(--color-surface-0) border-t-2 border-(--color-outline) rounded-t-[20px] pb-safe:pb-6">
+           <div class="px-5 pt-5 pb-2">
+             <p class="text-center text-[13px] text-(--color-on-surface-variant)">
+               Hapus semua alamat tersimpan dan riwayat? Tindakan ini tidak dapat dibatalkan.
+             </p>
+           </div>
+           <div class="flex gap-3 px-5 pt-3">
+             <button
+               type="button"
+               class="flex-1 py-2.5 rounded-full bg-(--color-surface-container) text-(--color-on-surface) font-semibold text-[14px]"
+               @click="showClearAllConfirm = false"
+             >
+               Batal
+             </button>
+             <button
+               type="button"
+               class="flex-1 py-2.5 rounded-full bg-(--color-error) text-white font-semibold text-[14px]"
+               @click="clearAllPlaces"
+             >
+               Hapus
+             </button>
+           </div>
+         </div>
+       </div>
 
-    <!-- fullscreen Leaflet map picker overlay -->
-    <div v-if="mapOpen" class="fixed inset-0 z-50 flex flex-col bg-(--color-surface)">
+       <!-- fullscreen Leaflet map picker overlay -->
+       <div v-if="mapOpen" class="fixed inset-0 z-50 flex flex-col bg-(--color-surface)">
       <div class="flex items-center gap-3 px-5 py-4 bg-(--color-surface-0) border-b border-(--color-outline)">
         <button type="button" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="closeMap">
           <Icon name="arrow-left" class="w-[19px] h-[19px]" />
@@ -736,7 +895,7 @@ onBeforeUnmount(() => {
         <h3 class="text-base font-extrabold flex-1">Pilih di Peta</h3>
       </div>
 
-      <div ref="mapEl" class="flex-1 w-full"></div>
+      <div ref="mapEl" :key="mapInstanceKey" class="flex-1 w-full"></div>
 
       <div class="px-5 py-4 bg-(--color-surface-0) border-t border-(--color-outline)">
         <p class="text-center text-xs text-(--color-on-surface-variant) mb-3">Geser peta lalu ketuk pin untuk menandai lokasi tugas</p>

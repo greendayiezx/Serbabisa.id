@@ -8,7 +8,13 @@ export interface AngkutDraft {
   helperCount: number
   tanggal: string
   waktu: string
+  beratTotal: number | null
   total: number
+  catatan?: string
+  namaPenerima?: string
+  teleponPenerima?: string
+  protectionLabel?: string
+  protectionPrice?: number
 }
 
 export const useAngkutDraftStore = defineStore('angkutDraft', () => {
@@ -18,9 +24,14 @@ export const useAngkutDraftStore = defineStore('angkutDraft', () => {
     draft.value = value
   }
 
+  function patchDraft(value: Partial<AngkutDraft>) {
+    if (!draft.value) return
+    draft.value = { ...draft.value, ...value }
+  }
+
   function clearDraft() {
     draft.value = null
   }
 
-  return { draft, setDraft, clearDraft }
+  return { draft, setDraft, patchDraft, clearDraft }
 })

@@ -8,17 +8,10 @@ import { useAngkutDraftStore } from '@/stores/angkutDraft'
 import vehicleMotorBoxImg from '@/assets/vehicle-motor-box.svg'
 import vehiclePickupBakImg from '@/assets/vehicle-pickup-bak.svg'
 import vehicleBlindVanImg from '@/assets/vehicle-blind-van.svg'
+import BisaAngkutNavbar from '@/components/angkut/BisaAngkutNavbar.vue'
 
 const router = useRouter()
 const angkutDraftStore = useAngkutDraftStore()
-
-function goBackOrHome() {
-  if (window.history.state?.back) {
-    router.back()
-  } else {
-    router.push({ name: 'home' })
-  }
-}
 
 type DeliveryId = 'instant' | 'instant_hemat' | 'sameday'
 
@@ -55,9 +48,10 @@ const catatan = ref('')
 const photos = ref<File[]>([])
 const photoInput = ref<HTMLInputElement | null>(null)
 const cameraInput = ref<HTMLInputElement | null>(null)
-const helperCount = ref(1)
+const helperCount = ref(0)
 const tanggal = ref('')
 const waktu = ref('')
+const beratTotal = ref<number | null>(null)
 
 function pickPhotos() {
   photoInput.value?.click()
@@ -105,7 +99,9 @@ function lanjut() {
     helperCount: helperCount.value,
     tanggal: tanggal.value,
     waktu: waktu.value,
+    beratTotal: beratTotal.value,
     total: estimasiTotal.value,
+    catatan: catatan.value,
   })
   router.push({ name: 'task-angkut-confirm' })
 }
@@ -113,17 +109,9 @@ function lanjut() {
 
 <template>
   <div class="min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-28">
-    <!-- Header: simple bar, no illustration -->
-    <div class="flex items-center gap-3 px-5 pt-5 pb-2">
-      <button
-        type="button"
-        class="w-10 h-10 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0"
-        @click="goBackOrHome"
-      >
-        <Icon name="arrow-left" class="w-5 h-5" />
-      </button>
-      <h1 class="font-extrabold text-[16px] text-(--color-on-surface)">Detail Pengiriman</h1>
-    </div>
+    <!-- Header: Navy navbar with SVG + BisaAngkut -->
+    <BisaAngkutNavbar />
+
 
     <div class="px-5 py-6 flex flex-col gap-7">
       <!-- Vehicle + delivery service summary, opens the combined bottom sheet -->
@@ -134,7 +122,7 @@ function lanjut() {
           class="w-full flex items-start gap-3 rounded-2xl bg-(--color-surface-0) border border-(--color-outline)/40 shadow-(--shadow-lift) px-4 py-3.5 transition-transform active:scale-[0.99]"
           @click="deliveryOpen = true"
         >
-          <span class="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center shrink-0 bg-(--color-surface-container)">
+          <span class="w-11 h-11 flex items-center justify-center shrink-0">
             <img v-if="currentVehicle?.image" :src="currentVehicle.image" :alt="currentVehicle.label" class="w-full h-full object-contain" />
             <Icon v-else-if="currentVehicle" :name="currentVehicle.icon" class="w-6 h-6 text-(--color-azure)" />
           </span>
@@ -191,7 +179,7 @@ function lanjut() {
                         :class="selectedVehicle === v.id ? 'border-(--color-azure) bg-(--color-primary-container)' : 'border-(--color-outline) bg-(--color-surface-0)'"
                       >
                         <span
-                          class="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center"
+                          class="w-12 h-12 flex items-center justify-center"
                           :class="v.image ? '' : (selectedVehicle === v.id ? 'bg-white text-(--color-azure)' : 'bg-(--color-surface-container) text-(--color-azure)')"
                         >
                           <img v-if="v.image" :src="v.image" :alt="v.label" class="w-full h-full object-contain" />
@@ -270,6 +258,24 @@ function lanjut() {
           </button>
         </div>
         <p v-if="photos.length" class="text-[12px] text-(--color-on-surface-variant)">{{ photos.length }} foto dipilih</p>
+
+        <div class="flex items-center gap-3 rounded-(--radius-input) bg-white border border-(--color-outline)/40 shadow-xs px-3.5 py-3">
+          <div class="flex-1 flex flex-col">
+            <span class="text-[13px] font-bold text-(--color-on-surface)">Estimasi Berat Total</span>
+            <span class="text-[11px] text-(--color-on-surface-variant)">Perkiraan berat seluruh barang</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <input
+              v-model.number="beratTotal"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              placeholder="0"
+              class="w-16 bg-transparent text-right text-lg font-extrabold text-(--color-on-surface) outline-none placeholder:text-(--color-on-surface-variant)"
+            />
+            <span class="text-sm font-bold text-(--color-on-surface-variant)">kg</span>
+          </div>
+        </div>
       </section>
 
       <!-- Schedule -->

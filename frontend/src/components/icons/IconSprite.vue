@@ -52,6 +52,9 @@
       <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" /><circle cx="12" cy="13" r="3.5" /></symbol>
       <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></symbol>
       <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M12 11v6" /><circle cx="12" cy="7.7" r="0.6" fill="currentColor" stroke="none" /></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M15.5 4.5l4 4L8 20H4v-4L15.5 4.5Z" /><path d="M13 7l4 4" /></symbol>
+      <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18" /><path d="M8 3h8a1 1 0 0 1 1 1v1H7V4a1 1 0 0 1 1-1Z" /><path d="M5 8h14v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8Z" /></symbol>
     </defs>
   </svg>
 </template>

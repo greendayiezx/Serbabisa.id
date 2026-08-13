@@ -42,7 +42,6 @@ onMounted(async () => {
     form.lokasi_alamat = location.alamat
     form.lokasi_lat = location.lat
     form.lokasi_lng = location.lng
-    locationStore.clearDraft()
   }
 })
 
@@ -56,6 +55,7 @@ async function handleSubmit() {
   try {
     const task = await taskStore.createTask(form)
     draftStore.reset()
+    locationStore.clearDraft()
     router.push({ name: 'task-detail', params: { id: task.id } })
   } catch (err: any) {
     error.value = err.response?.data?.message ?? 'Gagal membuat tugas.'

@@ -19,19 +19,46 @@ export interface PlaceItem {
 
 export type SavedPlaceKey = 'home' | 'office'
 
+export type SavePlaceResult = 'saved' | 'duplicate'
+
+export function isSameLocation(a: TaskLocation, b: TaskLocation) {
+  return (
+    a.alamat.trim().toLowerCase() === b.alamat.trim().toLowerCase() ||
+    (Number(a.lat).toFixed(5) === Number(b.lat).toFixed(5) &&
+      Number(a.lng).toFixed(5) === Number(b.lng).toFixed(5))
+  )
+}
+
 const SAVED_KEY = 'tugasin_saved_places'
 const SEARCH_HISTORY_KEY = 'tugasin_search_history'
+const DRAFT_KEY = 'tugasin_location_draft'
+
+function loadDraft(): TaskLocation | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object' && typeof parsed.alamat === 'string') {
+      return { alamat: parsed.alamat, lat: Number(parsed.lat), lng: Number(parsed.lng) }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
 
 export const useLocationStore = defineStore('location', () => {
-  const draft = ref<TaskLocation | null>(null)
+  const draft = ref<TaskLocation | null>(loadDraft())
   const recent = ref<PlaceItem[]>([])
 
   function setDraft(location: TaskLocation) {
     draft.value = location
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(location))
   }
 
   function clearDraft() {
     draft.value = null
+    localStorage.removeItem(DRAFT_KEY)
   }
 
   function loadSearchHistory(): PlaceItem[] {
@@ -47,10 +74,10 @@ export const useLocationStore = defineStore('location', () => {
 
   function addSearchHistory(location: TaskLocation): PlaceItem[] {
     const list = loadSearchHistory()
-    const key = `${location.lat.toFixed(5)},${location.lng.toFixed(5)}`
-    const filtered = list.filter((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}` !== key)
+    const coordKey = `${location.lat.toFixed(5)},${location.lng.toFixed(5)}`
+    const filtered = list.filter((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}` !== coordKey)
     filtered.unshift({
-      id: `history:${key}`,
+      id: `history:${coordKey}`,
       label: location.alamat,
       address: location.alamat,
       lat: location.lat,
@@ -73,10 +100,14 @@ export const useLocationStore = defineStore('location', () => {
     }
   }
 
-  function savePlace(key: SavedPlaceKey, location: TaskLocation) {
+  function savePlace(key: SavedPlaceKey, location: TaskLocation): SavePlaceResult {
     const saved = loadSavedPlaces()
+    for (const place of Object.values(saved) as TaskLocation[]) {
+      if (place && isSameLocation(place, location)) return 'duplicate'
+    }
     saved[key] = location
     localStorage.setItem(SAVED_KEY, JSON.stringify(saved))
+    return 'saved'
   }
 
   async function fetchRecent() {
@@ -85,5 +116,19 @@ export const useLocationStore = defineStore('location', () => {
     return data
   }
 
-  return { draft, recent, setDraft, clearDraft, loadSavedPlaces, savePlace, fetchRecent, loadSearchHistory, addSearchHistory }
+  function clearSavedPlaces() {
+    localStorage.removeItem(SAVED_KEY)
+  }
+
+  function clearSearchHistory() {
+    localStorage.removeItem(SEARCH_HISTORY_KEY)
+  }
+
+  function clearAll() {
+    clearSavedPlaces()
+    clearSearchHistory()
+    clearDraft()
+  }
+
+  return { draft, recent, setDraft, clearDraft, loadSavedPlaces, savePlace, fetchRecent, loadSearchHistory, addSearchHistory, isSameLocation, clearSavedPlaces, clearSearchHistory, clearAll }
 })
