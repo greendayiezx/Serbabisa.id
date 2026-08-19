@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Wallet;
+use App\Support\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -22,15 +23,26 @@ class AuthController extends Controller
             'role' => ['required', Rule::in(['customer', 'mitra'])],
         ]);
 
-        $user = User::create([
+        $user = new User([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'],
         ]);
 
+        // Kolom sensitif di-set eksplisit, bukan dari mass assignment.
+        // 'role' sudah divalidasi hanya boleh customer|mitra (admin tidak
+        // pernah bisa mendaftar sendiri). is_active default aktif.
+        $user->role = $validated['role'];
+        $user->is_active = true;
+        $user->save();
+
         Wallet::create(['user_id' => $user->id, 'saldo' => 0]);
+
+        AuditLog::record('auth.register', $request, [
+            'user_id' => $user->id,
+            'role' => $user->role,
+        ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -48,6 +60,10 @@ class AuthController extends Controller
         ]);
 
         if (! Auth::attempt($credentials)) {
+            AuditLog::record('auth.login.failed', $request, [
+                'email' => $credentials['email'],
+            ]);
+
             return response()->json([
                 'message' => 'Email atau password salah.',
             ], 401);
@@ -57,10 +73,18 @@ class AuthController extends Controller
         $user = Auth::user();
 
         if (! $user->is_active) {
+            AuditLog::record('auth.login.blocked_inactive', $request, [
+                'user_id' => $user->id,
+            ]);
+
             return response()->json([
                 'message' => 'Akun Anda dinonaktifkan. Hubungi admin.',
             ], 403);
         }
+
+        AuditLog::record('auth.login.success', $request, [
+            'user_id' => $user->id,
+        ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -72,6 +96,10 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        AuditLog::record('auth.logout', $request, [
+            'user_id' => $request->user()->id,
+        ]);
+
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Berhasil logout.']);

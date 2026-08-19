@@ -13,6 +13,8 @@ class MessageController extends Controller
      */
     public function index(Task $task)
     {
+        $this->authorize('view', $task);
+
         return response()->json(
             $task->messages()->with('sender:id,name')->orderBy('created_at')->get()
         );
@@ -23,6 +25,8 @@ class MessageController extends Controller
      */
     public function store(Request $request, Task $task)
     {
+        $this->authorize('update', $task);
+
         $validated = $request->validate([
             'isi' => ['required', 'string'],
         ]);

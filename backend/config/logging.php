@@ -73,6 +73,17 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Jejak audit aksi sensitif (login gagal/sukses, register, transaksi,
+        // payout, keputusan dispute) — terpisah dari log aplikasi biasa,
+        // disimpan lebih lama untuk keperluan forensik (VULN-009).
+        'audit' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/audit.log'),
+            'level' => 'info',
+            'days' => env('LOG_AUDIT_DAYS', 365),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

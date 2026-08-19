@@ -63,6 +63,8 @@ class TaskController extends Controller
      */
     public function show(Task $task)
     {
+        $this->authorize('view', $task);
+
         return response()->json($task->load(['category', 'mitra', 'customer']));
     }
 
@@ -108,6 +110,8 @@ class TaskController extends Controller
      */
     public function update(Request $request, Task $task)
     {
+        $this->authorize('update', $task);
+
         $validated = $request->validate([
             'status' => ['sometimes', Rule::in(['pending', 'accepted', 'in_progress', 'completed', 'cancelled'])],
         ]);
@@ -134,6 +138,8 @@ class TaskController extends Controller
      */
     public function destroy(Task $task)
     {
+        $this->authorize('delete', $task);
+
         $task->delete();
 
         return response()->json(null, 204);

@@ -17,6 +17,12 @@ class User extends Authenticatable
     /**
      * The attributes that are mass assignable.
      *
+     * Kolom sensitif (role, is_active, status_verifikasi) SENGAJA tidak
+     * dimasukkan agar tidak bisa di-set lewat mass assignment (mis.
+     * ->update($request->all())). Ubah nilainya hanya lewat penetapan
+     * eksplisit di alur yang sudah diotorisasi (lihat AuthController,
+     * AdminUserController). Mencegah privilege escalation.
+     *
      * @var list<string>
      */
     protected $fillable = [
@@ -24,9 +30,6 @@ class User extends Authenticatable
         'email',
         'phone',
         'password',
-        'role',
-        'status_verifikasi',
-        'is_active',
     ];
 
     /**

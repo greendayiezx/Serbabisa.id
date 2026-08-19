@@ -19,7 +19,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    // JANGAN pakai '*' di production. Whitelist origin frontend saja,
+    // diambil dari env FRONTEND_URL (bisa lebih dari satu, dipisah koma).
+    'allowed_origins' => array_filter(
+        explode(',', env('FRONTEND_URL', 'http://localhost:5173'))
+    ),
 
     'allowed_origins_patterns' => [],
 
@@ -29,6 +33,8 @@ return [
 
     'max_age' => 0,
 
+    // true jika suatu saat pindah ke Sanctum SPA (cookie). Untuk token
+    // Bearer di header, false sudah cukup.
     'supports_credentials' => false,
 
 ];

@@ -16,9 +16,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/ping', fn () => response()->json(['status' => 'ok']));
 
-// FR-01: Auth
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// FR-01: Auth — dibatasi rate limit untuk mencegah brute force & spam.
+// throttle:5,1 = maksimal 5 percobaan per menit per IP.
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
 // FR-16: Public category listing (kategori tetap, basis harga)
 Route::get('/categories', [CategoryController::class, 'index']);

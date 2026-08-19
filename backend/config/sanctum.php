@@ -50,7 +50,9 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Token kedaluwarsa setelah 7 hari (default) agar token yang bocor tidak
+    // berlaku selamanya (VULN-005). Bisa diatur lewat env SANCTUM_EXPIRATION.
+    'expiration' => env('SANCTUM_EXPIRATION', 60 * 24 * 7),
 
     /*
     |--------------------------------------------------------------------------
