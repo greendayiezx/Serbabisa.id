@@ -82,6 +82,9 @@ class AuthController extends Controller
             ], 403);
         }
 
+        $user->last_login_at = now();
+        $user->save();
+
         AuditLog::record('auth.login.success', $request, [
             'user_id' => $user->id,
         ]);
