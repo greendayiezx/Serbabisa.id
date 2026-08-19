@@ -13,6 +13,8 @@ import lottieSilver from '@/assets/lottie/protection-silver.json'
 import lottieGold from '@/assets/lottie/protection-gold.json'
 import lottiePlatinum from '@/assets/lottie/protection-platinum.json'
 import BisaAngkutNavbar from '@/components/angkut/BisaAngkutNavbar.vue'
+import { useSkeleton } from '@/composables/useSkeleton'
+import AngkutConfirmSkeleton from '@/components/skeleton/AngkutConfirmSkeleton.vue'
 
 const router = useRouter()
 const locationStore = useLocationStore()
@@ -323,232 +325,243 @@ onBeforeUnmount(() => {
   }
   closePicker()
 })
+
+/**
+ * Skeleton halaman: digambar di frame pertama, lalu konten asli menyusul di
+ * frame berikutnya. Dua rAF dipakai supaya skeleton benar-benar sempat
+ * dilukis browser sebelum kerja render konten dimulai.
+ */
+const { tampil: skelTampil, tandaiSiap } = useSkeleton()
+onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSiap())))
 </script>
 
 <template>
-  <div class="min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-28">
-    <!-- Header -->
-    <BisaAngkutNavbar />
-
-
-    <div class="px-5 pt-4 flex flex-col gap-5">
-      <!-- Map + location -->
-      <section class="bg-(--color-surface-0) rounded-(--radius-card) shadow-(--shadow-lift) border border-(--color-outline)/40 overflow-hidden">
-        <button type="button" class="block w-full text-left" @click="openPicker">
-          <div
-            ref="mapEl"
-            class="w-full h-40 bg-(--color-surface-container) pointer-events-none"
-            :style="{ visibility: pickerOpen ? 'hidden' : 'visible' }"
-          ></div>
-        </button>
-        <div class="p-4 flex flex-col gap-3">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <h3 class="text-sm font-bold text-(--color-on-surface) truncate">{{ alamatTitle || 'Lokasi belum dipilih' }}</h3>
-              <p class="text-[12px] text-(--color-on-surface-variant) mt-0.5 line-clamp-2">{{ alamat }}</p>
-            </div>
-            <button type="button" class="shrink-0 rounded-full bg-(--color-primary-container) text-(--color-on-primary-container) text-[12px] font-bold px-3.5 py-1.5" @click="openPicker">
-              Edit
-            </button>
-          </div>
-          <div class="flex items-center gap-2 rounded-(--radius-input) bg-(--color-surface-container) px-3.5 py-3">
-            <Icon name="pin" class="w-4 h-4 text-(--color-on-surface-variant) shrink-0" />
-            <input
-              v-model="patokan"
-              placeholder="Ada patokan terdekat? (opsional)"
-              class="w-full bg-transparent text-sm outline-none placeholder:text-(--color-on-surface-variant)"
-            />
-          </div>
-        </div>
-      </section>
-
-      <!-- Recipient details -->
-      <section class="flex flex-col gap-3.5">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm font-bold text-(--color-on-surface)">Detail Penerima</h2>
-          <button type="button" class="text-[12.5px] font-bold text-(--color-azure)" @click="pakaiDetailSaya">Pakai detail saya</button>
-        </div>
-
-        <div>
-          <label class="block text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide mb-1.5">Nama penerima*</label>
-          <input
-            v-model="namaPenerima"
-            placeholder="Masukkan nama penerima..."
-            class="w-full rounded-(--radius-input) bg-(--color-surface-container) px-3.5 py-3 text-sm outline-none placeholder:text-(--color-on-surface-variant)"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-bold text-(--color-on-surface) mb-2">
-            Nomor telepon<span class="text-red-500">*</span>
-          </label>
-          <div class="flex items-center gap-3">
-            <!-- Country code selector pill button -->
-            <div ref="countryDropdownRef" class="relative shrink-0">
-              <button
-                type="button"
-                class="flex items-center gap-1.5 rounded-full border border-(--color-outline)/40 bg-(--color-surface-0) px-3.5 py-1.5 text-sm font-bold text-(--color-on-surface) shadow-xs hover:bg-(--color-surface-container) transition-colors"
-                @click.stop="countryDropdownOpen = !countryDropdownOpen"
-              >
-                <img :src="flagUrl(selectedCountry.iso)" :alt="selectedCountry.name" class="w-5 h-3.5 rounded-[3px] object-cover shrink-0" />
-                <span>{{ selectedCountry.code }}</span>
-                <Icon name="chevron-down" class="w-3.5 h-3.5 text-(--color-on-surface-variant) transition-transform" :class="{ 'rotate-180': countryDropdownOpen }" />
-              </button>
-
-              <!-- Country dropdown menu -->
-              <div
-                v-if="countryDropdownOpen"
-                class="absolute left-0 top-full mt-1.5 z-40 w-56 rounded-2xl bg-(--color-surface-0) shadow-xl border border-(--color-outline)/40 py-1.5 max-h-60 overflow-y-auto"
-              >
-                <button
-                  v-for="country in countries"
-                  :key="country.code + country.name"
-                  type="button"
-                  class="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-left text-(--color-on-surface) hover:bg-(--color-surface-container) transition-colors"
-                  :class="{ 'bg-(--color-primary-container)/40 font-bold': country.code === selectedCountry.code }"
-                  @click="selectCountry(country)"
-                >
-                  <img :src="flagUrl(country.iso)" :alt="country.name" class="w-5 h-3.5 rounded-[3px] object-cover shrink-0" />
-                  <span class="font-bold min-w-10">{{ country.code }}</span>
-                  <span class="truncate text-(--color-on-surface-variant)">{{ country.name }}</span>
-                </button>
+  <AngkutConfirmSkeleton v-if="skelTampil" />
+  <template v-else>
+    <div class="min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-28">
+      <!-- Header -->
+      <BisaAngkutNavbar />
+  
+  
+      <div class="px-5 pt-4 flex flex-col gap-5">
+        <!-- Map + location -->
+        <section class="bg-(--color-surface-0) rounded-(--radius-card) shadow-(--shadow-lift) border border-(--color-outline)/40 overflow-hidden">
+          <button type="button" class="block w-full text-left" @click="openPicker">
+            <div
+              ref="mapEl"
+              class="w-full h-40 bg-(--color-surface-container) pointer-events-none"
+              :style="{ visibility: pickerOpen ? 'hidden' : 'visible' }"
+            ></div>
+          </button>
+          <div class="p-4 flex flex-col gap-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h3 class="text-sm font-bold text-(--color-on-surface) truncate">{{ alamatTitle || 'Lokasi belum dipilih' }}</h3>
+                <p class="text-[12px] text-(--color-on-surface-variant) mt-0.5 line-clamp-2">{{ alamat }}</p>
               </div>
+              <button type="button" class="shrink-0 rounded-full bg-(--color-primary-container) text-(--color-on-primary-container) text-[12px] font-bold px-3.5 py-1.5" @click="openPicker">
+                Edit
+              </button>
             </div>
-
-            <!-- Phone input field -->
-            <div class="flex-1 border-b border-(--color-outline)/40 transition-colors">
+            <div class="flex items-center gap-2 rounded-(--radius-input) bg-(--color-surface-container) px-3.5 py-3">
+              <Icon name="pin" class="w-4 h-4 text-(--color-on-surface-variant) shrink-0" />
               <input
-                v-model="teleponPenerima"
-                type="tel"
-                placeholder="Masukkan nomor telepon"
-                class="w-full bg-transparent text-sm font-medium text-(--color-on-surface) outline-none placeholder:text-(--color-on-surface-variant)/70 py-1 px-1"
+                v-model="patokan"
+                placeholder="Ada patokan terdekat? (opsional)"
+                class="w-full bg-transparent text-sm outline-none placeholder:text-(--color-on-surface-variant)"
               />
             </div>
           </div>
-        </div>
-
-        <!-- Simpan alamat? section -->
-        <div class="flex items-center justify-between gap-3 flex-wrap pt-3 mt-1">
-          <div class="flex items-center gap-3 text-(--color-on-surface) min-w-0">
-            <svg viewBox="0 0 24 24" width="22" height="22" class="fill-current text-(--color-on-surface) shrink-0">
-              <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
-            </svg>
-            <span class="font-extrabold text-[15px] text-(--color-on-surface) truncate">Simpan alamat?</span>
+        </section>
+  
+        <!-- Recipient details -->
+        <section class="flex flex-col gap-3.5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-(--color-on-surface)">Detail Penerima</h2>
+            <button type="button" class="text-[12.5px] font-bold text-(--color-azure)" @click="pakaiDetailSaya">Pakai detail saya</button>
           </div>
-          <button
-            type="button"
-            class="shrink-0 min-h-11 rounded-full px-6 text-sm font-extrabold transition-all active:scale-95 shadow-xs"
-            :class="alamatSaved ? 'bg-(--color-primary-container) text-(--color-on-primary-container)' : 'bg-(--color-azure) text-white hover:opacity-90'"
-            @click="handleSaveAddress"
-          >
-            {{ alamatSaved ? 'Tersimpan ✓' : 'Simpan' }}
-          </button>
-        </div>
-      </section>
-
-      <!-- Service summary -->
-      <section class="bg-(--color-surface-0) rounded-(--radius-card) shadow-(--shadow-lift) border border-(--color-outline)/40 p-4">
-        <h2 class="text-sm font-bold text-(--color-on-surface) mb-3.5">Ringkasan Layanan</h2>
-        <div class="flex items-start gap-3.5">
-          <span class="w-11 h-11 flex items-center justify-center shrink-0">
-            <img v-if="draft?.vehicleImage" :src="draft.vehicleImage" alt="" class="w-full h-full object-contain" />
-            <Icon v-else name="truck" class="w-6 h-6 text-(--color-on-surface)" />
-          </span>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between gap-2">
-              <h3 class="text-sm font-bold text-(--color-on-surface)">BisaAngkut</h3>
-              <span class="text-sm font-extrabold text-(--color-on-surface) shrink-0">{{ hargaFormatted }}</span>
-            </div>
-            <p class="text-[12.5px] text-(--color-on-surface-variant) mt-0.5">Kendaraan: {{ draft?.vehicleLabel || 'Pickup Bak' }} &middot; {{ draft?.deliveryLabel || 'Instant Hemat' }}</p>
-            <div v-if="jadwalLabel" class="flex items-center gap-1.5 mt-1.5 text-(--color-on-surface-variant)">
-              <Icon name="clock" class="w-3.5 h-3.5" />
-              <span class="text-[12px]">{{ jadwalLabel }}</span>
+  
+          <div>
+            <label class="block text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide mb-1.5">Nama penerima*</label>
+            <input
+              v-model="namaPenerima"
+              placeholder="Masukkan nama penerima..."
+              class="w-full rounded-(--radius-input) bg-(--color-surface-container) px-3.5 py-3 text-sm outline-none placeholder:text-(--color-on-surface-variant)"
+            />
+          </div>
+  
+          <div>
+            <label class="block text-sm font-bold text-(--color-on-surface) mb-2">
+              Nomor telepon<span class="text-red-500">*</span>
+            </label>
+            <div class="flex items-center gap-3">
+              <!-- Country code selector pill button -->
+              <div ref="countryDropdownRef" class="relative shrink-0">
+                <button
+                  type="button"
+                  class="flex items-center gap-1.5 rounded-full border border-(--color-outline)/40 bg-(--color-surface-0) px-3.5 py-1.5 text-sm font-bold text-(--color-on-surface) shadow-xs hover:bg-(--color-surface-container) transition-colors"
+                  @click.stop="countryDropdownOpen = !countryDropdownOpen"
+                >
+                  <img :src="flagUrl(selectedCountry.iso)" :alt="selectedCountry.name" class="w-5 h-3.5 rounded-[3px] object-cover shrink-0" />
+                  <span>{{ selectedCountry.code }}</span>
+                  <Icon name="chevron-down" class="w-3.5 h-3.5 text-(--color-on-surface-variant) transition-transform" :class="{ 'rotate-180': countryDropdownOpen }" />
+                </button>
+  
+                <!-- Country dropdown menu -->
+                <div
+                  v-if="countryDropdownOpen"
+                  class="absolute left-0 top-full mt-1.5 z-40 w-56 rounded-2xl bg-(--color-surface-0) shadow-xl border border-(--color-outline)/40 py-1.5 max-h-60 overflow-y-auto"
+                >
+                  <button
+                    v-for="country in countries"
+                    :key="country.code + country.name"
+                    type="button"
+                    class="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-left text-(--color-on-surface) hover:bg-(--color-surface-container) transition-colors"
+                    :class="{ 'bg-(--color-primary-container)/40 font-bold': country.code === selectedCountry.code }"
+                    @click="selectCountry(country)"
+                  >
+                    <img :src="flagUrl(country.iso)" :alt="country.name" class="w-5 h-3.5 rounded-[3px] object-cover shrink-0" />
+                    <span class="font-bold min-w-10">{{ country.code }}</span>
+                    <span class="truncate text-(--color-on-surface-variant)">{{ country.name }}</span>
+                  </button>
+                </div>
+              </div>
+  
+              <!-- Phone input field -->
+              <div class="flex-1 border-b border-(--color-outline)/40 transition-colors">
+                <input
+                  v-model="teleponPenerima"
+                  type="tel"
+                  placeholder="Masukkan nomor telepon"
+                  class="w-full bg-transparent text-sm font-medium text-(--color-on-surface) outline-none placeholder:text-(--color-on-surface-variant)/70 py-1 px-1"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <!-- Protection / insurance add-on -->
-      <section class="bg-(--color-surface-0) rounded-(--radius-card) shadow-(--shadow-lift) border border-(--color-outline)/40 p-4">
-        <h2 class="text-sm font-bold text-(--color-on-surface)">Perlindungan barang rusak atau hilang</h2>
-        <p class="text-[12.5px] text-(--color-on-surface-variant) mt-1 leading-relaxed">
-          Jaminan s.d. Rp5jt ditambahkan ke pengiriman ini. Berlaku untuk semua pengiriman, batalin kapan aja.
-        </p>
-        <span class="inline-block text-[12.5px] font-bold text-(--color-gold) mt-1.5">Cari tahu</span>
-
-        <div class="flex gap-3 mt-3.5 -mx-4 px-4 pt-2.5 pb-1 overflow-x-auto no-scrollbar">
-          <button
-            v-for="tier in protectionTiers"
-            :key="tier.id"
-            type="button"
-            class="relative shrink-0 w-[132px] rounded-(--radius-input) border p-3 text-left transition-colors"
-            :class="
-              selectedProtection === tier.id
-                ? 'border-(--color-azure) bg-(--color-primary-container)/40'
-                : 'border-(--color-outline)/50 bg-(--color-surface-0)'
-            "
-            @click="selectedProtection = tier.id"
-          >
-            <span
-              v-if="tier.badge"
-              class="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-(--color-error) text-white text-[9.5px] font-extrabold px-2.5 py-0.5 whitespace-nowrap shadow-xs uppercase tracking-wider text-center"
+  
+          <!-- Simpan alamat? section -->
+          <div class="flex items-center justify-between gap-3 flex-wrap pt-3 mt-1">
+            <div class="flex items-center gap-3 text-(--color-on-surface) min-w-0">
+              <svg viewBox="0 0 24 24" width="22" height="22" class="fill-current text-(--color-on-surface) shrink-0">
+                <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+              </svg>
+              <span class="font-extrabold text-[15px] text-(--color-on-surface) truncate">Simpan alamat?</span>
+            </div>
+            <button
+              type="button"
+              class="shrink-0 min-h-11 rounded-full px-6 text-sm font-extrabold transition-all active:scale-95 shadow-xs"
+              :class="alamatSaved ? 'bg-(--color-primary-container) text-(--color-on-primary-container)' : 'bg-(--color-azure) text-white hover:opacity-90'"
+              @click="handleSaveAddress"
             >
-              {{ tier.badge }}
+              {{ alamatSaved ? 'Tersimpan ✓' : 'Simpan' }}
+            </button>
+          </div>
+        </section>
+  
+        <!-- Service summary -->
+        <section class="bg-(--color-surface-0) rounded-(--radius-card) shadow-(--shadow-lift) border border-(--color-outline)/40 p-4">
+          <h2 class="text-sm font-bold text-(--color-on-surface) mb-3.5">Ringkasan Layanan</h2>
+          <div class="flex items-start gap-3.5">
+            <span class="w-11 h-11 flex items-center justify-center shrink-0">
+              <img v-if="draft?.vehicleImage" :src="draft.vehicleImage" alt="" class="w-full h-full object-contain" />
+              <Icon v-else name="truck" class="w-6 h-6 text-(--color-on-surface)" />
             </span>
-
-            <div class="flex items-start justify-between">
-              <LottieIcon :data="tier.lottie" :size="40" />
-              <span
-                class="w-5 h-5 rounded-full border flex items-center justify-center shrink-0"
-                :class="selectedProtection === tier.id ? 'bg-(--color-azure) border-(--color-azure)' : 'border-(--color-outline)'"
-              >
-                <Icon v-if="selectedProtection === tier.id" name="check" class="w-3 h-3 text-white" />
-              </span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2">
+                <h3 class="text-sm font-bold text-(--color-on-surface)">BisaAngkut</h3>
+                <span class="text-sm font-extrabold text-(--color-on-surface) shrink-0">{{ hargaFormatted }}</span>
+              </div>
+              <p class="text-[12.5px] text-(--color-on-surface-variant) mt-0.5">Kendaraan: {{ draft?.vehicleLabel || 'Pickup Bak' }} &middot; {{ draft?.deliveryLabel || 'Instant Hemat' }}</p>
+              <div v-if="jadwalLabel" class="flex items-center gap-1.5 mt-1.5 text-(--color-on-surface-variant)">
+                <Icon name="clock" class="w-3.5 h-3.5" />
+                <span class="text-[12px]">{{ jadwalLabel }}</span>
+              </div>
             </div>
-
-            <h3 class="text-[12.5px] font-bold text-(--color-on-surface) mt-2.5 leading-tight">{{ tier.label }}</h3>
-            <p class="text-[13px] font-bold text-(--color-on-surface) mt-0.5">Rp{{ tier.price.toLocaleString('id-ID') }}</p>
-            <p class="text-[11px] text-(--color-on-surface-variant) mt-1.5">Perlindungan s.d.</p>
-            <p class="text-[11.5px] font-bold text-black">{{ tier.coverage }}</p>
-          </button>
-        </div>
-      </section>
-    </div>
-
-    <!-- Sticky footer -->
-    <div class="fixed bottom-0 inset-x-0 z-20 bg-(--color-surface-0) border-t border-(--color-outline)/40 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-      <button
-        type="button"
-        class="w-full flex items-center justify-center gap-2 rounded-full bg-(--color-azure) text-white font-bold text-[15px] py-3.5 min-h-11 shadow-(--shadow-lift) disabled:opacity-50"
-        :disabled="!canConfirm || submitting"
-        @click="lanjutkan"
-      >
-        Lanjutkan
-        <Icon name="chevron-right" class="w-[18px] h-[18px]" />
-      </button>
-    </div>
-
-    <!-- Fullscreen pin picker, stays on this page instead of navigating away -->
-    <div v-if="pickerOpen" class="fixed inset-0 z-50 flex flex-col bg-(--color-surface)">
-      <div class="flex items-center gap-3 px-5 py-4 bg-(--color-surface-0) border-b border-(--color-outline)">
-        <button type="button" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="closePicker">
-          <Icon name="arrow-left" class="w-[19px] h-[19px]" />
-        </button>
-        <h3 class="text-base font-extrabold flex-1">Pilih di Peta</h3>
+          </div>
+        </section>
+  
+        <!-- Protection / insurance add-on -->
+        <section class="bg-(--color-surface-0) rounded-(--radius-card) shadow-(--shadow-lift) border border-(--color-outline)/40 p-4">
+          <h2 class="text-sm font-bold text-(--color-on-surface)">Perlindungan barang rusak atau hilang</h2>
+          <p class="text-[12.5px] text-(--color-on-surface-variant) mt-1 leading-relaxed">
+            Jaminan s.d. Rp5jt ditambahkan ke pengiriman ini. Berlaku untuk semua pengiriman, batalin kapan aja.
+          </p>
+          <span class="inline-block text-[12.5px] font-bold text-(--color-gold) mt-1.5">Cari tahu</span>
+  
+          <div class="flex gap-3 mt-3.5 -mx-4 px-4 pt-2.5 pb-1 overflow-x-auto no-scrollbar">
+            <button
+              v-for="tier in protectionTiers"
+              :key="tier.id"
+              type="button"
+              class="relative shrink-0 w-[132px] rounded-(--radius-input) border p-3 text-left transition-colors"
+              :class="
+                selectedProtection === tier.id
+                  ? 'border-(--color-azure) bg-(--color-primary-container)/40'
+                  : 'border-(--color-outline)/50 bg-(--color-surface-0)'
+              "
+              @click="selectedProtection = tier.id"
+            >
+              <span
+                v-if="tier.badge"
+                class="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-(--color-error) text-white text-[9.5px] font-extrabold px-2.5 py-0.5 whitespace-nowrap shadow-xs uppercase tracking-wider text-center"
+              >
+                {{ tier.badge }}
+              </span>
+  
+              <div class="flex items-start justify-between">
+                <LottieIcon :data="tier.lottie" :size="40" />
+                <span
+                  class="w-5 h-5 rounded-full border flex items-center justify-center shrink-0"
+                  :class="selectedProtection === tier.id ? 'bg-(--color-azure) border-(--color-azure)' : 'border-(--color-outline)'"
+                >
+                  <Icon v-if="selectedProtection === tier.id" name="check" class="w-3 h-3 text-white" />
+                </span>
+              </div>
+  
+              <h3 class="text-[12.5px] font-bold text-(--color-on-surface) mt-2.5 leading-tight">{{ tier.label }}</h3>
+              <p class="text-[13px] font-bold text-(--color-on-surface) mt-0.5">Rp{{ tier.price.toLocaleString('id-ID') }}</p>
+              <p class="text-[11px] text-(--color-on-surface-variant) mt-1.5">Perlindungan s.d.</p>
+              <p class="text-[11.5px] font-bold text-black">{{ tier.coverage }}</p>
+            </button>
+          </div>
+        </section>
       </div>
-
-      <div ref="pickerMapEl" class="flex-1 w-full"></div>
-
-      <div class="px-5 py-4 bg-(--color-surface-0) border-t border-(--color-outline)">
-        <p class="text-center text-xs text-(--color-on-surface-variant) mb-3">Geser peta lalu ketuk pin untuk menandai lokasi</p>
+  
+      <!-- Sticky footer -->
+      <div class="fixed bottom-0 inset-x-0 z-20 bg-(--color-surface-0) border-t border-(--color-outline)/40 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <button
           type="button"
-          class="w-full flex items-center justify-center gap-2 rounded-full bg-(--color-azure) text-white font-bold text-[15px] py-3.5 min-h-11"
-          @click="confirmPicker"
+          class="w-full flex items-center justify-center gap-2 rounded-full bg-(--color-azure) text-white font-bold text-[15px] py-3.5 min-h-11 shadow-(--shadow-lift) disabled:opacity-50"
+          :disabled="!canConfirm || submitting"
+          @click="lanjutkan"
         >
-          <Icon name="pin" class="w-[18px] h-[18px]" />Gunakan Lokasi Ini
+          Lanjutkan
+          <Icon name="chevron-right" class="w-[18px] h-[18px]" />
         </button>
       </div>
+  
+      <!-- Fullscreen pin picker, stays on this page instead of navigating away -->
+      <div v-if="pickerOpen" class="fixed inset-0 z-50 flex flex-col bg-(--color-surface)">
+        <div class="flex items-center gap-3 px-5 py-4 bg-(--color-surface-0) border-b border-(--color-outline)">
+          <button type="button" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="closePicker">
+            <Icon name="arrow-left" class="w-[19px] h-[19px]" />
+          </button>
+          <h3 class="text-base font-extrabold flex-1">Pilih di Peta</h3>
+        </div>
+  
+        <div ref="pickerMapEl" class="flex-1 w-full"></div>
+  
+        <div class="px-5 py-4 bg-(--color-surface-0) border-t border-(--color-outline)">
+          <p class="text-center text-xs text-(--color-on-surface-variant) mb-3">Geser peta lalu ketuk pin untuk menandai lokasi</p>
+          <button
+            type="button"
+            class="w-full flex items-center justify-center gap-2 rounded-full bg-(--color-azure) text-white font-bold text-[15px] py-3.5 min-h-11"
+            @click="confirmPicker"
+          >
+            <Icon name="pin" class="w-[18px] h-[18px]" />Gunakan Lokasi Ini
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
+  </template>
 </template>

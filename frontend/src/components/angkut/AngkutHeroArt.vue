@@ -1,48 +1,69 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { HERO_SKY, type HeroTimeOfDay } from '@/lib/heroSky'
+
+const props = withDefaults(defineProps<{ timeOfDay?: HeroTimeOfDay }>(), {
+  timeOfDay: 'malam',
+})
+
+const p = computed(() => HERO_SKY[props.timeOfDay])
+
+const altText = computed(() => {
+  const waktu = {
+    pagi: 'pagi hari',
+    siang: 'siang hari',
+    sore: 'sore hari',
+    malam: 'malam hari',
+  }[props.timeOfDay]
+  return `Ilustrasi truk BisaAngkut dan dua kurir di jalan kota pada ${waktu}`
+})
+</script>
+
 <template>
   <!--
-    Hero ilustrasi BisaAngkut — flat vector / 2D, tema malam:
-    langit navy gradient, bulan, bintang, siluet kota, truk box navy
-    dengan logo & brand BisaAngkut, kurir di samping kanan.
+    Hero ilustrasi BisaAngkut — flat vector / 2D. Nuansa langit, siluet kota,
+    matahari/bulan, bintang, dan lampu jalan mengikuti waktu nyata
+    (pagi/siang/sore/malam) lewat palet di @/lib/heroSky.
   -->
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 400 620"
     preserveAspectRatio="xMidYMax slice"
     role="img"
-    aria-label="Ilustrasi truk BisaAngkut dan dua kurir di jalan kota pada malam hari"
+    :aria-label="altText"
     class="block w-full h-auto"
   >
     <defs>
       <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#070E26"/>
-        <stop offset="38%" stop-color="#0D1839"/>
-        <stop offset="72%" stop-color="#152859"/>
-        <stop offset="100%" stop-color="#1F3A76"/>
+        <stop offset="0%" :stop-color="p.sky[0]"/>
+        <stop offset="38%" :stop-color="p.sky[1]"/>
+        <stop offset="72%" :stop-color="p.sky[2]"/>
+        <stop offset="100%" :stop-color="p.sky[3]"/>
       </linearGradient>
 
       <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="#F6E9BE" stop-opacity="0.30"/>
-        <stop offset="45%" stop-color="#F6E9BE" stop-opacity="0.10"/>
-        <stop offset="100%" stop-color="#F6E9BE" stop-opacity="0"/>
+        <stop offset="0%" :stop-color="p.celestialGlow" stop-opacity="0.30"/>
+        <stop offset="45%" :stop-color="p.celestialGlow" stop-opacity="0.10"/>
+        <stop offset="100%" :stop-color="p.celestialGlow" stop-opacity="0"/>
       </radialGradient>
 
       <radialGradient id="horizonHaze" cx="50%" cy="100%" r="70%">
-        <stop offset="0%" stop-color="#4A7FD6" stop-opacity="0.28"/>
-        <stop offset="60%" stop-color="#2B4E9E" stop-opacity="0.10"/>
-        <stop offset="100%" stop-color="#2B4E9E" stop-opacity="0"/>
+        <stop offset="0%" :stop-color="p.haze.color" :stop-opacity="p.haze.inner"/>
+        <stop offset="60%" :stop-color="p.haze.color" :stop-opacity="p.haze.mid"/>
+        <stop offset="100%" :stop-color="p.haze.color" stop-opacity="0"/>
       </radialGradient>
 
       <linearGradient id="bldgFar" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#22376E"/>
-        <stop offset="100%" stop-color="#182A57"/>
+        <stop offset="0%" :stop-color="p.bldgFar[0]"/>
+        <stop offset="100%" :stop-color="p.bldgFar[1]"/>
       </linearGradient>
       <linearGradient id="bldgMid" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#182B5C"/>
-        <stop offset="100%" stop-color="#101E45"/>
+        <stop offset="0%" :stop-color="p.bldgMid[0]"/>
+        <stop offset="100%" :stop-color="p.bldgMid[1]"/>
       </linearGradient>
       <linearGradient id="bldgNear" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#101D42"/>
-        <stop offset="100%" stop-color="#08122E"/>
+        <stop offset="0%" :stop-color="p.bldgNear[0]"/>
+        <stop offset="100%" :stop-color="p.bldgNear[1]"/>
       </linearGradient>
 
       <linearGradient id="boxBody" x1="0" y1="0" x2="0" y2="1">
@@ -80,13 +101,13 @@
       </linearGradient>
 
       <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="#B7E36B" stop-opacity="0.42"/>
+        <stop offset="0%" stop-color="#B7E36B" :stop-opacity="p.lampOpacity"/>
         <stop offset="100%" stop-color="#B7E36B" stop-opacity="0"/>
       </radialGradient>
 
       <radialGradient id="groundShade" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="#03071A" stop-opacity="0.65"/>
-        <stop offset="100%" stop-color="#03071A" stop-opacity="0"/>
+        <stop offset="0%" :stop-color="p.groundShade" stop-opacity="0.65"/>
+        <stop offset="100%" :stop-color="p.groundShade" stop-opacity="0"/>
       </radialGradient>
     </defs>
 
@@ -94,8 +115,8 @@
     <rect width="400" height="620" fill="url(#sky)"/>
     <rect y="200" width="400" height="200" fill="url(#horizonHaze)"/>
 
-    <!-- Stars -->
-    <g fill="#FFFFFF">
+    <!-- Stars (disembunyikan saat siang, redup saat sore) -->
+    <g v-if="p.starOpacity > 0" fill="#FFFFFF" :opacity="p.starOpacity">
       <circle cx="30" cy="48" r="1.5" opacity=".85"/>
       <circle cx="72" cy="92" r="1" opacity=".55"/>
       <circle cx="112" cy="36" r="1.3" opacity=".75"/>
@@ -113,21 +134,33 @@
       <circle cx="52" cy="20" r="1" opacity=".6"/>
     </g>
     <!-- Sparkle stars -->
-    <g fill="#FFFFFF" opacity=".9">
+    <g v-if="p.starOpacity > 0" fill="#FFFFFF" :opacity="0.9 * p.starOpacity">
       <path d="M132,62 l1.6,4.4 4.4,1.6 -4.4,1.6 -1.6,4.4 -1.6,-4.4 -4.4,-1.6 4.4,-1.6z"/>
       <path d="M258,120 l1.2,3.4 3.4,1.2 -3.4,1.2 -1.2,3.4 -1.2,-3.4 -3.4,-1.2 3.4,-1.2z" opacity=".7"/>
       <path d="M60,68 l1,2.8 2.8,1 -2.8,1 -1,2.8 -1,-2.8 -2.8,-1 2.8,-1z" opacity=".6"/>
     </g>
 
-    <!-- Moon with glow -->
+    <!-- Matahari / bulan sabit + pendarnya -->
     <circle cx="322" cy="80" r="78" fill="url(#moonGlow)"/>
     <g>
-      <circle cx="322" cy="80" r="30" fill="#F8EEC8"/>
-      <circle cx="334" cy="70" r="27" fill="#0A1330"/>
+      <circle cx="322" cy="80" r="30" :fill="p.celestialCore"/>
+      <!-- "gigitan" hanya untuk bulan sabit; matahari tetap bulat penuh -->
+      <circle v-if="p.celestial === 'moon'" cx="334" cy="70" r="27" :fill="p.crescentCut"/>
+      <!-- sinar matahari -->
+      <g v-else :stroke="p.celestialCore" stroke-width="3.5" stroke-linecap="round" opacity=".75">
+        <line x1="322" y1="34" x2="322" y2="22"/>
+        <line x1="322" y1="126" x2="322" y2="138"/>
+        <line x1="276" y1="80" x2="264" y2="80"/>
+        <line x1="368" y1="80" x2="380" y2="80"/>
+        <line x1="289" y1="47" x2="281" y2="39"/>
+        <line x1="355" y1="113" x2="363" y2="121"/>
+        <line x1="355" y1="47" x2="363" y2="39"/>
+        <line x1="289" y1="113" x2="281" y2="121"/>
+      </g>
     </g>
 
     <!-- Thin cloud wisps -->
-    <g fill="#4A6BB0" opacity=".16">
+    <g :fill="p.cloud.color" :opacity="p.cloud.opacity">
       <ellipse cx="100" cy="176" rx="62" ry="7"/>
       <ellipse cx="150" cy="188" rx="40" ry="5"/>
       <ellipse cx="300" cy="164" rx="52" ry="6"/>
@@ -143,7 +176,7 @@
       <rect x="300" y="234" width="28" height="168"/>
       <rect x="356" y="242" width="52" height="160"/>
     </g>
-    <g fill="#F7DE84" opacity=".30">
+    <g :fill="p.window.color" :opacity="p.window.far">
       <rect x="2" y="266" width="5" height="7"/><rect x="16" y="266" width="5" height="7"/>
       <rect x="2" y="286" width="5" height="7"/><rect x="44" y="248" width="5" height="7"/>
       <rect x="56" y="248" width="5" height="7"/><rect x="44" y="272" width="5" height="7"/>
@@ -179,7 +212,7 @@
     <line x1="376" y1="242" x2="376" y2="256" stroke="#101E45" stroke-width="2"/>
     <circle cx="376" cy="240" r="2.2" fill="#FF6B6B" opacity=".8"/>
 
-    <g fill="#F7DE84" opacity=".5">
+    <g :fill="p.window.color" :opacity="p.window.mid">
       <rect x="0" y="300" width="6" height="8"/><rect x="14" y="300" width="6" height="8"/>
       <rect x="28" y="300" width="6" height="8"/><rect x="0" y="322" width="6" height="8"/>
       <rect x="28" y="322" width="6" height="8"/><rect x="14" y="344" width="6" height="8"/>
@@ -220,14 +253,18 @@
       <circle cx="76" cy="322" r="34" fill="url(#lampGlow)"/>
       <rect x="74" y="322" width="3.5" height="76" fill="#0C1734"/>
       <path d="M75.5,322 q0,-14 16,-14" fill="none" stroke="#0C1734" stroke-width="3.5"/>
-      <ellipse cx="92" cy="310" rx="7" ry="4" fill="#CDEB8E"/>
+      <!-- bohlam ikut padam saat siang -->
+      <ellipse cx="92" cy="310" rx="7" ry="4" :fill="p.lampOpacity > 0 ? '#CDEB8E' : '#9FB4C6'"/>
     </g>
 
     <!-- ============ ROAD ============ -->
-    <rect x="0" y="396" width="400" height="66" fill="#0A1330"/>
-    <rect x="0" y="396" width="400" height="3" fill="#1B2C5E"/>
+    <!-- Dibentang sampai dasar kanvas: dulu hanya setinggi 66px sehingga di
+         bawahnya langit ikut terlihat sebagai pita terang sebelum gelombang
+         hijau (tak kentara saat malam, mencolok saat siang). -->
+    <rect x="0" y="396" width="400" height="224" :fill="p.road.asphalt"/>
+    <rect x="0" y="396" width="400" height="3" :fill="p.road.kerb"/>
     <!-- lane dashes with perspective -->
-    <g fill="#3A5296" opacity=".45">
+    <g :fill="p.road.lane" opacity=".45">
       <rect x="18" y="424" width="26" height="3.5" rx="1.5"/>
       <rect x="70" y="424" width="26" height="3.5" rx="1.5"/>
       <rect x="122" y="424" width="26" height="3.5" rx="1.5"/>
@@ -237,8 +274,8 @@
       <rect x="330" y="424" width="26" height="3.5" rx="1.5"/>
     </g>
 
-    <!-- Headlight beam across road -->
-    <path d="M300,384 L400,372 L400,400 L300,390 Z" fill="url(#beam)" opacity=".55"/>
+    <!-- Headlight beam across road — nyaris tak terlihat saat terang -->
+    <path d="M300,384 L400,372 L400,400 L300,390 Z" fill="url(#beam)" :opacity="p.celestial === 'moon' ? 0.55 : 0.18"/>
 
     <!-- ============ ROUTE PIN (app context) ============ -->
     <g opacity=".95">

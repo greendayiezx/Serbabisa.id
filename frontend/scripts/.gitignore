@@ -1,0 +1,5 @@
+# Hasil generate gambar (jangan di-commit — bisa ratusan/ribuan file)
+pilot-out/
+out/
+*.png
+*.webp

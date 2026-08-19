@@ -4,7 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import Icon from '@/components/icons/Icon.vue'
-import { useLocationStore, type PlaceItem, type SavedPlaceKey, type TaskLocation } from '@/stores/location'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import { useLocationStore, kunciAlamat, type PlaceItem, type SavedPlaceKey, type TaskLocation } from '@/stores/location'
 import { useAuthStore } from '@/stores/auth'
 import { useDriverStore } from '@/stores/driver'
 import { driverPinIcon } from '@/lib/driverIcon'
@@ -16,6 +17,10 @@ import cardBorderBisaAngkutSore from '@/assets/card-border-BisaAngkut-sore.png'
 import cardBorderBisaAngkutMalam from '@/assets/card-border-BisaAngkut-malam.png'
 import AngkutHeroArt from '@/components/angkut/AngkutHeroArt.vue'
 import BisaBelanjaHeroArt from '@/components/belanja/BisaBelanjaHeroArt.vue'
+import BisaBersihHeroArt from '@/components/bersih/BisaBersihHeroArt.vue'
+import { heroTimeOfDayFromHour } from '@/lib/heroSky'
+import { useSkeleton } from '@/composables/useSkeleton'
+import LokasiSkeleton from '@/components/skeleton/LokasiSkeleton.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -35,6 +40,12 @@ const mapOpen = ref(false)
 const mapInstanceKey = ref(0)
 const mapEl = ref<HTMLDivElement | null>(null)
 const previewMapEl = ref<HTMLDivElement | null>(null)
+/**
+ * Tile peta datang dari jaringan dan pada koneksi lambat butuh beberapa detik.
+ * Sampai tile pertama termuat, kotak petanya diisi skeleton — tanpa ini yang
+ * terlihat cuma kotak abu kosong yang tidak jelas sedang memuat atau rusak.
+ */
+const tilePratinjauSiap = ref(false)
 const selectedId = ref<string | null>(null)
 const fieldFocused = ref(false)
 
@@ -132,22 +143,22 @@ const placeList = computed<DisplayPlace[]>(() => {
 
   if (savedPlaces.value.home) {
     const h = savedPlaces.value.home
-    seen.add(`${h.lat},${h.lng}`)
+    seen.add(kunciAlamat(h.alamat, h.lat, h.lng))
     list.push({ id: 'saved:home', title: 'Rumah', address: h.alamat, lat: h.lat, lng: h.lng, lastUsed: null, kind: 'saved' })
   }
   if (savedPlaces.value.office) {
     const o = savedPlaces.value.office
-    seen.add(`${o.lat},${o.lng}`)
+    seen.add(kunciAlamat(o.alamat, o.lat, o.lng))
     list.push({ id: 'saved:office', title: 'Kantor', address: o.alamat, lat: o.lat, lng: o.lng, lastUsed: null, kind: 'saved' })
   }
   for (const r of searchHistory.value) {
-    const key = `${r.lat},${r.lng}`
+    const key = kunciAlamat(r.address, r.lat, r.lng)
     if (seen.has(key)) continue
     seen.add(key)
     list.push({ id: r.id, title: r.label, address: r.address, lat: r.lat, lng: r.lng, lastUsed: r.last_used_at, kind: 'recent' })
   }
   for (const r of locationStore.recent) {
-    const key = `${r.lat},${r.lng}`
+    const key = kunciAlamat(r.address, r.lat, r.lng)
     if (seen.has(key)) continue
     seen.add(key)
     list.push({ id: r.id, title: r.label, address: r.address, lat: r.lat, lng: r.lng, lastUsed: r.last_used_at, kind: 'recent' })
@@ -186,12 +197,16 @@ const greeting = computed(() => {
 
 type TimeOfDay = 'pagi' | 'sore' | 'malam'
 
+// Gambar PNG header hanya punya 3 varian, jadi 'siang' ikut memakai aset 'pagi'.
 const timeOfDay = computed<TimeOfDay>(() => {
   const hour = clock.value.getHours()
   if (hour >= 4 && hour < 15) return 'pagi'
   if (hour >= 15 && hour < 18) return 'sore'
   return 'malam'
 })
+
+// Ilustrasi SVG digambar ulang per fase, jadi bisa memakai 4 fase penuh.
+const heroTimeOfDay = computed(() => heroTimeOfDayFromHour(clock.value.getHours()))
 
 const headerBorderImages: Record<TimeOfDay, string> = {
   pagi: cardBorderLocationPagi,
@@ -205,21 +220,25 @@ const bisaAngkutHeaderImages: Record<TimeOfDay, string> = {
   malam: cardBorderBisaAngkutMalam,
 }
 
+const isBisaAngkut = computed(() => route.query.category === 'bisaangkut' || route.name === 'task-angkut-location')
+const isBisaBelanja = computed(() => route.query.category === 'bisabelanja')
+const isBisaBersih = computed(() => route.query.category === 'bisabersih')
+
 const cardBorderLocationImg = computed(() =>
-  route.query.category === 'bisaangkut'
+  isBisaAngkut.value
     ? bisaAngkutHeaderImages[timeOfDay.value]
     : headerBorderImages[timeOfDay.value],
 )
 
 const subtitleText = computed(() => {
-  if (route.query.category === 'bisaangkut') return 'Mau angkut barang ke mana hari ini?'
-  if (route.query.category === 'bisabelanja') return 'Mau belanja apa hari ini?'
+  if (isBisaAngkut.value) return 'Mau angkut barang ke mana hari ini?'
+  if (isBisaBelanja.value) return 'Mau belanja apa hari ini?'
+  if (isBisaBersih.value) return 'Bersih-bersih di mana hari ini?'
   return 'Mau anter tugas ke mana hari ini?'
 })
 
 const contentSheetMarginClass = computed(() => {
-  if (route.query.category === 'bisaangkut') return '-mt-3'
-  if (route.query.category === 'bisabelanja') return '-mt-14'
+  if (isBisaAngkut.value || isBisaBelanja.value || isBisaBersih.value) return '-mt-14'
   return '-mt-1'
 })
 
@@ -369,7 +388,10 @@ function initPreviewMap() {
     keyboard: false,
     touchZoom: false,
   })
-  L.tileLayer(TILE_URL, TILE_OPTIONS).addTo(previewMap)
+  tilePratinjauSiap.value = false
+  L.tileLayer(TILE_URL, TILE_OPTIONS)
+    .on('load', () => (tilePratinjauSiap.value = true))
+    .addTo(previewMap)
   previewMarker = L.marker(center, { icon: pinIcon }).addTo(previewMap)
   previewDriverLayer = addDriversToMap(previewMap)
 
@@ -555,15 +577,15 @@ async function confirmMap() {
   finishLocationSelection()
 }
 
-// router.back() silently does nothing when this page has no in-app history to
-// return to (e.g. opened directly via URL or after a hard refresh) — fall back
-// to a known route so the button always does something.
+// The location picker is the first step of every new-task flow (Home ->
+// Location -> detail/kategori), so "back" always exits to the home route.
+// We deliberately do NOT use router.back()/window.history.state.back: in the
+// belanja flow the detail page re-enters this page (BisaBelanjaNavbar, step >= 2),
+// which leaves history.state.back pointing at /tasks/new/belanja/detail. router.back()
+// would bounce right back into detail, trapping the user in a Location <-> Detail
+// loop that can never reach `/` (home) — exactly the "can't go back to home" bug.
 function goBackOrHome() {
-  if (window.history.state?.back) {
-    router.back()
-  } else {
-    router.push({ name: 'home' })
-  }
+  router.push({ name: 'home' })
 }
 
 // Alamat yang dipilih tampil sebagai "jembatan" di bawah — tombol Lanjut
@@ -611,304 +633,319 @@ onBeforeUnmount(() => {
   closeMap()
   closePreviewMap()
 })
+
+/**
+ * Skeleton halaman: digambar di frame pertama, lalu konten asli menyusul di
+ * frame berikutnya. Dua rAF dipakai supaya skeleton benar-benar sempat
+ * dilukis browser sebelum kerja render konten dimulai.
+ */
+const { tampil: skelTampil, tandaiSiap } = useSkeleton()
+onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSiap())))
 </script>
 
 <template>
-  <div class="min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-6 overflow-x-hidden">
-    <!-- Full-Width Header: BisaAngkut = ilustrasi flat vector + wave lime (pola Gojek) -->
-    <div
-      v-if="route.query.category === 'bisaangkut'"
-      class="relative w-full overflow-hidden bg-[#060f29] rounded-b-[2rem]"
-    >
-      <AngkutHeroArt />
-
-      <!-- Floating Back Button (White circle, Gojek style) -->
+  <LokasiSkeleton v-if="skelTampil" />
+  <template v-else>
+    <div class="min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-6 overflow-x-hidden">
+      <!-- Tombol kembali: fixed, bukan absolute di dalam header ilustrasi. Kalau
+           ikut header, tombolnya ikut tergulung hilang begitu halaman di-scroll
+           dan user kehabisan jalan pulang (halaman ini tidak punya bottom nav).
+           z-40 supaya tetap di bawah overlay peta & dialog yang pakai z-50. -->
       <button
         type="button"
-        class="absolute top-4 left-4 z-30 w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-md transition-transform active:scale-95"
+        aria-label="Kembali"
+        class="fixed top-4 left-4 z-40 w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-md transition-transform active:scale-95"
         @click="goBackOrHome"
       >
         <Icon name="arrow-left" class="w-5 h-5 text-slate-800" />
       </button>
-
-      <!-- Greeting & Subtitle floats directly on the illustration's own wave
-           (no separate flat-color box), so there's no green seam/edge against it -->
-      <div class="absolute inset-x-5 bottom-8 z-10 flex flex-col items-center justify-center text-center">
-        <h1 class="font-display font-extrabold text-[14px] sm:text-[16px] leading-tight text-white text-center drop-shadow-sm">
-          {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
-        </h1>
-        <p class="text-white/95 text-[10.5px] sm:text-[12px] font-bold text-center mt-0.5">
-          {{ subtitleText }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Full-Width Header: BisaBelanja = ilustrasi flat vector + wave lime (pola Gojek) -->
-    <div
-      v-else-if="route.query.category === 'bisabelanja'"
-      class="relative w-full overflow-hidden bg-[#060f29] rounded-b-[2rem]"
-    >
-      <BisaBelanjaHeroArt />
-
-      <!-- Floating Back Button (White circle, Gojek style) -->
-      <button
-        type="button"
-        class="absolute top-4 left-4 z-30 w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-md transition-transform active:scale-95"
-        @click="goBackOrHome"
+  
+      <!-- Full-Width Header: BisaAngkut = ilustrasi flat vector + wave lime (pola Gojek) -->
+      <div
+        v-if="isBisaAngkut"
+        class="relative w-full overflow-hidden bg-[#060f29] rounded-b-[2rem]"
       >
-        <Icon name="arrow-left" class="w-5 h-5 text-slate-800" />
-      </button>
-
-      <!-- Greeting & Subtitle: floats directly on the illustration's own wave
-           (no separate flat-color box), so there's no seam/edge against it -->
-      <div class="absolute inset-x-5 bottom-16 z-10 flex flex-col items-center justify-center text-center">
-        <h1 class="font-display font-extrabold text-[16px] sm:text-[18px] leading-tight text-white text-center drop-shadow-sm">
-          {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
-        </h1>
-        <p class="text-white/95 text-[12px] sm:text-[13.5px] font-bold text-center mt-0.5">
-          {{ subtitleText }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Full-Width Header: ilustrasi PNG lokasi lainnya (pagi/sore/malam) -->
-    <div v-else class="relative w-full overflow-hidden bg-[#155b0e]">
-      <div class="relative w-full">
-        <img :src="cardBorderLocationImg" alt="Tugasin" class="w-full h-auto block" />
-
-        <div class="absolute inset-x-0 bottom-0 h-[22%] bg-gradient-to-t from-black/55 to-transparent pointer-events-none"></div>
-
-        <!-- Floating Back Button (White circle, Gojek style) -->
-        <button
-          type="button"
-          class="absolute top-4 left-4 z-30 w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-md transition-transform active:scale-95"
-          @click="goBackOrHome"
-        >
-          <Icon name="arrow-left" class="w-5 h-5 text-slate-800" />
-        </button>
-
-        <!-- Greeting & Subtitle, anchored right in the green band at the bottom of the artwork -->
-        <div class="absolute inset-x-5 bottom-1 z-10 flex flex-col items-center justify-center text-center text-white">
-          <h1 class="font-display font-extrabold text-[13px] sm:text-[15px] leading-tight text-white text-center drop-shadow-md">
+        <AngkutHeroArt :time-of-day="heroTimeOfDay" />
+  
+        <!-- Greeting & Subtitle floats directly on the illustration's own wave -->
+        <div class="absolute inset-x-5 bottom-16 z-10 flex flex-col items-center justify-center text-center">
+          <h1 class="font-display font-extrabold text-[16px] sm:text-[18px] leading-tight text-white text-center drop-shadow-sm">
             {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
           </h1>
-          <p class="text-white/95 text-[10px] sm:text-[11px] font-semibold text-center mt-0.5 drop-shadow-sm">
+          <p class="text-white/95 text-[12px] sm:text-[13.5px] font-bold text-center mt-0.5">
             {{ subtitleText }}
           </p>
         </div>
       </div>
-    </div>
-
-    <!-- Floating White Content Sheet (raised slightly for maps) -->
-    <div
-      class="px-4 relative z-20"
-      :class="contentSheetMarginClass"
-    >
-      <div class="bg-(--color-surface-0) rounded-3xl shadow-(--shadow-float) p-4 flex flex-col gap-4">
-        <!-- map preview: real Leaflet map, centered on the device's live GPS position -->
-        <button
-          type="button"
-          class="relative w-full h-40 rounded-2xl overflow-hidden bg-(--color-surface-container) text-left shadow-inner"
-          @click="openMap"
-        >
-          <div
-            ref="previewMapEl"
-            class="absolute inset-0 pointer-events-none"
-            :style="{ visibility: mapOpen ? 'hidden' : 'visible' }"
-          ></div>
-          <span class="absolute top-2.5 left-2.5 glass-panel rounded-full text-[11px] font-bold px-2.5 py-1 flex items-center gap-1 text-(--color-on-surface)">
-            <Icon name="map" class="w-3 h-3" />Pilih di Peta
-          </span>
-          <span v-if="locating" class="absolute inset-0 flex items-center justify-center bg-(--color-surface-0)/80 text-xs font-bold text-(--color-on-surface-variant)">
-            Mencari lokasi kamu...
-          </span>
-        </button>
-
-        <!-- search -->
-        <div class="relative">
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Icon name="search" class="w-4.5 h-4.5 text-(--color-azure)" />
-            </div>
-            <input
-              ref="inputRef"
-              v-model="alamat"
-              :readonly="hasSelectedAddress"
-              placeholder="Cari lokasi tujuan"
-              class="w-full bg-(--color-surface-container) py-3.5 pl-11 pr-11 rounded-xl outline-none text-sm text-(--color-on-surface) placeholder:text-(--color-on-surface-variant)"
-              @focus="onFieldFocus"
-              @input="selectedId = null; fieldFocused = true"
-              @blur="onFieldBlur"
-            />
-            <button v-if="alamat" type="button" class="absolute inset-y-0 right-0 pr-4 flex items-center" @click="clearAddress">
-              <Icon name="x" class="w-4 h-4 text-(--color-outline)" />
-            </button>
+  
+      <!-- Full-Width Header: BisaBelanja = ilustrasi flat vector + wave lime (pola Gojek) -->
+      <div
+        v-else-if="route.query.category === 'bisabelanja'"
+        class="relative w-full overflow-hidden bg-[#060f29] rounded-b-[2rem]"
+      >
+        <BisaBelanjaHeroArt :time-of-day="heroTimeOfDay" />
+  
+        <!-- Greeting & Subtitle: floats directly on the illustration's own wave
+             (no separate flat-color box), so there's no seam/edge against it -->
+        <div class="absolute inset-x-5 bottom-16 z-10 flex flex-col items-center justify-center text-center">
+          <h1 class="font-display font-extrabold text-[16px] sm:text-[18px] leading-tight text-white text-center drop-shadow-sm">
+            {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
+          </h1>
+          <p class="text-white/95 text-[12px] sm:text-[13.5px] font-bold text-center mt-0.5">
+            {{ subtitleText }}
+          </p>
+        </div>
+      </div>
+  
+      <!-- Full-Width Header: BisaBersih = ilustrasi malam. Sapaannya bagian dari
+           SVG (panel putih), jadi tidak ada overlay teks seperti dua hero lain. -->
+      <div
+        v-else-if="route.query.category === 'bisabersih'"
+        class="relative w-full overflow-hidden bg-[#0D1536] rounded-b-[2rem]"
+      >
+        <BisaBersihHeroArt :greeting="greeting" :nama="firstName" :subtitle="subtitleText" />
+      </div>
+  
+      <!-- Full-Width Header: ilustrasi PNG lokasi lainnya (pagi/sore/malam) -->
+      <div v-else class="relative w-full overflow-hidden bg-[#155b0e]">
+        <div class="relative w-full">
+          <img :src="cardBorderLocationImg" alt="Tugasin" class="w-full h-auto block" />
+  
+          <div class="absolute inset-x-0 bottom-0 h-[22%] bg-gradient-to-t from-black/55 to-transparent pointer-events-none"></div>
+  
+          <!-- Greeting & Subtitle, anchored right in the green band at the bottom of the artwork -->
+          <div class="absolute inset-x-5 bottom-1 z-10 flex flex-col items-center justify-center text-center text-white">
+            <h1 class="font-display font-extrabold text-[13px] sm:text-[15px] leading-tight text-white text-center drop-shadow-md">
+              {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
+            </h1>
+            <p class="text-white/95 text-[10px] sm:text-[11px] font-semibold text-center mt-0.5 drop-shadow-sm">
+              {{ subtitleText }}
+            </p>
           </div>
-
-          <div v-if="showDropdown && searchResults.length" class="absolute z-30 top-full left-0 right-0 mt-1.5 bg-(--color-surface-0) rounded-xl shadow-(--shadow-float) border border-(--color-outline)/40 max-h-64 overflow-y-auto">
-            <button
-              v-for="(result, idx) in searchResults"
-              :key="idx"
-              type="button"
-              class="w-full flex items-start gap-2.5 px-3.5 py-3 text-left border-b border-(--color-outline)/25 last:border-b-0 hover:bg-(--color-surface-container)"
-              @mousedown.prevent="pickSearchResult(result)"
+        </div>
+      </div>
+  
+      <!-- Floating White Content Sheet (raised slightly for maps) -->
+      <div
+        class="px-4 relative z-20"
+        :class="contentSheetMarginClass"
+      >
+        <div class="bg-(--color-surface-0) rounded-3xl shadow-(--shadow-float) p-4 flex flex-col gap-4">
+          <!-- map preview: real Leaflet map, centered on the device's live GPS position -->
+          <button
+            type="button"
+            class="relative w-full h-40 rounded-2xl overflow-hidden bg-(--color-surface-container) text-left shadow-inner"
+            @click="openMap"
+          >
+            <div
+              ref="previewMapEl"
+              class="absolute inset-0 pointer-events-none"
+              :style="{ visibility: mapOpen ? 'hidden' : 'visible' }"
+            ></div>
+            <!-- Placeholder sampai tile peta pertama termuat -->
+            <div
+              v-if="!tilePratinjauSiap"
+              class="absolute inset-0 pointer-events-none p-3 flex flex-col justify-end gap-2"
+              data-map-skeleton
             >
-              <Icon name="pin" class="w-4 h-4 text-(--color-on-surface-variant) shrink-0 mt-0.5" />
-              <span class="text-[13px] text-(--color-on-surface) leading-snug">{{ result.label }}</span>
-            </button>
-          </div>
-          <div
-            v-else-if="searching"
-            class="absolute z-30 top-full left-0 right-0 mt-1.5 bg-(--color-surface-0) rounded-xl shadow-(--shadow-float) border border-(--color-outline)/40 px-3.5 py-3 text-[13px] text-(--color-on-surface-variant)"
-          >
-            Mencari...
-          </div>
-
-          <!-- confirmation card: active address display; tapping it proceeds to the next page -->
-          <button
-            type="button"
-            v-if="hasSelectedAddress && fieldFocused"
-            class="mt-2.5 w-full flex items-center gap-2.5 rounded-2xl border border-(--color-surface-container) px-3.5 py-3 text-left cursor-pointer"
-            @click="finishLocationSelection"
-          >
-            <Icon name="pin" class="w-4 h-4 text-(--color-azure) shrink-0" />
-            <p class="text-[13px] font-bold text-(--color-on-surface) leading-snug">{{ selectedPlace?.alamat }}</p>
+              <Skeleton class="absolute inset-0 rounded-2xl" />
+              <Skeleton class="relative h-2.5 w-2/5" />
+              <Skeleton class="relative h-2.5 w-1/4" />
+            </div>
+            <span class="absolute top-2.5 left-2.5 glass-panel rounded-full text-[11px] font-bold px-2.5 py-1 flex items-center gap-1 text-(--color-on-surface)">
+              <Icon name="map" class="w-3 h-3" />Pilih di Peta
+            </span>
+            <span v-if="locating" class="absolute inset-0 flex items-center justify-center bg-(--color-surface-0)/80 text-xs font-bold text-(--color-on-surface-variant)">
+              Mencari lokasi kamu...
+            </span>
           </button>
-        </div>
-
-        <!-- quick actions -->
-        <div class="flex gap-2.5">
-          <button
-            type="button"
-            class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-[12.5px] font-bold text-(--color-on-surface) border-0 border-transparent transition-colors"
-            :class="savedPlaces.home ? 'bg-(--color-primary-container)' : 'bg-white'"
-            @click="handleQuickSave('home')"
-          >
-            <Icon name="home" class="w-4 h-4 text-(--color-on-primary-container)" />
-            {{ savedPlaces.home ? 'Rumah' : 'Simpan Rumah' }}
-          </button>
-          <button
-            type="button"
-            class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-[12.5px] font-bold text-(--color-on-surface) border-0 border-transparent transition-colors"
-            :class="savedPlaces.office ? 'bg-(--color-primary-container)' : 'bg-white'"
-            @click="handleQuickSave('office')"
-          >
-            <Icon name="business" class="w-4 h-4 text-(--color-on-primary-container)" />
-            {{ savedPlaces.office ? 'Kantor' : 'Simpan Kantor' }}
-          </button>
-        </div>
-
-        <button
-          type="button"
-          class="flex items-center gap-1.5 text-[12.5px] font-bold text-(--color-azure) -mt-1"
-          @click="useMyLocation(true)"
-        >
-          <Icon name="crosshair" class="w-4 h-4" />
-          {{ locating ? 'Mencari lokasi...' : 'Gunakan Lokasi Saat Ini' }}
-        </button>
-
-        <div class="h-px w-full bg-(--color-outline)/40"></div>
-
-        <!-- saved / recent places -->
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <div class="text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide">Tersimpan / Baru-Baru Ini</div>
-              <button
-                v-if="placeList.length"
-                type="button"
-                class="flex items-center gap-1 text-[11px] font-semibold text-(--color-on-surface-variant) hover:text-(--color-error) transition-colors"
-                @click="confirmClearAll"
-              >
-                <Icon name="trash" class="w-3.5 h-3.5" />
-                Hapus Semua
+  
+          <!-- search -->
+          <div class="relative">
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Icon name="search" class="w-4.5 h-4.5 text-(--color-azure)" />
+              </div>
+              <input
+                ref="inputRef"
+                v-model="alamat"
+                :readonly="hasSelectedAddress"
+                placeholder="Cari lokasi tujuan"
+                class="w-full bg-(--color-surface-container) py-3.5 pl-11 pr-11 rounded-xl outline-none text-sm text-(--color-on-surface) placeholder:text-(--color-on-surface-variant)"
+                @focus="onFieldFocus"
+                @input="selectedId = null; fieldFocused = true"
+                @blur="onFieldBlur"
+              />
+              <button v-if="alamat" type="button" class="absolute inset-y-0 right-0 pr-4 flex items-center" @click="clearAddress">
+                <Icon name="x" class="w-4 h-4 text-(--color-outline)" />
               </button>
             </div>
-            <div v-if="placeList.length" class="flex flex-col">
+  
+            <div v-if="showDropdown && searchResults.length" class="absolute z-30 top-full left-0 right-0 mt-1.5 bg-(--color-surface-0) rounded-xl shadow-(--shadow-float) border border-(--color-outline)/40 max-h-64 overflow-y-auto">
               <button
-                v-for="place in placeList"
-              :key="place.id"
-              type="button"
-              class="flex items-center gap-3.5 py-3 border-b border-(--color-outline)/30 last:border-b-0 text-left"
-              :class="selectedId === place.id ? 'text-(--color-on-primary-container)' : ''"
-              @click="selectPlace(place)"
+                v-for="(result, idx) in searchResults"
+                :key="idx"
+                type="button"
+                class="w-full flex items-start gap-2.5 px-3.5 py-3 text-left border-b border-(--color-outline)/25 last:border-b-0 hover:bg-(--color-surface-container)"
+                @mousedown.prevent="pickSearchResult(result)"
+              >
+                <Icon name="pin" class="w-4 h-4 text-(--color-on-surface-variant) shrink-0 mt-0.5" />
+                <span class="text-[13px] text-(--color-on-surface) leading-snug">{{ result.label }}</span>
+              </button>
+            </div>
+            <div
+              v-else-if="searching"
+              class="absolute z-30 top-full left-0 right-0 mt-1.5 bg-(--color-surface-0) rounded-xl shadow-(--shadow-float) border border-(--color-outline)/40 px-3.5 py-3 text-[13px] text-(--color-on-surface-variant)"
             >
-              <Icon
-                :name="place.kind === 'saved' ? (place.title === 'Rumah' ? 'home' : 'business') : 'clock'"
-                class="w-[18px] h-[18px] text-(--color-on-surface-variant) shrink-0"
-              />
-              <div class="flex-1 min-w-0">
-                <h3 class="text-sm font-bold text-(--color-on-surface) truncate">{{ place.title }}</h3>
-                <p class="text-[12.5px] text-(--color-on-surface-variant) truncate">
-                  {{ place.kind === 'saved' ? place.address : `Terakhir dipakai ${relativeTime(place.lastUsed)}` }}
-                </p>
-              </div>
-              <Icon
-                :name="selectedId === place.id ? 'check-circle' : 'bookmark'"
-                class="w-[18px] h-[18px] shrink-0"
-                :class="selectedId === place.id ? 'text-(--color-azure)' : 'text-(--color-on-surface-variant)'"
-              />
+              Mencari...
+            </div>
+  
+            <!-- confirmation card: active address display; tapping it proceeds to the next page -->
+            <button
+              type="button"
+              v-if="hasSelectedAddress && fieldFocused"
+              class="mt-2.5 w-full flex items-center gap-2.5 rounded-2xl border border-(--color-surface-container) px-3.5 py-3 text-left cursor-pointer"
+              @click="finishLocationSelection"
+            >
+              <Icon name="pin" class="w-4 h-4 text-(--color-azure) shrink-0" />
+              <p class="text-[13px] font-bold text-(--color-on-surface) leading-snug">{{ selectedPlace?.alamat }}</p>
             </button>
           </div>
-          <p v-else class="text-[12.5px] text-(--color-on-surface-variant) py-2">
-            Belum ada alamat tersimpan. Pilih lokasi lalu klik &ldquo;Simpan Rumah&rdquo; atau &ldquo;Simpan Kantor&rdquo;.
-          </p>
+  
+          <!-- quick actions -->
+          <div class="flex gap-2.5">
+            <button
+              type="button"
+              class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-[12.5px] font-bold text-(--color-on-surface) border-0 border-transparent transition-colors"
+              :class="savedPlaces.home ? 'bg-(--color-primary-container)' : 'bg-white'"
+              @click="handleQuickSave('home')"
+            >
+              <Icon name="home" class="w-4 h-4 text-(--color-on-primary-container)" />
+              {{ savedPlaces.home ? 'Rumah' : 'Simpan Rumah' }}
+            </button>
+            <button
+              type="button"
+              class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-[12.5px] font-bold text-(--color-on-surface) border-0 border-transparent transition-colors"
+              :class="savedPlaces.office ? 'bg-(--color-primary-container)' : 'bg-white'"
+              @click="handleQuickSave('office')"
+            >
+              <Icon name="business" class="w-4 h-4 text-(--color-on-primary-container)" />
+              {{ savedPlaces.office ? 'Kantor' : 'Simpan Kantor' }}
+            </button>
+          </div>
+  
+          <button
+            type="button"
+            class="flex items-center gap-1.5 text-[12.5px] font-bold text-(--color-azure) -mt-1"
+            @click="useMyLocation(true)"
+          >
+            <Icon name="crosshair" class="w-4 h-4" />
+            {{ locating ? 'Mencari lokasi...' : 'Gunakan Lokasi Saat Ini' }}
+          </button>
+  
+          <div class="h-px w-full bg-(--color-outline)/40"></div>
+  
+          <!-- saved / recent places -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <div class="text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide">Tersimpan / Baru-Baru Ini</div>
+                <button
+                  v-if="placeList.length"
+                  type="button"
+                  class="flex items-center gap-1 text-[11px] font-semibold text-(--color-on-surface-variant) hover:text-(--color-error) transition-colors"
+                  @click="confirmClearAll"
+                >
+                  <Icon name="trash" class="w-3.5 h-3.5" />
+                  Hapus Semua
+                </button>
+              </div>
+              <div v-if="placeList.length" class="flex flex-col">
+                <button
+                  v-for="place in placeList"
+                :key="place.id"
+                type="button"
+                class="flex items-center gap-3.5 py-3 border-b border-(--color-outline)/30 last:border-b-0 text-left"
+                :class="selectedId === place.id ? 'text-(--color-on-primary-container)' : ''"
+                @click="selectPlace(place)"
+              >
+                <Icon
+                  :name="place.kind === 'saved' ? (place.title === 'Rumah' ? 'home' : 'business') : 'clock'"
+                  class="w-[18px] h-[18px] text-(--color-on-surface-variant) shrink-0"
+                />
+                <div class="flex-1 min-w-0">
+                  <h3 class="text-sm font-bold text-(--color-on-surface) truncate">{{ place.title }}</h3>
+                  <p class="text-[12.5px] text-(--color-on-surface-variant) truncate">
+                    {{ place.kind === 'saved' ? place.address : `Terakhir dipakai ${relativeTime(place.lastUsed)}` }}
+                  </p>
+                </div>
+                <Icon
+                  :name="selectedId === place.id ? 'check-circle' : 'bookmark'"
+                  class="w-[18px] h-[18px] shrink-0"
+                  :class="selectedId === place.id ? 'text-(--color-azure)' : 'text-(--color-on-surface-variant)'"
+                />
+              </button>
+            </div>
+            <p v-else class="text-[12.5px] text-(--color-on-surface-variant) py-2">
+              Belum ada alamat tersimpan. Pilih lokasi lalu klik &ldquo;Simpan Rumah&rdquo; atau &ldquo;Simpan Kantor&rdquo;.
+            </p>
+            </div>
           </div>
         </div>
-      </div>
-    <!-- Clear All confirmation dialog: sibling of the content sheet, not nested
-         inside it — otherwise its fixed z-50 overlay inherits the sheet's own
-         (lower) stacking context and ends up hit-testing BELOW the header's
-         z-30 back button instead of on top of it. Same reasoning applies to
-         the fullscreen map picker overlay just below. -->
-        <div v-if="showClearAllConfirm" class="fixed inset-0 z-50 flex items-end bg-black/30">
-         <div class="w-full bg-(--color-surface-0) border-t-2 border-(--color-outline) rounded-t-[20px] pb-safe:pb-6">
-           <div class="px-5 pt-5 pb-2">
-             <p class="text-center text-[13px] text-(--color-on-surface-variant)">
-               Hapus semua alamat tersimpan dan riwayat? Tindakan ini tidak dapat dibatalkan.
-             </p>
-           </div>
-           <div class="flex gap-3 px-5 pt-3">
-             <button
-               type="button"
-               class="flex-1 py-2.5 rounded-full bg-(--color-surface-container) text-(--color-on-surface) font-semibold text-[14px]"
-               @click="showClearAllConfirm = false"
-             >
-               Batal
-             </button>
-             <button
-               type="button"
-               class="flex-1 py-2.5 rounded-full bg-(--color-error) text-white font-semibold text-[14px]"
-               @click="clearAllPlaces"
-             >
-               Hapus
-             </button>
+      <!-- Clear All confirmation dialog: sibling of the content sheet, not nested
+           inside it — otherwise its fixed z-50 overlay inherits the sheet's own
+           (lower) stacking context and ends up hit-testing BELOW the header's
+           z-30 back button instead of on top of it. Same reasoning applies to
+           the fullscreen map picker overlay just below. -->
+          <div v-if="showClearAllConfirm" class="fixed inset-0 z-50 flex items-end bg-black/30">
+           <div class="w-full bg-(--color-surface-0) border-t-2 border-(--color-outline) rounded-t-[20px] pb-safe:pb-6">
+             <div class="px-5 pt-5 pb-2">
+               <p class="text-center text-[13px] text-(--color-on-surface-variant)">
+                 Hapus semua alamat tersimpan dan riwayat? Tindakan ini tidak dapat dibatalkan.
+               </p>
+             </div>
+             <div class="flex gap-3 px-5 pt-3">
+               <button
+                 type="button"
+                 class="flex-1 py-2.5 rounded-full bg-(--color-surface-container) text-(--color-on-surface) font-semibold text-[14px]"
+                 @click="showClearAllConfirm = false"
+               >
+                 Batal
+               </button>
+               <button
+                 type="button"
+                 class="flex-1 py-2.5 rounded-full bg-(--color-error) text-white font-semibold text-[14px]"
+                 @click="clearAllPlaces"
+               >
+                 Hapus
+               </button>
+             </div>
            </div>
          </div>
-       </div>
-
-       <!-- fullscreen Leaflet map picker overlay -->
-       <div v-if="mapOpen" class="fixed inset-0 z-50 flex flex-col bg-(--color-surface)">
-      <div class="flex items-center gap-3 px-5 py-4 bg-(--color-surface-0) border-b border-(--color-outline)">
-        <button type="button" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="closeMap">
-          <Icon name="arrow-left" class="w-[19px] h-[19px]" />
-        </button>
-        <h3 class="text-base font-extrabold flex-1">Pilih di Peta</h3>
-      </div>
-
-      <div ref="mapEl" :key="mapInstanceKey" class="flex-1 w-full"></div>
-
-      <div class="px-5 py-4 bg-(--color-surface-0) border-t border-(--color-outline)">
-        <p class="text-center text-xs text-(--color-on-surface-variant) mb-3">Geser peta lalu ketuk pin untuk menandai lokasi tugas</p>
-        <button
-          type="button"
-          class="w-full flex items-center justify-center gap-2 rounded-full bg-(--color-azure) text-white font-bold text-[15px] py-3.5 min-h-11"
-          @click="confirmMap"
-        >
-          <Icon name="pin" class="w-[18px] h-[18px]" />Gunakan Lokasi Ini
-        </button>
+  
+         <!-- fullscreen Leaflet map picker overlay -->
+         <div v-if="mapOpen" class="fixed inset-0 z-50 flex flex-col bg-(--color-surface)">
+        <div class="flex items-center gap-3 px-5 py-4 bg-(--color-surface-0) border-b border-(--color-outline)">
+          <button type="button" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="closeMap">
+            <Icon name="arrow-left" class="w-[19px] h-[19px]" />
+          </button>
+          <h3 class="text-base font-extrabold flex-1">Pilih di Peta</h3>
+        </div>
+  
+        <div ref="mapEl" :key="mapInstanceKey" class="flex-1 w-full"></div>
+  
+        <div class="px-5 py-4 bg-(--color-surface-0) border-t border-(--color-outline)">
+          <p class="text-center text-xs text-(--color-on-surface-variant) mb-3">Geser peta lalu ketuk pin untuk menandai lokasi tugas</p>
+          <button
+            type="button"
+            class="w-full flex items-center justify-center gap-2 rounded-full bg-(--color-azure) text-white font-bold text-[15px] py-3.5 min-h-11"
+            @click="confirmMap"
+          >
+            <Icon name="pin" class="w-[18px] h-[18px]" />Gunakan Lokasi Ini
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  </template>
 </template>
 
 <style>

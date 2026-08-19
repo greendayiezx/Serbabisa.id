@@ -29,6 +29,20 @@ export function isSameLocation(a: TaskLocation, b: TaskLocation) {
   )
 }
 
+/**
+ * Kunci identitas sebuah alamat.
+ *
+ * Teksnya yang dipakai, BUKAN koordinatnya. Menggeser pin beberapa meter
+ * menghasilkan lat/lng berbeda tapi hasil reverse-geocoding-nya sama persis,
+ * sehingga dedup berbasis koordinat membiarkan alamat yang identik di mata
+ * pengguna tersimpan dua kali. Koordinat hanya jadi cadangan untuk entri lama
+ * yang alamatnya kosong.
+ */
+export function kunciAlamat(alamat: string, lat: number, lng: number): string {
+  const teks = (alamat ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+  return teks || `${Number(lat).toFixed(4)},${Number(lng).toFixed(4)}`
+}
+
 const SAVED_KEY = 'tugasin_saved_places'
 const SEARCH_HISTORY_KEY = 'tugasin_search_history'
 const DRAFT_KEY = 'tugasin_location_draft'
@@ -66,18 +80,40 @@ export const useLocationStore = defineStore('location', () => {
       const raw = localStorage.getItem(SEARCH_HISTORY_KEY)
       if (!raw) return []
       const parsed = JSON.parse(raw)
-      return Array.isArray(parsed) ? parsed : []
+      if (!Array.isArray(parsed)) return []
+      // Riwayat yang tersimpan sebelum aturan ini ada bisa berisi alamat kembar.
+      // Dibersihkan saat dibaca supaya pengguna tidak perlu menghapus manual;
+      // yang paling baru dipertahankan karena daftar ini urut terbaru dulu.
+      const bersih = buangKembar(parsed)
+      if (bersih.length !== parsed.length) {
+        localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(bersih))
+      }
+      return bersih
     } catch {
       return []
     }
   }
 
+  /** Sisakan satu entri per alamat, mempertahankan yang muncul lebih dulu. */
+  function buangKembar(daftar: PlaceItem[]): PlaceItem[] {
+    const terlihat = new Set<string>()
+    return daftar.filter((p) => {
+      if (!p || typeof p.address !== 'string') return false
+      const k = kunciAlamat(p.address, p.lat, p.lng)
+      if (terlihat.has(k)) return false
+      terlihat.add(k)
+      return true
+    })
+  }
+
   function addSearchHistory(location: TaskLocation): PlaceItem[] {
     const list = loadSearchHistory()
-    const coordKey = `${location.lat.toFixed(5)},${location.lng.toFixed(5)}`
-    const filtered = list.filter((p) => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}` !== coordKey)
+    const kunci = kunciAlamat(location.alamat, location.lat, location.lng)
+    // Alamat yang sama tidak ditambah sebagai baris baru — entri lamanya dibuang
+    // lalu dipasang lagi di posisi teratas dengan waktu pakai terbaru.
+    const filtered = list.filter((p) => kunciAlamat(p.address, p.lat, p.lng) !== kunci)
     filtered.unshift({
-      id: `history:${coordKey}`,
+      id: `history:${kunci}`,
       label: location.alamat,
       address: location.alamat,
       lat: location.lat,
@@ -98,6 +134,12 @@ export const useLocationStore = defineStore('location', () => {
     } catch {
       return {}
     }
+  }
+
+  /** Sudah pernah dipakai? Dipakai UI untuk menandai alamat yang sudah tersimpan. */
+  function sudahAda(location: TaskLocation): boolean {
+    const k = kunciAlamat(location.alamat, location.lat, location.lng)
+    return loadSearchHistory().some((p) => kunciAlamat(p.address, p.lat, p.lng) === k)
   }
 
   function savePlace(key: SavedPlaceKey, location: TaskLocation): SavePlaceResult {
@@ -130,5 +172,5 @@ export const useLocationStore = defineStore('location', () => {
     clearDraft()
   }
 
-  return { draft, recent, setDraft, clearDraft, loadSavedPlaces, savePlace, fetchRecent, loadSearchHistory, addSearchHistory, isSameLocation, clearSavedPlaces, clearSearchHistory, clearAll }
+  return { draft, recent, setDraft, clearDraft, loadSavedPlaces, savePlace, fetchRecent, loadSearchHistory, addSearchHistory, sudahAda, isSameLocation, clearSavedPlaces, clearSearchHistory, clearAll }
 })

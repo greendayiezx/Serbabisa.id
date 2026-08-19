@@ -2,13 +2,19 @@
 import { useRouter } from 'vue-router'
 import Icon from '@/components/icons/Icon.vue'
 
-defineProps<{
+const props = defineProps<{
   step?: number
 }>()
 
 const router = useRouter()
 
 function goBackOrHome() {
+  // Dari halaman detail belanja (step ≥ 2) selalu kembali ke home,
+  // bukan ke halaman kategori yang mungkin ada di history.
+  if (props.step && props.step >= 2) {
+    router.push({ name: 'task-location', query: { category: 'bisabelanja' } })
+    return
+  }
   if (window.history.state?.back) {
     router.back()
   } else {
@@ -104,5 +110,6 @@ function goBackOrHome() {
         <span class="font-extrabold text-lg tracking-tight text-white">Bisa Belanja</span>
       </div>
     </div>
+
   </nav>
 </template>

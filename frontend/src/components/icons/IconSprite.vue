@@ -26,6 +26,7 @@
       <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M8.5 12.3l2.3 2.3 4.7-5" /></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" /></symbol>
       <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></symbol>
+      <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" /></symbol>
       <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7" /></symbol>
       <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" /></symbol>
       <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M20 20l-5-5" /></symbol>
@@ -55,6 +56,7 @@
       <symbol id="i-edit" viewBox="0 0 24 24"><path d="M15.5 4.5l4 4L8 20H4v-4L15.5 4.5Z" /><path d="M13 7l4 4" /></symbol>
       <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></symbol>
       <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18" /><path d="M8 3h8a1 1 0 0 1 1 1v1H7V4a1 1 0 0 1 1-1Z" /><path d="M5 8h14v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8Z" /></symbol>
+      <symbol id="i-external-link" viewBox="0 0 24 24"><path d="M18 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" /><path d="M13 3h8v8" /><path d="M21 3l-8 8" /></symbol>
     </defs>
   </svg>
 </template>

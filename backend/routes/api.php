@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BelanjaCheckoutController;
 use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DisputeController;
+use App\Http\Controllers\Api\LanggananController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PayoutRequestController;
@@ -46,6 +47,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/payments/{payment}/konfirmasi', [PaymentController::class, 'confirm']);
 
     // BisaBelanja: checkout (hitung tagihan + promo tervalidasi) & selesai (cashback ke saldo)
+    // Langganan BisaBelanja: paket, berlangganan, berhenti
+    Route::get('/belanja/langganan', [LanggananController::class, 'index']);
+    Route::post('/belanja/langganan', [LanggananController::class, 'store']);
+    Route::delete('/belanja/langganan', [LanggananController::class, 'destroy']);
+
     Route::get('/belanja/orders', [BelanjaCheckoutController::class, 'index']);
     Route::get('/belanja/orders/{nomor}', [BelanjaCheckoutController::class, 'show']);
     Route::post('/belanja/checkout', [BelanjaCheckoutController::class, 'store']);

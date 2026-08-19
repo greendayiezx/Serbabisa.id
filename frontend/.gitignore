@@ -28,3 +28,7 @@ dist-ssr
 build_log.txt
 stdOut.txt
 stdErr.txt
+
+# Hasil antara saat mem-parse tabel katalog. Datanya sudah masuk
+# src/lib/belanjaKatalog.ts, jadi tidak perlu ikut terlacak.
+parsed_snack.json

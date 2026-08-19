@@ -36,6 +36,7 @@ class Payment extends Model
             'jumlah' => 'decimal:2',
             'subtotal_barang' => 'decimal:2',
             'ongkir' => 'decimal:2',
+            'ongkir_normal' => 'decimal:2',
             'potongan' => 'decimal:2',
             'cashback' => 'decimal:2',
             'komisi_platform' => 'decimal:2',
