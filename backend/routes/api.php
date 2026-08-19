@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BelanjaCheckoutController;
 use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DisputeController;
@@ -42,9 +43,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // FR-09/FR-10: Payment & escrow per tugas
     Route::apiResource('tasks.payments', PaymentController::class)->shallow()->only(['index', 'store', 'show']);
+    Route::post('/payments/{payment}/konfirmasi', [PaymentController::class, 'confirm']);
+
+    // BisaBelanja: checkout (hitung tagihan + promo tervalidasi) & selesai (cashback ke saldo)
+    Route::get('/belanja/orders', [BelanjaCheckoutController::class, 'index']);
+    Route::get('/belanja/orders/{nomor}', [BelanjaCheckoutController::class, 'show']);
+    Route::post('/belanja/checkout', [BelanjaCheckoutController::class, 'store']);
+    Route::patch('/belanja/orders/{task}/selesai', [BelanjaCheckoutController::class, 'complete']);
 
     // FR-11: Dompet Mitra & payout
     Route::get('/wallet', [WalletController::class, 'show']);
+    Route::get('/wallet/transactions', [WalletController::class, 'transactions']);
     Route::apiResource('payout-requests', PayoutRequestController::class)->only(['index', 'store', 'show']);
 
     // FR-12: Rating & ulasan dua arah
@@ -58,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index']);
         Route::apiResource('users', AdminUserController::class)->only(['index', 'show', 'update']);
         Route::patch('/disputes/{dispute}', [DisputeController::class, 'update']);
+        Route::patch('/payout-requests/{payoutRequest}', [PayoutRequestController::class, 'update']);
         Route::apiResource('categories', CategoryController::class)->except(['index']);
     });
 });
