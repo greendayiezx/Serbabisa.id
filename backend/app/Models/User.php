@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -12,18 +14,19 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
      *
+     * @var list<string>
+     */
+    /**
      * Kolom sensitif (role, is_active, status_verifikasi) SENGAJA tidak
      * dimasukkan agar tidak bisa di-set lewat mass assignment (mis.
      * ->update($request->all())). Ubah nilainya hanya lewat penetapan
      * eksplisit di alur yang sudah diotorisasi (lihat AuthController,
      * AdminUserController). Mencegah privilege escalation.
-     *
-     * @var list<string>
      */
     protected $fillable = [
         'name',
@@ -54,6 +57,7 @@ class User extends Authenticatable
             'phone_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -65,6 +69,34 @@ class User extends Authenticatable
     public function wallet(): HasOne
     {
         return $this->hasOne(Wallet::class);
+    }
+
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(Address::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    /** Langganan aktif terkini (kalau ada). */
+    public function activeSubscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class)->where('status', 'active')->latestOfMany();
+    }
+
+    /** User yang mengundang (pengundang). */
+    public function referredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'direferal_oleh_id');
+    }
+
+    /** Referral yang dibuat user ini sebagai pengundang. */
+    public function referralsMade(): HasMany
+    {
+        return $this->hasMany(Referral::class, 'referrer_id');
     }
 
     public function tasksAsCustomer(): HasMany

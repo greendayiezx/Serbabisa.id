@@ -7,20 +7,27 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
     /** @use HasFactory<\Database\Factories\TaskFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'nomor_invoice',
         'customer_id',
         'mitra_id',
+        'address_id',
         'category_id',
+        'promo_id',
+        'subscription_id',
         'tipe',
         'judul',
         'deskripsi',
+        'toko',
         'status',
+        'fulfillment_status',
         'lokasi_alamat',
         'lokasi_lat',
         'lokasi_lng',
@@ -28,6 +35,14 @@ class Task extends Model
         'budget',
         'foto',
         'catatan',
+        'kendaraan',
+        'jumlah_helper',
+        'berat_total',
+        'proteksi_label',
+        'proteksi_harga',
+        'dijadwalkan_pada',
+        'nama_penerima',
+        'telepon_penerima',
         'accepted_at',
         'completed_at',
         'cancelled_at',
@@ -40,7 +55,10 @@ class Task extends Model
             'lokasi_lng' => 'decimal:7',
             'harga' => 'decimal:2',
             'budget' => 'decimal:2',
+            'berat_total' => 'decimal:2',
+            'proteksi_harga' => 'decimal:2',
             'foto' => 'array',
+            'dijadwalkan_pada' => 'datetime',
             'accepted_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
@@ -60,6 +78,26 @@ class Task extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function address(): BelongsTo
+    {
+        return $this->belongsTo(Address::class);
+    }
+
+    public function promo(): BelongsTo
+    {
+        return $this->belongsTo(Promo::class);
+    }
+
+    public function subscription(): BelongsTo
+    {
+        return $this->belongsTo(Subscription::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(TaskItem::class);
     }
 
     public function bids(): HasMany

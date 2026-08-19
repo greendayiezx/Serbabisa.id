@@ -15,12 +15,15 @@ class Wallet extends Model
     protected $fillable = [
         'user_id',
         'saldo',
+        'saldo_tertahan',
+        'mata_uang',
     ];
 
     protected function casts(): array
     {
         return [
             'saldo' => 'decimal:2',
+            'saldo_tertahan' => 'decimal:2',
         ];
     }
 
@@ -32,5 +35,10 @@ class Wallet extends Model
     public function payoutRequests(): HasMany
     {
         return $this->hasMany(PayoutRequest::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(WalletTransaction::class);
     }
 }
