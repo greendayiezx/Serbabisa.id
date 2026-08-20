@@ -607,6 +607,11 @@ function finishLocationSelection() {
     return
   }
 
+  if (route.query.category === 'bisabersih') {
+    router.push({ name: 'task-bersih-detail', query: { category: 'bisabersih' } })
+    return
+  }
+
   goBackOrHome()
 }
 

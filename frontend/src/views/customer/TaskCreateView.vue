@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/task'
 import { useTaskDraftStore } from '@/stores/taskDraft'
@@ -22,7 +23,11 @@ const taskStore = useTaskStore()
 const draftStore = useTaskDraftStore()
 const locationStore = useLocationStore()
 
-const step = draftStore.step
+// storeToRefs, bukan draftStore.step langsung: Pinia meng-unwrap ref jadi angka
+// biasa, sehingga "step = 2" di template menulis ke variabel mati dan wizard
+// tidak pernah berpindah langkah. `form` tidak perlu diperlakukan sama karena
+// isinya objek — proxy reaktifnya ikut terbawa saat di-unwrap.
+const { step } = storeToRefs(draftStore)
 const form = draftStore.form
 const submitting = ref(false)
 const error = ref('')

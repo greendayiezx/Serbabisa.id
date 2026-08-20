@@ -38,7 +38,7 @@ function handleLanjut() {
   if (!selectedService.value) return
   router.push({
     name: 'task-create',
-    query: { category: 'bisabersich', service: selectedService.value },
+    query: { category: 'bisabersih', service: selectedService.value },
   })
 }
 
@@ -59,7 +59,7 @@ function onScroll() {
 }
 
 function goBack() {
-  router.push({ name: 'task-location', query: { category: 'bisabersich' } })
+  router.push({ name: 'task-location', query: { category: 'bisabersih' } })
 }
 
 onMounted(() => {
@@ -79,16 +79,17 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
 </script>
 
 <template>
+  <!-- Skeleton loading -->
   <div v-if="skelTampil" class="min-h-dvh w-full bg-(--color-surface) pb-24">
     <div class="h-56 w-full">
-      <Skeleton class="h-full w-full rounded-b-[2rem]" />
+      <Skeleton class="h-full w-full" />
     </div>
-    <div class="mx-4 mt-4 space-y-3">
+    <div class="mx-4 mt-4 space-y-4">
       <Skeleton class="h-14 w-full" />
       <div class="grid grid-cols-3 gap-3">
         <Skeleton class="h-20 w-full" v-for="i in 6" :key="i" />
       </div>
-      <Skeleton class="h-8 w-40" />
+      <Skeleton class="h-7 w-40" />
       <div class="space-y-3">
         <Skeleton class="h-20 w-full" v-for="i in 3" :key="'c' + i" />
       </div>
@@ -97,29 +98,42 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
   </div>
 
   <template v-else>
-    <div class="min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) font-body-md overflow-x-hidden">
+    <div class="min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) font-body overflow-x-hidden">
       <!-- TopAppBar: fixed, hides on scroll down -->
       <header
         ref="topAppBar"
-        class="fixed top-0 w-full z-50 bg-white/85 backdrop-blur-xl border-b border-white/20 shadow-sm transition-transform duration-300 translate-y-0"
+        class="fixed top-0 w-full z-50 bg-(--color-surface-0)/85 backdrop-blur-xl border-b border-white/20 shadow-sm transition-transform duration-300 translate-y-0"
       >
-        <div class="flex items-center px-4 pt-4 pb-2.5">
-          <button
-            type="button"
-            aria-label="Kembali"
-            class="w-9 h-9 rounded-full bg-(--color-surface-container) flex items-center justify-center active:scale-90 transition-transform"
-            @click="goBack"
-          >
-            <Icon name="arrow-left" class="w-[19px] h-[19px]" />
-          </button>
-          <h1 class="flex-1 font-display-lg text-headline-lg-mobile text-center text-(--color-azure)">
-            BisaBersich
-          </h1>
-          <div class="w-9"></div>
+        <div class="flex flex-col px-4 pt-4 pb-2.5">
+          <div class="flex items-center justify-between">
+            <button
+              type="button"
+              aria-label="Kembali"
+              class="w-9 h-9 rounded-full bg-(--color-surface-container) flex items-center justify-center text-(--color-azure) active:scale-90 transition-transform"
+              @click="goBack"
+            >
+              <Icon name="arrow-left" class="w-[19px] h-[19px]" />
+            </button>
+            <h1 class="font-display font-extrabold text-[15px] text-(--color-azure)">BisaBersih</h1>
+            <div class="w-9"></div>
+          </div>
+
+          <!-- Search Bar -->
+          <div class="relative w-full mt-2.5">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Icon name="search" class="w-4 h-4 text-(--color-on-surface-variant)" />
+            </div>
+            <input
+              type="text"
+              readonly
+              placeholder="Cari layanan kebersihan..."
+              class="block w-full pl-10 pr-3 py-2 bg-(--color-surface-container) rounded-[10px] focus:ring-0 text-sm text-(--color-on-surface) placeholder-(--color-on-surface-variant)/60 transition-colors"
+            />
+          </div>
         </div>
       </header>
 
-      <main class="pt-[56px] flex flex-col gap-5">
+      <main class="pt-[68px] pb-40 flex flex-col gap-5">
         <!-- Hero Section -->
         <section class="relative mx-4 mt-1 rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.10)] group">
           <img
@@ -127,15 +141,15 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
             class="w-full h-[200px] object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuAug0RL3fedrwmBwP9aaLYfp1cx80r3fve20LvRXUnpYDuinNXpSa97KYzkZglha7fCq0NETgO3Pxi8ZwM-yhaYpkFf0NdH376O7z08of2wnFzW5EzfeNNCPQiWrseVVlBFTsCe3a6_hnz9hjKWQwxSKl4rAE3-go3doQxGMiXWRTkPafZqFMjCsvsbFv-CszoNpLR06KqfkNjQoZIGfcvABzlopC8IK88xPofcIKeCXdHdui0LFaDW"
           />
-          <div class="absolute inset-0 bg-gradient-to-t from-deep-onyx/70 to-transparent z-10 rounded-[2rem] pointer-events-none"></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-[#1A1A1A]/80 to-transparent z-10 rounded-[2rem] pointer-events-none"></div>
           <div class="absolute bottom-0 left-0 w-full p-5 z-20">
             <div
-              class="inline-block bg-(--color-lime) text-[#33430b] font-label-lg px-3 py-1 rounded-full mb-2 shadow-sm animate-pulse"
+              class="inline-block bg-(--color-lime) text-[#33430b] text-[11px] font-semibold px-3 py-1 rounded-full mb-2 shadow-sm"
             >
               Promo 20% Off for First Order
             </div>
-            <h2 class="font-title-lg text-title-lg text-white mb-1">Spotless Home, Instantly.</h2>
-            <p class="font-body-md text-white/90">Professional cleaning at your fingertips.</p>
+            <h2 class="font-display font-extrabold text-[20px] text-white mb-1">Spotless Home, Instantly.</h2>
+            <p class="text-[13px] text-white/90">Professional cleaning at your fingertips.</p>
           </div>
         </section>
 
@@ -161,12 +175,13 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
         <!-- Service Categories (Grid) -->
         <section class="mx-4">
           <div class="flex justify-between items-end mb-3">
-            <h3 class="font-title-lg text-title-lg text-(--color-on-surface)">Services</h3>
+            <h3 class="font-display font-extrabold text-[15px] text-(--color-on-surface)">Services</h3>
             <a
-              class="font-label-lg text-(--color-azure) hover:underline"
+              class="text-[12px] font-semibold text-(--color-azure) hover:underline"
               href="#"
               @click.prevent
-            >See all</a>
+              >See all</a
+            >
           </div>
           <div class="grid grid-cols-3 gap-3">
             <button
@@ -174,7 +189,11 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
               :key="s.id"
               type="button"
               class="flex flex-col items-center justify-center p-4 bg-(--color-surface-0) rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all active:scale-95 border border-(--color-outline)/20 group"
-              :class="selectedService === s.id ? 'border-2 border-(--color-azure) bg-(--color-primary-container)' : ''"
+              :class="
+                selectedService === s.id
+                  ? 'border-2 border-(--color-azure) bg-(--color-primary-container)'
+                  : ''
+              "
               @click="handleServiceSelect(s.id)"
             >
               <span
@@ -232,17 +251,17 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
                 </svg>
                 <Icon v-else name="layers" class="w-6 h-6 text-(--color-on-primary-container)" />
               </span>
-              <span class="font-label-sm text-center text-(--color-on-surface) text-[11px] leading-tight">
+              <span class="text-[11px] font-medium text-(--color-on-surface) leading-tight text-center">
                 {{ s.label }}
               </span>
             </button>
           </div>
         </section>
 
-        <!-- Special Section: Why BisaBersich? -->
-        <section class="mx-4 bg-(--color-surface-container-low) py-8 my-4 rounded-[2rem]">
-          <h3 class="font-title-lg text-title-lg text-(--color-on-surface) mb-6 text-center">
-            Why BisaBersich?
+        <!-- Special Section: Why BisaBersih? -->
+        <section class="mx-4 bg-(--color-surface-container-high) py-8 my-4 rounded-[2rem]">
+          <h3 class="font-display font-extrabold text-[15px] text-(--color-on-surface) mb-6 text-center">
+            Why BisaBersih?
           </h3>
           <div class="flex flex-col gap-4">
             <!-- Card 1 -->
@@ -251,8 +270,8 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
                 <Icon name="shield" class="w-5 h-5 text-(--color-on-secondary-container)" />
               </div>
               <div>
-                <h4 class="font-label-lg text-(--color-on-surface) mb-1">Verified Cleaners</h4>
-                <p class="font-body-md text-(--color-on-surface-variant) text-sm">
+                <h4 class="font-display font-bold text-[13px] text-(--color-on-surface) mb-1">Verified Cleaners</h4>
+                <p class="text-[12px] text-(--color-on-surface-variant)">
                   Every partner is background-checked and professionally trained for top-tier service.
                 </p>
               </div>
@@ -263,8 +282,8 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
                 <Icon name="sparkle" class="w-5 h-5 text-(--color-on-secondary-container)" />
               </div>
               <div>
-                <h4 class="font-label-lg text-(--color-on-surface) mb-1">Eco-Friendly Supplies</h4>
-                <p class="font-body-md text-(--color-on-surface-variant) text-sm">
+                <h4 class="font-display font-bold text-[13px] text-(--color-on-surface) mb-1">Eco-Friendly Supplies</h4>
+                <p class="text-[12px] text-(--color-on-surface-variant)">
                   We use safe, sustainable cleaning products that are tough on dirt but gentle on your home.
                 </p>
               </div>
@@ -275,8 +294,8 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
                 <Icon name="check-circle" class="w-5 h-5 text-(--color-on-secondary-container)" />
               </div>
               <div>
-                <h4 class="font-label-lg text-(--color-on-surface) mb-1">24h Satisfaction Guarantee</h4>
-                <p class="font-body-md text-(--color-on-surface-variant) text-sm">
+                <h4 class="font-display font-bold text-[13px] text-(--color-on-surface) mb-1">24h Satisfaction Guarantee</h4>
+                <p class="text-[12px] text-(--color-on-surface-variant)">
                   Not happy with the clean? Let us know within 24 hours and we'll re-clean for free.
                 </p>
               </div>
@@ -290,12 +309,12 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
           <div class="absolute bottom-0 left-0 w-24 h-24 bg-(--color-lime)/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
           <div class="relative z-10 flex flex-col items-center">
             <Icon name="calendar" class="w-8 h-8 text-(--color-lime) mb-2" />
-            <h3 class="font-title-lg text-title-lg text-white mb-2">Subscription Plans</h3>
-            <p class="font-body-md text-white/90 mb-4 max-w-[250px]">
+            <h3 class="font-display font-extrabold text-[18px] text-white mb-2">Subscription Plans</h3>
+            <p class="text-[13px] text-white/90 mb-4 max-w-[250px]">
               Schedule weekly or bi-weekly cleans and lock in huge savings.
             </p>
             <div
-              class="inline-block bg-(--color-lime) text-[#33430b] font-label-lg px-4 py-2 rounded-full font-bold shadow-md hover:bg-white transition-colors cursor-pointer active:scale-95"
+              class="inline-block bg-(--color-lime) text-[#33430b] text-[12px] font-semibold px-4 py-2 rounded-full shadow-md hover:bg-white transition-colors cursor-pointer active:scale-95"
             >
               Save up to 20%
             </div>
@@ -305,13 +324,13 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
 
       <!-- Sticky footer CTA -->
       <footer
-        class="fixed bottom-0 inset-x-0 z-30 bg-(--color-surface-0)/90 backdrop-blur-xl border-t border-(--color-outline)/40 pb-[env(safe-area-inset-bottom)]"
+        class="fixed bottom-20 inset-x-0 z-40 bg-(--color-surface-0)/90 backdrop-blur-xl border-t border-(--color-outline)/40 pb-[env(safe-area-inset-bottom)]"
       >
         <div class="max-w-[430px] mx-auto px-4 py-3 flex gap-3">
           <button
             type="button"
             :disabled="!selectedService"
-            class="flex-1 bg-(--color-azure) text-white rounded-full py-3.5 text-[14px] font-bold shadow-md shadow-(--color-azure)/20 hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed min-h-11"
+            class="flex-1 bg-(--color-azure) text-white rounded-full py-3.5 text-[14px] font-bold shadow-(--shadow-lift) hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed min-h-11"
             @click="handleLanjut"
           >
             Lanjut
@@ -324,35 +343,31 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
       <nav
         class="fixed bottom-0 w-full z-50 bg-(--color-surface-0)/85 backdrop-blur-xl border-t border-white/20 shadow-[0_-20px_60px_rgba(0,0,0,0.10)] flex justify-around items-center h-20 px-4 pb-[env(safe-area-inset-bottom)]"
       >
-        <button class="flex flex-col items-center justify-center bg-(--color-primary-container) text-(--color-on-primary-container) rounded-xl px-3 py-1 active:scale-90 transition-transform duration-200">
+        <button
+          type="button"
+          class="flex flex-col items-center justify-center bg-(--color-primary-container) text-(--color-on-primary-container) rounded-xl px-3 py-1 active:scale-90 transition-transform duration-200"
+          @click="router.push({ name: 'home' })"
+        >
           <Icon name="home" class="w-5 h-5 mb-1" />
-          <span class="font-label-sm text-label-sm">Home</span>
+          <span class="text-[10.5px] font-medium">Home</span>
         </button>
         <button
           type="button"
-          class="flex flex-col items-center justify-center text-(--color-on-surface-variant) hover:bg-(--color-surface-container)/60 transition-colors rounded-xl px-3 py-1 active:scale-90"
+          class="flex flex-col items-center justify-center text-(--color-on-surface-variant) hover:bg-(--color-surface-container-high) rounded-xl px-3 py-1 active:scale-90 transition-colors"
           @click="router.push({ name: 'task-list' })"
         >
           <Icon name="clipboard" class="w-5 h-5 mb-1" />
-          <span class="font-label-sm text-label-sm">Tasks</span>
+          <span class="text-[10.5px] font-medium">Tasks</span>
         </button>
         <button
           type="button"
-          class="flex flex-col items-center justify-center text-(--color-on-surface-variant) hover:bg-(--color-surface-container)/60 transition-colors rounded-xl px-3 py-1 active:scale-90"
+          class="flex flex-col items-center justify-center text-(--color-on-surface-variant) hover:bg-(--color-surface-container-high) rounded-xl px-3 py-1 active:scale-90 transition-colors"
           @click="router.push({ name: 'profile' })"
         >
           <Icon name="user" class="w-5 h-5 mb-1" />
-          <span class="font-label-sm text-label-sm">Profile</span>
+          <span class="text-[10.5px] font-medium">Profile</span>
         </button>
       </nav>
     </div>
   </template>
 </template>
-
-<style scoped>
-/* The hero headline/subtitle live on a transparent-to-dark gradient, so force
-   them legible without relying on the upstream page's text color. */
-.hero-headline {
-  color: #ffffff;
-}
-</style>

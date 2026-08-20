@@ -108,6 +108,20 @@ const router = createRouter({
       meta: { roles: ['customer', 'mitra', 'admin'] as Role[] },
     },
     {
+      // Pola jalurnya disamakan dengan layanan lain (angkut/detail,
+      // belanja/detail) supaya URL layanan konsisten dan mudah ditebak.
+      path: '/tasks/new/bersih/detail',
+      name: 'task-bersih-detail',
+      component: () => import('@/views/customer/BersihDetailView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new',
+      name: 'task-create',
+      component: () => import('@/views/customer/TaskCreateView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
       path: '/tasks/mine',
       name: 'task-list',
       component: () => import('@/views/customer/MyTasksView.vue'),
