@@ -303,6 +303,7 @@ function lanjutkan() {
   angkutDraftStore.patchDraft({
     namaPenerima: namaPenerima.value,
     teleponPenerima: `${selectedCountry.value.code}${teleponPenerima.value}`,
+    protectionId: selectedProtection.value,
     protectionLabel: tier?.label,
     protectionPrice: tier?.price,
   })

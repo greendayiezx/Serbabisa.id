@@ -93,8 +93,29 @@ const estimasiTotal = computed(() => {
   return priceFor(selectedDelivery.value) + helperCount.value * 50000
 })
 
+const errorMsg = ref('')
+
+/**
+ * Validasi sebelum lanjut — dulu tombol ini bisa ditekan terus tanpa mengecek
+ * apa pun. Server juga memvalidasi hal yang sama, ini hanya agar salahnya
+ * ketahuan lebih awal tanpa bolak-balik ke server.
+ */
 function lanjut() {
+  const kurang: string[] = []
+  if (!catatan.value.trim()) kurang.push('detail barang bawaan')
+  if (!beratTotal.value || beratTotal.value <= 0) kurang.push('estimasi berat')
+  if (!tanggal.value) kurang.push('tanggal pengambilan')
+  if (!waktu.value) kurang.push('waktu pengambilan')
+
+  if (kurang.length) {
+    errorMsg.value = `Lengkapi dulu: ${kurang.join(', ')}.`
+    return
+  }
+  errorMsg.value = ''
+
   angkutDraftStore.setDraft({
+    vehicleId: selectedVehicle.value,
+    deliveryId: selectedDelivery.value,
     vehicleLabel: currentVehicle.value?.label ?? '',
     vehicleImage: currentVehicle.value?.image,
     deliveryLabel: selectedDeliveryOpt.value?.label ?? '',
@@ -324,19 +345,24 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
       </div>
   
       <!-- Sticky footer -->
-      <div class="fixed bottom-0 inset-x-0 z-20 bg-(--color-surface-0) border-t border-(--color-outline)/40 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
-        <div class="flex flex-col">
-          <span class="text-[11px] text-(--color-on-surface-variant)">Estimasi Total</span>
-          <span class="text-lg font-extrabold text-black">Rp{{ estimasiTotal.toLocaleString('id-ID') }}</span>
+      <div class="fixed bottom-0 inset-x-0 z-20 bg-(--color-surface-0) border-t border-(--color-outline)/40 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex flex-col gap-2">
+        <p v-if="errorMsg" class="flex items-center gap-1.5 text-[12px] font-semibold text-(--color-error)">
+          <Icon name="info" class="w-3.5 h-3.5 shrink-0" />{{ errorMsg }}
+        </p>
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex flex-col">
+            <span class="text-[11px] text-(--color-on-surface-variant)">Estimasi Total</span>
+            <span class="text-lg font-extrabold text-black">Rp{{ estimasiTotal.toLocaleString('id-ID') }}</span>
+          </div>
+          <button
+            type="button"
+            class="flex items-center gap-2 rounded-full bg-(--color-azure) text-white font-bold text-[15px] px-6 py-3.5 min-h-11 shadow-(--shadow-lift)"
+            @click="lanjut"
+          >
+            Lanjut
+            <Icon name="chevron-right" class="w-4 h-4" />
+          </button>
         </div>
-        <button
-          type="button"
-          class="flex items-center gap-2 rounded-full bg-(--color-azure) text-white font-bold text-[15px] px-6 py-3.5 min-h-11 shadow-(--shadow-lift)"
-          @click="lanjut"
-        >
-          Lanjut
-          <Icon name="chevron-right" class="w-4 h-4" />
-        </button>
       </div>
     </div>
   </template>

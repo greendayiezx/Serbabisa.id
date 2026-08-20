@@ -2,6 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export interface AngkutDraft {
+  /** Id pilihan yang dikirim ke server untuk dihitung ulang (bukan harga/label). */
+  vehicleId: string
+  deliveryId: string
+  protectionId?: string
   vehicleLabel: string
   vehicleImage?: string
   deliveryLabel: string

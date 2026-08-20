@@ -12,6 +12,7 @@ import BisaAngkutNavbar from '@/components/angkut/BisaAngkutNavbar.vue'
 import AngkutLoadingTruck from '@/components/angkut/AngkutLoadingTruck.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
 import AngkutDeliverySkeleton from '@/components/skeleton/AngkutDeliverySkeleton.vue'
+import { kirimAngkut, pesanError } from '@/api/angkut'
 
 const router = useRouter()
 const locationStore = useLocationStore()
@@ -63,22 +64,69 @@ function choosePayment(id: PaymentMethod['id']) {
 const submitting = ref(false)
 const searchingDriver = ref(false)
 const searchStep = ref(1)
+const errorMsg = ref('')
 
-function kirimPesanan() {
+/**
+ * Kirim pesanan ke backend, lalu tampilkan animasi cari driver. Sebelumnya
+ * fungsi ini hanya animasi tanpa memanggil server, jadi pesanan tidak pernah
+ * tersimpan dan tidak muncul di riwayat. Sekarang: simpan dulu ke server; kalau
+ * gagal, jangan pura-pura berhasil — tampilkan pesannya.
+ */
+async function kirimPesanan() {
   if (submitting.value) return
+
+  const d = draft.value
+  const loc = locationStore.draft
+  if (!d || !d.vehicleId || !d.deliveryId) {
+    errorMsg.value = 'Detail layanan belum lengkap. Ulangi dari langkah awal ya.'
+    return
+  }
+  if (!loc?.alamat) {
+    errorMsg.value = 'Alamat pengiriman belum dipilih.'
+    return
+  }
+  if (!d.namaPenerima || !d.teleponPenerima) {
+    errorMsg.value = 'Detail penerima belum lengkap.'
+    return
+  }
+
+  errorMsg.value = ''
   submitting.value = true
+
+  try {
+    await kirimAngkut({
+      vehicle_id: d.vehicleId,
+      delivery_id: d.deliveryId,
+      protection_id: d.protectionId ?? 'silver',
+      helper_count: d.helperCount ?? 0,
+      berat_total: d.beratTotal ?? 0,
+      tanggal: d.tanggal,
+      waktu: d.waktu,
+      catatan: d.catatan ?? '',
+      nama_penerima: d.namaPenerima,
+      telepon_penerima: d.teleponPenerima,
+      lokasi_alamat: loc.alamat,
+      lokasi_lat: loc.lat,
+      lokasi_lng: loc.lng,
+      metode: currentPayment.value.label,
+    })
+  } catch (e) {
+    submitting.value = false
+    errorMsg.value = pesanError(e)
+    return
+  }
+
+  // Tersimpan — baru mainkan animasi cari driver lalu ke halaman riwayat.
   searchingDriver.value = true
   searchStep.value = 1
-
   setTimeout(() => {
     searchStep.value = 2
-  }, 2500)
-
+  }, 1800)
   setTimeout(() => {
     locationStore.clearDraft()
     angkutDraftStore.clearDraft()
-    router.push({ name: 'home' })
-  }, 4200)
+    router.push({ name: 'task-list' })
+  }, 3400)
 }
 
 
@@ -227,6 +275,10 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
           <Icon name="chevron-right" class="w-4 h-4 text-(--color-on-surface-variant) shrink-0" />
         </button>
   
+        <p v-if="errorMsg" class="flex items-center gap-1.5 text-[12px] font-semibold text-(--color-error)">
+          <Icon name="info" class="w-3.5 h-3.5 shrink-0" />{{ errorMsg }}
+        </p>
+
         <button
           type="button"
           class="w-full flex items-center justify-between gap-2 rounded-full bg-(--color-azure) text-white font-bold text-[15px] px-6 py-3.5 min-h-11 shadow-(--shadow-lift) disabled:opacity-50"

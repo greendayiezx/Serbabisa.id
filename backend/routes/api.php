@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Api\AngkutCheckoutController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BelanjaCheckoutController;
 use App\Http\Controllers\Api\BidController;
@@ -56,6 +57,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/belanja/orders/{nomor}', [BelanjaCheckoutController::class, 'show']);
     Route::post('/belanja/checkout', [BelanjaCheckoutController::class, 'store']);
     Route::patch('/belanja/orders/{task}/selesai', [BelanjaCheckoutController::class, 'complete']);
+
+    // BisaAngkut: checkout (total dihitung server, tersimpan sebagai task → muncul di riwayat)
+    Route::post('/angkut/checkout', [AngkutCheckoutController::class, 'store']);
 
     // FR-11: Dompet Mitra & payout
     Route::get('/wallet', [WalletController::class, 'show']);
