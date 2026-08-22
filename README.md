@@ -53,6 +53,22 @@ Auth memakai Sanctum personal access token (Bearer), bukan cookie SPA session �
 - `layouts/AppLayout.vue` — shell mobile-first dengan bottom navigation (PRD bab 9).
 - `views/` — dipisah per peran: root untuk auth bersama, `customer/`, `mitra/`, `admin/`.
 
+## Testing & CI/CD
+
+Repo ini punya pipeline **GitHub Actions** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
+yang berjalan otomatis tiap push/PR ke `main`/`develop`: test + code style backend,
+serta typecheck + unit test + build frontend. Contoh deploy staging ada di
+[`.github/workflows/deploy-staging.yml`](.github/workflows/deploy-staging.yml).
+
+Menjalankan test secara lokal:
+
+```bash
+cd backend  && php artisan test        # PHPUnit (Feature: Auth, Category, HealthCheck)
+cd frontend && npm test                # Vitest (unit test Pinia store)
+```
+
+Panduan belajar CI/CD untuk QA bertahap: [`docs/CICD-QA-LEARNING.md`](docs/CICD-QA-LEARNING.md).
+
 ## Yang belum dikerjakan (lihat roadmap PRD bab 10)
 
 - Business logic penuh di controller (saat ini sebagian besar masih resource-stub kosong; `Auth` dan `Category` sudah fungsional).

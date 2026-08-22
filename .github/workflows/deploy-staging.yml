@@ -1,0 +1,84 @@
+# =============================================================================
+# CD (Continuous Delivery) — Deploy ke STAGING  [CONTOH PEMBELAJARAN]
+#
+# Ini kerangka tahap lanjut: setelah CI hijau di branch `develop`, artefak
+# frontend di-build dan (secara opsional) di-publish ke provider hosting.
+#
+# ⚠️  Workflow ini SENGAJA tidak akan menjalankan langkah deploy sungguhan
+#     sampai Anda menyiapkan Environment "staging" + secrets di GitHub:
+#       Settings → Environments → New environment → "staging"
+#       Settings → Secrets and variables → Actions → tambahkan token provider
+#
+# Alur nyata: pelajari dulu, isi secrets, baru aktifkan langkah deploy.
+# =============================================================================
+name: Deploy Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch: {} # bisa dijalankan manual dari tab Actions
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-frontend:
+    name: Build artefak frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+        env:
+          # Contoh: URL API staging diambil dari GitHub Variables (bukan secret).
+          VITE_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
+      - name: Simpan artefak build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  deploy:
+    name: Deploy ke hosting staging
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    # Environment "staging" bisa diberi protection rule (mis. wajib approval).
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_URL }}
+    steps:
+      - name: Ambil artefak build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+
+      # Guard: langkah deploy hanya jalan bila secret provider sudah diisi.
+      # Selama kosong, pipeline tetap hijau tapi hanya mencetak instruksi.
+      - name: Deploy (aktif setelah secrets diisi)
+        env:
+          DEPLOY_TOKEN: ${{ secrets.STAGING_DEPLOY_TOKEN }}
+        run: |
+          if [ -z "$DEPLOY_TOKEN" ]; then
+            echo "ℹ️  STAGING_DEPLOY_TOKEN belum diisi — melewati deploy sungguhan."
+            echo "    Isi secret ini di Settings → Secrets → Actions untuk mengaktifkan."
+            echo "    Contoh provider: Vercel/Netlify (frontend), Railway/Render (backend)."
+            exit 0
+          fi
+          echo "🚀 Meng-upload folder dist/ ke provider staging..."
+          # Contoh nyata (uncomment & sesuaikan dengan provider Anda):
+          # npx netlify deploy --dir=dist --site="$NETLIFY_SITE_ID" --auth="$DEPLOY_TOKEN" --prod
+          # atau: npx vercel deploy --prebuilt --token="$DEPLOY_TOKEN"

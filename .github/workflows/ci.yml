@@ -1,0 +1,148 @@
+# =============================================================================
+# CI (Continuous Integration) — Tugasin / Serbabisa.id
+#
+# Tujuan (sudut pandang QA): setiap push & pull request otomatis diverifikasi
+# kualitasnya sebelum boleh di-merge. Kalau ada job merah, PR terkunci.
+#
+# Pipeline ini punya dua "job" paralel + satu job ringkas:
+#   - backend  : Laravel/PHP  -> code style (Pint) + PHPUnit + audit keamanan
+#   - frontend : Vue/TS/Vite  -> typecheck + unit test (Vitest) + build + audit
+#   - ci-ok    : gerbang tunggal yang di-set sebagai required status check
+# =============================================================================
+name: CI
+
+# Kapan pipeline jalan.
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Batalkan run lama di branch yang sama saat ada push baru (hemat menit CI).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # BACKEND — Laravel 11 / PHP 8.3
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend (Laravel · PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3']
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo, sqlite, pdo_sqlite, bcmath
+          coverage: none
+          tools: composer:v2
+
+      # Cache paket Composer supaya run berikutnya jauh lebih cepat.
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: composer-${{ runner.os }}-php${{ matrix.php }}-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php${{ matrix.php }}-
+
+      - name: Install dependency
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Siapkan .env & app key
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # Gaya kode: --test = laporkan file yang belum ter-format (tanpa mengubah).
+      # Non-blocking dulu karena masih ada file lama yang belum rapi. Untuk
+      # merapikan: jalankan `./vendor/bin/pint` lalu commit, setelah itu hapus
+      # baris `continue-on-error` di bawah agar gaya kode jadi gerbang wajib.
+      - name: Code style (Laravel Pint)
+        run: ./vendor/bin/pint --test
+        continue-on-error: true
+
+      - name: Jalankan test (PHPUnit)
+        run: php artisan test
+
+      # `composer audit` mengecek CVE pada dependency. Non-blocking untuk saat
+      # ini (continue-on-error) supaya tidak memblokir belajar; naikkan jadi
+      # blocking begitu dependency sudah bersih.
+      - name: Audit keamanan dependency
+        run: composer audit --no-interaction
+        continue-on-error: true
+
+  # ---------------------------------------------------------------------------
+  # FRONTEND — Vue 3 / TypeScript / Vite
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (Vue · Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22']
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `npm ci` = install deterministik dari package-lock.json (bukan install).
+      - name: Install dependency
+        run: npm ci
+
+      - name: Typecheck (vue-tsc)
+        run: npm run typecheck
+
+      - name: Unit test (Vitest)
+        run: npm test
+
+      - name: Build produksi
+        run: npm run build
+
+      - name: Audit keamanan dependency
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+  # ---------------------------------------------------------------------------
+  # GERBANG TUNGGAL — jadikan job ini satu-satunya "required check" di branch
+  # protection. Ia hijau hanya jika backend & frontend dua-duanya hijau.
+  # ---------------------------------------------------------------------------
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pastikan semua job wajib sukses
+        run: |
+          if [ "${{ needs.backend.result }}" != "success" ] || [ "${{ needs.frontend.result }}" != "success" ]; then
+            echo "Ada job CI yang gagal — lihat detail job di atas."
+            exit 1
+          fi
+          echo "Semua job CI hijau ✅"
