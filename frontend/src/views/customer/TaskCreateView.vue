@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
+import { useKembali } from '@/composables/useKembali'
 import { useTaskStore } from '@/stores/task'
 import { useTaskDraftStore } from '@/stores/taskDraft'
 import { useLocationStore } from '@/stores/location'
@@ -19,6 +20,7 @@ const iconMap: Record<string, string> = {
 
 const route = useRoute()
 const router = useRouter()
+const kembali = useKembali()
 const taskStore = useTaskStore()
 const draftStore = useTaskDraftStore()
 const locationStore = useLocationStore()
@@ -73,7 +75,7 @@ async function handleSubmit() {
 <template>
   <AppLayout>
     <div class="flex items-center gap-3 px-5 pt-4.5 pb-1.5">
-      <button type="button" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="router.back()">
+      <button type="button" aria-label="Kembali" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="kembali">
         <Icon name="arrow-left" class="w-[19px] h-[19px]" />
       </button>
       <h3 class="text-base font-extrabold flex-1">Buat Tugas</h3>

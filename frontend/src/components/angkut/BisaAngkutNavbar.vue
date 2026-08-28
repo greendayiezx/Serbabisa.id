@@ -1,16 +1,8 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
 import Icon from '@/components/icons/Icon.vue'
+import { useKembali } from '@/composables/useKembali'
 
-const router = useRouter()
-
-function goBackOrHome() {
-  if (window.history.state?.back) {
-    router.back()
-  } else {
-    router.push({ name: 'home' })
-  }
-}
+const goBackOrHome = useKembali()
 </script>
 
 <template>
@@ -19,6 +11,7 @@ function goBackOrHome() {
       <button
         type="button"
         class="w-9 h-9 rounded-full bg-slate-800/80 text-white flex items-center justify-center hover:bg-slate-700 active:scale-95 transition-all"
+        aria-label="Kembali"
         @click="goBackOrHome"
       >
         <Icon name="arrow-left" class="w-5 h-5 text-white" />

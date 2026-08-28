@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+import { useKembali } from '@/composables/useKembali'
 import { useChatStore } from '@/stores/chat'
 import { useTaskStore } from '@/stores/task'
 import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
-import type { TaskStatus } from '@/types'
 
 const route = useRoute()
-const router = useRouter()
+const kembali = useKembali()
 const chatStore = useChatStore()
 const taskStore = useTaskStore()
 const auth = useAuthStore()
@@ -23,15 +23,25 @@ onMounted(async () => {
 })
 
 const messages = computed(() => chatStore.messagesByTask[taskId] ?? [])
-const counterpart = computed(() => taskStore.currentTask?.mitra ?? taskStore.currentTask?.customer)
 
-const statusLabel: Record<TaskStatus, string> = {
-  pending: 'Menunggu Mitra',
-  accepted: 'Diterima',
-  in_progress: 'Dikerjakan',
-  completed: 'Selesai',
-  cancelled: 'Dibatalkan',
-}
+/**
+ * Lawan bicara mengikuti PERAN yang membuka chat: customer melihat driver-nya,
+ * mitra melihat customer-nya — bukan sekadar "mitra kalau ada". Tanpa ini,
+ * customer justru melihat namanya sendiri saat mitra belum ditugaskan.
+ */
+const akuMitra = computed(() => auth.user?.role === 'mitra')
+const lawan = computed(() =>
+  akuMitra.value ? taskStore.currentTask?.customer : taskStore.currentTask?.mitra,
+)
+/**
+ * Nama & nomor driver placeholder selama server belum mengirim identitas mitra.
+ * Sama seperti di halaman status pesanan: nama/plat/nomor masih contoh. Nomor
+ * placeholder dipakai supaya tombol telepon tetap ada; ganti begitu server
+ * mengirim nomor mitra sungguhan.
+ */
+const DRIVER_TELP = '+6281234567890'
+const namaLawan = computed(() => lawan.value?.name ?? (akuMitra.value ? 'Customer' : 'Asep Suparman'))
+const teleponLawan = computed(() => lawan.value?.phone ?? (akuMitra.value ? null : DRIVER_TELP))
 
 function initial(name?: string) {
   return (name ?? 'M').trim().charAt(0).toUpperCase()
@@ -51,19 +61,25 @@ async function send() {
 </script>
 
 <template>
-  <AppLayout>
-    <div class="flex flex-col h-[calc(100vh-96px)] md:h-[calc(100vh-16px)]">
+  <AppLayout :hide-nav="true">
+    <div class="flex flex-col h-dvh">
       <div class="flex items-center gap-3 px-5 pt-4.5 pb-3 border-b border-(--color-outline)">
-        <button type="button" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="router.back()">
+        <button type="button" aria-label="Kembali" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="kembali">
           <Icon name="arrow-left" class="w-[19px] h-[19px]" />
         </button>
         <div class="w-8.5 h-8.5 rounded-full flex items-center justify-center font-display font-extrabold text-white text-[13px] bg-linear-to-br from-(--color-azure) to-[#0f7fce] shrink-0">
-          {{ initial(counterpart?.name) }}
+          {{ initial(namaLawan) }}
         </div>
-        <h3 class="text-sm font-extrabold flex-1 truncate">{{ counterpart?.name ?? 'Chat' }}</h3>
-        <span v-if="taskStore.currentTask" class="rounded-full text-[11px] font-bold px-2.5 py-1 bg-(--color-tertiary-container) text-(--color-on-tertiary-container) shrink-0">
-          {{ statusLabel[taskStore.currentTask.status] }}
-        </span>
+        <h3 class="text-sm font-extrabold flex-1 truncate">{{ namaLawan }}</h3>
+        <!-- Telepon driver langsung dari dalam aplikasi -->
+        <a
+          v-if="teleponLawan"
+          :href="`tel:${teleponLawan}`"
+          aria-label="Telepon driver"
+          class="w-9 h-9 rounded-full bg-(--color-azure) text-white flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+        >
+          <Icon name="phone" class="w-[18px] h-[18px]" />
+        </a>
       </div>
 
       <div class="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2.5">

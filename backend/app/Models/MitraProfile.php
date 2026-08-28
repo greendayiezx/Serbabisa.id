@@ -16,6 +16,7 @@ class MitraProfile extends Model
         'no_ktp',
         'foto_ktp',
         'foto_selfie',
+        'gender',
         'skill',
         'rating_avg',
         'rating_count',

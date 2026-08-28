@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useTaskStore } from '@/stores/task'
+import { rupiah } from '@/lib/rupiah'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 
@@ -27,7 +28,7 @@ onMounted(() => {
             <Icon name="pin" class="w-3.5 h-3.5" />{{ task.lokasi_alamat }}
           </p>
           <p v-if="task.harga" class="text-sm font-bold text-(--color-on-primary-container) mt-1.5">
-            Rp{{ task.harga.toLocaleString('id-ID') }}
+            {{ rupiah(task.harga) }}
           </p>
         </RouterLink>
         <div v-if="!taskStore.tasks.length" class="text-center py-10">

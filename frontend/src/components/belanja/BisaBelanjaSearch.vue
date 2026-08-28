@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import Icon from '@/components/icons/Icon.vue'
-import { KATALOG_BY_KATEGORI } from '@/lib/belanjaKatalog'
+import { KATALOG_BY_KATEGORI } from '@/lib/belanja/belanjaKatalog'
 
 /**
  * Pintu masuk pencarian. Kotaknya sengaja bukan <input> — mengetik di sini

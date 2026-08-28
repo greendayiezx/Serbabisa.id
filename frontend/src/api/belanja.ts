@@ -52,6 +52,7 @@ interface TaskApi {
   telepon_penerima: string | null
   fulfillment_status: string | null
   created_at: string
+  category?: { slug: string; nama: string } | null
   items?: Array<{
     sku: string | null
     nama: string
@@ -119,6 +120,7 @@ export function kePesanan(t: TaskApi): Pesanan {
 
   const status = t.fulfillment_status as StatusPesanan
   return {
+    id: t.id,
     invoice,
     // Bagian kode di URL: SBB-260819-5D9C5H0 → 5D9C5H0
     nomor: invoice.split('-')[2] ?? invoice,
@@ -126,6 +128,9 @@ export function kePesanan(t: TaskApi): Pesanan {
     estimasiMulai: new Date(dibuat.getTime() + ETA_MULAI_MENIT * 60000).toISOString(),
     estimasiSelesai: new Date(dibuat.getTime() + ETA_SELESAI_MENIT * 60000).toISOString(),
     metodePembayaran: labelMetode(bayar?.metode),
+    // Nama layanan datang dari relasi kategori, bukan disimpulkan dari judul:
+    // halaman status dipakai bersama semua layanan, dan judul boleh berubah.
+    layanan: t.category?.nama ?? 'Serbabisa',
     status: STATUS_DIKENAL.includes(status) ? status : 'diproses',
     toko: t.toko ?? '',
     alamat: t.lokasi_alamat ?? '',

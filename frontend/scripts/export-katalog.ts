@@ -13,7 +13,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { KATALOG_BY_KATEGORI, hargaFinal, type KatalogItem } from '../src/lib/belanjaKatalog.ts'
+import { KATALOG_BY_KATEGORI, hargaFinal, type KatalogItem } from '../src/lib/belanja/belanjaKatalog.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const tujuan = resolve(here, '../../backend/database/data/products.json')

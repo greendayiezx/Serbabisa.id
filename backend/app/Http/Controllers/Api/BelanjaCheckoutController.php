@@ -244,7 +244,7 @@ class BelanjaCheckoutController extends Controller
     {
         $kategoriId = Category::where('slug', 'bisabelanja')->value('id');
 
-        $pesanan = Task::with(['items', 'payment', 'promo'])
+        $pesanan = Task::with(['items', 'payment', 'promo', 'category'])
             ->where('customer_id', $request->user()->id)
             ->when($kategoriId, fn ($q) => $q->where('category_id', $kategoriId))
             ->whereNotNull('nomor_invoice')
@@ -268,7 +268,7 @@ class BelanjaCheckoutController extends Controller
     {
         $nomor = strtoupper(trim($nomor));
 
-        $task = Task::with(['items', 'payment', 'promo'])
+        $task = Task::with(['items', 'payment', 'promo', 'category'])
             ->where('customer_id', $request->user()->id)
             ->where(fn ($q) => $q
                 ->where('nomor_invoice', $nomor)

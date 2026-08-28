@@ -4,6 +4,22 @@ import Icon from '@/components/icons/Icon.vue'
 
 const modelValue = defineModel<string>({ default: '' })
 
+const props = defineProps<{
+  /** Isian wajib. Bersama `ditandai`, menentukan garis merah. */
+  wajib?: boolean
+  /** Sudah pernah gagal divalidasi — tepinya memerah selama masih kosong. */
+  ditandai?: boolean
+}>()
+
+/**
+ * Garis merah baru muncul setelah pengguna menekan "Lanjut" dan isian ini
+ * memang masih kosong. Halaman yang baru dibuka tidak boleh langsung merah:
+ * pengguna belum melakukan apa pun yang salah.
+ */
+const kosongDanDitandai = computed(
+  () => props.wajib === true && props.ditandai === true && !modelValue.value,
+)
+
 const today = new Date()
 today.setHours(0, 0, 0, 0)
 
@@ -87,13 +103,15 @@ function pickToday() {
   <div>
     <button
       type="button"
-      class="w-full flex items-center gap-2.5 bg-(--color-surface-container) rounded-(--radius-input) px-3.5 py-3 text-left"
+      class="w-full flex items-center gap-2.5 bg-white border-2 rounded-2xl px-4 py-3.5 text-left active:scale-[0.99] transition-transform cursor-pointer shadow-xs"
+      :class="kosongDanDitandai ? 'border-(--color-error)' : 'border-white'"
       @click="openPicker"
     >
-      <Icon name="calendar" class="w-[18px] h-[18px] text-(--color-on-surface-variant) shrink-0" />
-      <span class="text-sm flex-1 truncate" :class="modelValue ? 'text-(--color-on-surface) font-semibold' : 'text-(--color-on-surface-variant)'">
+      <Icon name="calendar" class="w-5 h-5 text-(--color-on-surface-variant) shrink-0" />
+      <span class="text-[15px] flex-1 truncate" :class="modelValue ? 'text-(--color-on-surface) font-extrabold' : 'text-(--color-on-surface-variant)'">
         {{ displayLabel || 'Pilih tanggal' }}
       </span>
+      <Icon name="chevron-down" class="w-5 h-5 text-(--color-on-surface-variant) shrink-0" />
     </button>
 
     <Teleport to="body">

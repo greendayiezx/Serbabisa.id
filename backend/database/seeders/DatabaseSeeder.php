@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             SubscriptionPlanSeeder::class,
             PromoSeeder::class,
+            MitraBersihSeeder::class,
         ]);
 
         User::factory()->create([

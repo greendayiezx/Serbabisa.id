@@ -43,6 +43,7 @@ class Task extends Model
         'dijadwalkan_pada',
         'nama_penerima',
         'telepon_penerima',
+        'detail_layanan',
         'accepted_at',
         'completed_at',
         'cancelled_at',
@@ -51,6 +52,7 @@ class Task extends Model
     protected function casts(): array
     {
         return [
+            'detail_layanan' => 'array',
             'lokasi_lat' => 'decimal:7',
             'lokasi_lng' => 'decimal:7',
             'harga' => 'decimal:2',

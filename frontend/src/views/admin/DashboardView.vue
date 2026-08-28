@@ -161,6 +161,23 @@ function initial(name: string) {
           <button type="button" class="rounded-full text-xs font-bold px-3.5 py-2 border border-(--color-azure) text-(--color-on-primary-container) shrink-0">Tangani</button>
         </div>
       </div>
+
+      <!-- Permintaan penawaran BisaBersih Kantor -->
+      <RouterLink
+        :to="{ name: 'admin-permintaan-kantor' }"
+        class="flex items-center gap-3 rounded-(--radius-card) border border-(--color-outline)/30 bg-(--color-surface-0) p-4 mt-4 active:scale-[0.99] transition-transform"
+      >
+        <span class="w-10 h-10 rounded-full bg-(--color-primary-container) text-(--color-on-primary-container) flex items-center justify-center shrink-0">
+          <Icon name="business" class="w-5 h-5" />
+        </span>
+        <span class="flex-1 min-w-0">
+          <span class="block text-sm font-bold">Permintaan Penawaran Kantor</span>
+          <span class="block text-[11.5px] text-(--color-on-surface-variant) leading-snug">
+            Tinjau permintaan masuk dan majukan tahapnya.
+          </span>
+        </span>
+        <Icon name="chevron-right" class="w-4 h-4 shrink-0 text-(--color-on-surface-variant)" />
+      </RouterLink>
     </div>
   </AdminLayout>
 </template>

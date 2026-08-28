@@ -6,29 +6,46 @@
  * dari LocationView, panel sapaan di sini bagian dari gambarnya sendiri (gelombang
  * lime di bawah). Karena itu teksnya masuk lewat props, bukan overlay.
  *
- * Catatan: adegan ini khusus malam (bulan, bintang, jendela menyala, lampu
- * teras). Belum ada varian pagi/siang/sore seperti dua hero lainnya.
+ * Nuansa langitnya kini mengikuti waktu nyata (pagi/siang/sore/malam) lewat palet
+ * bersama di @/lib/heroSky — sama seperti dua hero lainnya. Langit, benda langit
+ * (bulan sabit / matahari), bintang, kabut horizon, siluet pohon, jalan, kaca
+ * jendela, dan pendar lampu teras semuanya diturunkan dari palet itu. Foreground
+ * (rumah, petugas, ember, gelembung, gelombang lime) tetap tampil sama di semua
+ * waktu karena punya pencahayaan sendiri.
  *
  * Semua id gradient/filter diberi awalan bb- supaya tidak bentrok dengan SVG
  * lain di halaman yang sama.
  */
-defineProps<{
-  greeting: string
-  nama?: string
-  subtitle: string
-}>()
+import { computed } from 'vue'
+import { HERO_SKY, type HeroTimeOfDay } from '@/lib/heroSky'
+
+const props = withDefaults(
+  defineProps<{
+    greeting: string
+    nama?: string
+    subtitle: string
+    timeOfDay?: HeroTimeOfDay
+  }>(),
+  { timeOfDay: 'malam' },
+)
+
+const p = computed(() => HERO_SKY[props.timeOfDay])
 </script>
 
 <template>
   <svg viewBox="0 0 400 620" xmlns="http://www.w3.org/2000/svg" class="block w-full h-auto">
     <defs>
       <linearGradient id="bbSky" x1="0" y1="0" x2="0" y2="1">
-        <!-- Sama persis dengan palet malam BisaBelanja (heroSky.ts) -->
-        <stop offset="0%" stop-color="#070E26" />
-        <stop offset="38%" stop-color="#0D1839" />
-        <stop offset="72%" stop-color="#152859" />
-        <stop offset="100%" stop-color="#1F3A76" />
+        <stop offset="0%" :stop-color="p.sky[0]" />
+        <stop offset="38%" :stop-color="p.sky[1]" />
+        <stop offset="72%" :stop-color="p.sky[2]" />
+        <stop offset="100%" :stop-color="p.sky[3]" />
       </linearGradient>
+      <radialGradient id="bbHaze" cx="50%" cy="100%" r="70%">
+        <stop offset="0%" :stop-color="p.haze.color" :stop-opacity="p.haze.inner" />
+        <stop offset="60%" :stop-color="p.haze.color" :stop-opacity="p.haze.mid" />
+        <stop offset="100%" :stop-color="p.haze.color" stop-opacity="0" />
+      </radialGradient>
       <linearGradient id="bbWave" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#A6DD5C" />
         <stop offset="100%" stop-color="#7CB232" />
@@ -54,24 +71,24 @@ defineProps<{
         <stop offset="100%" stop-color="#B9C6E0" />
       </linearGradient>
       <linearGradient id="bbGrass" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#2B3763" />
-        <stop offset="100%" stop-color="#1A2244" />
+        <stop offset="0%" :stop-color="p.road.asphalt" />
+        <stop offset="100%" :stop-color="p.groundShade" />
       </linearGradient>
       <linearGradient id="bbSkin" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stop-color="#FFD9B4" />
         <stop offset="100%" stop-color="#F0B584" />
       </linearGradient>
       <linearGradient id="bbCelest" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#FFF6CE" />
-        <stop offset="100%" stop-color="#E8D48A" />
+        <stop offset="0%" :stop-color="p.celestialCore" />
+        <stop offset="100%" :stop-color="p.celestialGlow" />
       </linearGradient>
       <linearGradient id="bbSteel" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stop-color="#F4F8FF" />
         <stop offset="100%" stop-color="#AFC3DE" />
       </linearGradient>
       <radialGradient id="bbCelGlow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="#FFF6CE" stop-opacity="0.45" />
-        <stop offset="100%" stop-color="#FFF6CE" stop-opacity="0" />
+        <stop offset="0%" :stop-color="p.celestialGlow" stop-opacity="0.45" />
+        <stop offset="100%" :stop-color="p.celestialGlow" stop-opacity="0" />
       </radialGradient>
       <radialGradient id="bbLampGlow" cx="50%" cy="50%" r="50%">
         <stop offset="0%" stop-color="#FFE9A6" stop-opacity="0.55" />
@@ -96,13 +113,32 @@ defineProps<{
 
     <g clip-path="url(#bbFrame)">
       <rect width="400" height="620" fill="url(#bbSky)" />
+      <rect y="150" width="400" height="320" fill="url(#bbHaze)" />
 
       <!-- Adegan digambar pada koordinat aslinya lalu diskala ke kanvas -->
       <g transform="translate(-48,0) scale(0.62)">
         <circle cx="648" cy="166" r="160" fill="url(#bbCelGlow)" />
-        <path d="M704,104 a76,76 0 1 0 26,120 a60,60 0 1 1 -26,-120 Z" fill="url(#bbCelest)" />
+        <!-- Bulan sabit di malam/sore, matahari bersinar di pagi/siang -->
+        <path
+          v-if="p.celestial === 'moon'"
+          d="M704,104 a76,76 0 1 0 26,120 a60,60 0 1 1 -26,-120 Z"
+          fill="url(#bbCelest)"
+        />
+        <g v-else>
+          <circle cx="700" cy="152" r="60" fill="url(#bbCelest)" />
+          <g :stroke="p.celestialCore" stroke-width="7" stroke-linecap="round" opacity="0.75">
+            <line x1="700" y1="60" x2="700" y2="34" />
+            <line x1="700" y1="244" x2="700" y2="270" />
+            <line x1="608" y1="152" x2="582" y2="152" />
+            <line x1="792" y1="152" x2="818" y2="152" />
+            <line x1="635" y1="87" x2="617" y2="69" />
+            <line x1="765" y1="217" x2="783" y2="235" />
+            <line x1="765" y1="87" x2="783" y2="69" />
+            <line x1="635" y1="217" x2="617" y2="235" />
+          </g>
+        </g>
 
-        <g fill="#FFFFFF">
+        <g fill="#FFFFFF" :opacity="p.starOpacity">
           <circle cx="120" cy="96" r="3" />
           <circle cx="214" cy="152" r="2.4" />
           <circle cx="300" cy="74" r="2.8" />
@@ -114,17 +150,17 @@ defineProps<{
           <circle cx="748" cy="240" r="2.4" />
           <circle cx="84" cy="330" r="2.6" />
         </g>
-        <g fill="#FFFFFF" opacity="0.95">
+        <g fill="#FFFFFF" :opacity="0.95 * p.starOpacity">
           <path d="M262,110 l6,16 16,6 -16,6 -6,16 -6,-16 -16,-6 16,-6 z" />
           <path d="M146,168 l6,16 16,6 -16,6 -6,16 -6,-16 -16,-6 16,-6 z" opacity="0.75" />
         </g>
-        <g fill="#26325F" opacity="0.55">
+        <g :fill="p.cloud.color" :opacity="p.cloud.opacity">
           <ellipse cx="196" cy="244" rx="94" ry="18" />
           <ellipse cx="576" cy="330" rx="66" ry="14" />
         </g>
 
         <!-- Barisan pohon di kejauhan -->
-        <g fill="#1A2550" opacity="0.9">
+        <g :fill="p.bldgNear[1]" opacity="0.9">
           <ellipse cx="80" cy="612" rx="110" ry="70" />
           <ellipse cx="200" cy="628" rx="90" ry="56" />
           <ellipse cx="700" cy="606" rx="120" ry="74" />
@@ -134,7 +170,7 @@ defineProps<{
         <!-- Trotoar tipis di depan rumah -->
         <path
           d="M0,648 C 150,624 300,662 470,644 C 620,628 700,656 800,640 L800,712 L0,724 Z"
-          fill="#3A4670"
+          :fill="p.road.kerb"
         />
         <!-- Badan jalan (aspal) -->
         <path
@@ -144,7 +180,7 @@ defineProps<{
         <path
           d="M0,712 C 150,700 300,724 470,708 C 620,694 700,716 800,706"
           fill="none"
-          stroke="#4C5A88"
+          :stroke="p.road.kerb"
           stroke-width="8"
         />
         <!-- Marka jalan hijau -->
@@ -177,9 +213,9 @@ defineProps<{
           </g>
         </g>
 
-        <!-- Jendela -->
+        <!-- Jendela: kaca mengikuti warna palet (hangat malam, sejuk siang) -->
         <g>
-          <rect x="252" y="392" width="132" height="112" rx="12" fill="#FFD98A" />
+          <rect x="252" y="392" width="132" height="112" rx="12" :fill="p.window.color" />
           <g clip-path="url(#bbWinClip)">
             <path d="M244,504 L336,388 L378,388 L286,504 Z" fill="#FFFFFF" opacity="0.25" />
             <circle cx="300" cy="424" r="18" fill="#FFF3C8" opacity="0.9" />
@@ -237,12 +273,12 @@ defineProps<{
           </g>
         </g>
 
-        <!-- Lampu teras -->
+        <!-- Lampu teras: pendar menyala di malam/sore, redup di siang -->
         <g>
-          <circle cx="640" cy="446" r="70" fill="url(#bbLampGlow)" />
+          <circle cx="640" cy="446" r="70" fill="url(#bbLampGlow)" :opacity="p.lampOpacity * 2" />
           <rect x="634" y="404" width="12" height="26" rx="6" fill="#1B3480" />
           <path d="M614,430 h52 l-10,40 h-32 z" fill="#1B3480" />
-          <path d="M620,434 h40 l-8,32 h-24 z" fill="#FFE9A6" />
+          <path d="M620,434 h40 l-8,32 h-24 z" fill="#FFE9A6" :opacity="0.4 + p.lampOpacity" />
         </g>
 
         <!-- Gelombang ketukan pintu -->

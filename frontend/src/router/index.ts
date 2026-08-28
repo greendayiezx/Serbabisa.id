@@ -4,6 +4,13 @@ import type { Role } from '@/types'
 
 const router = createRouter({
   history: createWebHistory(),
+  /**
+   * `meta.induk` = nama rute satu tingkat di atasnya.
+   *
+   * Dipakai tombol kembali (composables/useKembali.ts) supaya panah di pojok
+   * kiri atas menaiki hierarki halaman, bukan menelusuri riwayat browser.
+   * Rute tanpa induk dianggap berinduk ke beranda.
+   */
   routes: [
     {
       path: '/login',
@@ -32,73 +39,73 @@ const router = createRouter({
     {
       path: '/tasks/new/angkut/detail',
       name: 'task-angkut-detail',
-      component: () => import('@/views/customer/AngkutDetailView.vue'),
-      meta: { roles: ['customer'] as Role[] },
+      component: () => import('@/views/angkut/AngkutDetailView.vue'),
+      meta: { induk: 'task-angkut-location', roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/angkut/confirm',
       name: 'task-angkut-confirm',
-      component: () => import('@/views/customer/AngkutConfirmView.vue'),
-      meta: { roles: ['customer'] as Role[] },
+      component: () => import('@/views/angkut/AngkutConfirmView.vue'),
+      meta: { induk: 'task-angkut-detail', roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/angkut/delivery',
       name: 'task-angkut-delivery',
-      component: () => import('@/views/customer/AngkutDeliveryDetailView.vue'),
-      meta: { roles: ['customer'] as Role[] },
+      component: () => import('@/views/angkut/AngkutDeliveryDetailView.vue'),
+      meta: { induk: 'task-angkut-confirm', roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/belanja/detail',
       name: 'task-belanja-detail',
-      component: () => import('@/views/customer/BelanjaDetailView.vue'),
+      component: () => import('@/views/belanja/BelanjaDetailView.vue'),
       meta: { roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/belanja/kategori/:kategori',
       name: 'task-belanja-kategori',
-      component: () => import('@/views/customer/BelanjaKategoriView.vue'),
-      meta: { roles: ['customer'] as Role[] },
+      component: () => import('@/views/belanja/BelanjaKategoriView.vue'),
+      meta: { induk: 'task-belanja-detail', roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/belanja/cari',
       name: 'task-belanja-cari',
-      component: () => import('@/views/customer/BelanjaSearchView.vue'),
-      meta: { roles: ['customer'] as Role[] },
+      component: () => import('@/views/belanja/BelanjaSearchView.vue'),
+      meta: { induk: 'task-belanja-detail', roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/belanja/keranjang',
       name: 'task-belanja-keranjang',
-      component: () => import('@/views/customer/BelanjaKeranjangView.vue'),
-      meta: { roles: ['customer'] as Role[] },
+      component: () => import('@/views/belanja/BelanjaKeranjangView.vue'),
+      meta: { induk: 'task-belanja-detail', roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/belanja/checkout',
       name: 'task-belanja-checkout',
-      component: () => import('@/views/customer/BelanjaCheckoutView.vue'),
-      meta: { roles: ['customer'] as Role[] },
+      component: () => import('@/views/belanja/BelanjaCheckoutView.vue'),
+      meta: { induk: 'task-belanja-detail', roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/belanja/promo',
       name: 'task-belanja-promo',
-      component: () => import('@/views/customer/BelanjaPromoView.vue'),
-      meta: { roles: ['customer'] as Role[] },
+      component: () => import('@/views/promo/BelanjaPromoView.vue'),
+      meta: { induk: 'task-belanja-checkout', roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/belanja/langganan',
       name: 'task-belanja-langganan',
-      component: () => import('@/views/customer/BelanjaLanggananView.vue'),
-      meta: { roles: ['customer'] as Role[] },
+      component: () => import('@/views/belanja/BelanjaLanggananView.vue'),
+      meta: { induk: 'task-belanja-checkout', roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/belanja/status-bayar/:nomor',
       name: 'task-belanja-status-bayar',
-      component: () => import('@/views/customer/BelanjaStatusBayarView.vue'),
+      component: () => import('@/views/belanja/BelanjaStatusBayarView.vue'),
       meta: { roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new/belanja/status-pesanan/:nomor',
       name: 'task-belanja-status-pesanan',
-      component: () => import('@/views/customer/BelanjaStatusPesananView.vue'),
+      component: () => import('@/views/belanja/BelanjaStatusPesananView.vue'),
       meta: { roles: ['customer'] as Role[] },
     },
     {
@@ -108,17 +115,149 @@ const router = createRouter({
       meta: { roles: ['customer', 'mitra', 'admin'] as Role[] },
     },
     {
+      path: '/tasks/new/bersih/rumah',
+      name: 'task-bersih-rumah',
+      component: () => import('@/views/bersih/rumah/BersihRumahView.vue'),
+      meta: { induk: 'task-bersih-detail', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/kantor',
+      name: 'task-bersih-kantor',
+      component: () => import('@/views/bersih/kantor/BersihKantorView.vue'),
+      meta: { induk: 'task-bersih-detail', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/kantor/pesan',
+      name: 'task-bersih-kantor-pesan',
+      component: () => import('@/views/bersih/kantor/BersihKantorPesanView.vue'),
+      meta: { induk: 'task-bersih-kantor', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/kantor/konfirmasi',
+      name: 'task-bersih-kantor-konfirmasi',
+      component: () => import('@/views/bersih/kantor/BersihKantorKonfirmasiView.vue'),
+      meta: { induk: 'task-bersih-kantor-pesan', roles: ['customer'] as Role[] },
+    },
+    {
+      // Layar tunggu setelah bayar: menanyakan status sampai ada cleaner yang
+      // menerima, lalu berpindah sendiri ke detail-order.
+      path: '/tasks/new/bersih/kantor/mencari/:nomor',
+      name: 'task-bersih-kantor-mencari',
+      component: () => import('@/views/bersih/kantor/BersihKantorMencariView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/kantor/detail-order',
+      name: 'task-bersih-kantor-detail-order',
+      component: () => import('@/views/bersih/kantor/BersihKantorDetailOrderView.vue'),
+      meta: { induk: 'home', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/kantor/penawaran',
+      name: 'task-bersih-kantor-penawaran',
+      component: () => import('@/views/bersih/kantor/BersihKantorPenawaranView.vue'),
+      meta: { induk: 'task-bersih-kantor', roles: ['customer'] as Role[] },
+    },
+    {
+      // Konfirmasi setelah permintaan penawaran terkirim, mis. REQ-000001.
+      path: '/tasks/new/bersih/kantor/terkirim/:nomor',
+      name: 'kantor-permintaan-terkirim',
+      component: () => import('@/views/bersih/kantor/KantorPermintaanTerkirimView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
+      // Dokumen penawaran yang sudah disusun tim, mis. /penawaran/OFF-000124.
+      path: '/penawaran/:nomor',
+      name: 'penawaran',
+      component: () => import('@/views/bersih/kantor/PenawaranView.vue'),
+      meta: { induk: 'task-list', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/kantor/promo',
+      name: 'task-bersih-kantor-promo',
+      component: () => import('@/views/promo/BersihKantorPromoView.vue'),
+      meta: { induk: 'task-bersih-kantor', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/langganan',
+      name: 'task-bersih-langganan',
+      component: () => import('@/views/bersih/rumah/BersihLanggananView.vue'),
+      meta: { induk: 'task-bersih-detail', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/cleaner',
+      name: 'task-bersih-cleaner',
+      component: () => import('@/views/bersih/rumah/BersihCleanerView.vue'),
+      meta: { induk: 'task-bersih-rumah', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/status-bayar/:nomor',
+      name: 'task-bersih-status-bayar',
+      component: () => import('@/views/bersih/rumah/BersihStatusBayarView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/promo',
+      name: 'task-bersih-promo',
+      component: () => import('@/views/promo/BersihPromoView.vue'),
+      meta: { induk: 'task-bersih-detail', roles: ['customer'] as Role[] },
+    },
+    {
       // Pola jalurnya disamakan dengan layanan lain (angkut/detail,
       // belanja/detail) supaya URL layanan konsisten dan mudah ditebak.
       path: '/tasks/new/bersih/detail',
       name: 'task-bersih-detail',
-      component: () => import('@/views/customer/BersihDetailView.vue'),
+      component: () => import('@/views/bersih/BersihDetailView.vue'),
       meta: { roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/deep',
+      alias: '/tasks/new/bersih/deep-cleaning',
+      name: 'task-bersih-deep',
+      component: () => import('@/views/bersih/deep/BersihDeepView.vue'),
+      meta: { induk: 'task-bersih-detail', roles: ['customer'] as Role[] },
+    },
+    {
+      // Ringkasan sebelum pesanan dibuat — pola yang sama dengan konfirmasi
+      // BisaBersih Kantor, ditambah pemilihan layanan tambahan.
+      path: '/tasks/new/bersih/deep/konfirmasi',
+      name: 'task-bersih-deep-konfirmasi',
+      component: () => import('@/views/bersih/deep/BersihDeepKonfirmasiView.vue'),
+      meta: { induk: 'task-bersih-deep', roles: ['customer'] as Role[] },
     },
     {
       path: '/tasks/new',
       name: 'task-create',
       component: () => import('@/views/customer/TaskCreateView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
+      // Servis AC: halaman masuk layanan.
+      path: '/tasks/new/servis-ac',
+      name: 'servis-ac',
+      component: () => import('@/views/servis-ac/ACServisView.vue'),
+      meta: { induk: 'home', roles: ['customer'] as Role[] },
+    },
+    {
+      // Detail unit, paket, jadwal, dan pembayaran — satu halaman.
+      path: '/tasks/new/servis-ac/pesan',
+      name: 'servis-ac-pesan',
+      component: () => import('@/views/servis-ac/ACPesanView.vue'),
+      meta: { induk: 'servis-ac', roles: ['customer'] as Role[] },
+    },
+    {
+      // Konfirmasi setelah pesanan tercatat.
+      path: '/tasks/new/servis-ac/selesai/:nomor',
+      name: 'servis-ac-selesai',
+      component: () => import('@/views/servis-ac/ACSelesaiView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
+      // Katalog promo satu layanan. Katalognya berbeda tiap layanan; halaman
+      // dan cara pakainya sama, jadi satu view saja yang melayani semuanya.
+      path: '/promo/:layanan',
+      name: 'promo-layanan',
+      component: () => import('@/views/promo/PromoLayananView.vue'),
       meta: { roles: ['customer'] as Role[] },
     },
     {
@@ -131,13 +270,13 @@ const router = createRouter({
       path: '/tasks/:id',
       name: 'task-detail',
       component: () => import('@/views/TaskDetailView.vue'),
-      meta: { roles: ['customer', 'mitra', 'admin'] as Role[] },
+      meta: { induk: 'task-list', roles: ['customer', 'mitra', 'admin'] as Role[] },
     },
     {
       path: '/tasks/:id/chat',
       name: 'task-chat',
       component: () => import('@/views/ChatView.vue'),
-      meta: { roles: ['customer', 'mitra'] as Role[] },
+      meta: { induk: 'task-detail', roles: ['customer', 'mitra'] as Role[] },
     },
     {
       path: '/profile',
@@ -156,6 +295,13 @@ const router = createRouter({
       name: 'wallet',
       component: () => import('@/views/mitra/WalletView.vue'),
       meta: { roles: ['mitra'] as Role[] },
+    },
+    {
+      // Permintaan penawaran BisaBersih Kantor — tahapnya digerakkan dari sini.
+      path: '/admin/permintaan',
+      name: 'admin-permintaan-kantor',
+      component: () => import('@/views/admin/PermintaanKantorView.vue'),
+      meta: { induk: 'admin-dashboard', roles: ['admin'] as Role[] },
     },
     {
       path: '/admin',

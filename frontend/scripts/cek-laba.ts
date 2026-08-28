@@ -8,7 +8,7 @@
  * merugi, sehingga tidak perlu menghitung manual tiap kali menambah promo.
  */
 
-import { BIAYA_LAYANAN, ongkirUntuk } from '../src/lib/ongkir'
+import { BIAYA_LAYANAN, ongkirUntuk } from '../src/lib/belanja/ongkir'
 import {
   LABA_MINIMUM_PER_PESANAN,
   MARKUP_RATA_PER_ITEM,
@@ -16,7 +16,7 @@ import {
   pendapatanKotor,
   perkiraanItem,
 } from '../src/lib/ekonomi'
-import { LANGGANAN, PROMO, hitungPromo, type KonteksPromo } from '../src/lib/promo'
+import { LANGGANAN, PROMO, hitungPromo, type KonteksPromo } from '../src/lib/promo/promoBelanja'
 
 const rp = (n: number) => 'Rp' + Math.round(n).toLocaleString('id-ID')
 const ongkir = ongkirUntuk(4)

@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import L from 'leaflet'
+import { cariLokasi, reverseGeocode } from '@/lib/geocode'
 import 'leaflet/dist/leaflet.css'
 import Icon from '@/components/icons/Icon.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
@@ -244,19 +245,12 @@ const contentSheetMarginClass = computed(() => {
 
 const firstName = computed(() => authStore.user?.name?.split(' ')[0] ?? '')
 
-function coordsLabel(latv: number, lngv: number) {
-  return `Lokasi pada ${latv.toFixed(5)}, ${lngv.toFixed(5)}`
-}
-
-async function reverseGeocode(latv: number, lngv: number) {
-  try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latv}&lon=${lngv}`)
-    const data = await res.json()
-    return typeof data.display_name === 'string' ? data.display_name : coordsLabel(latv, lngv)
-  } catch {
-    return coordsLabel(latv, lngv)
-  }
-}
+/*
+ * Penerjemahan koordinat dan pencarian tempat memakai lib bersama
+ * (lib/geocode.ts). Salinan lokal yang dulu ada di sini bertanya pada zoom
+ * bawaan Nominatim, yang berhenti di tingkat jalan — nama gedung dan tempat
+ * usaha tidak pernah ikut.
+ */
 
 async function useMyLocation(autoConfirm = false) {
   if (!navigator.geolocation) return
@@ -279,6 +273,10 @@ async function useMyLocation(autoConfirm = false) {
 }
 
 interface SearchResult {
+  /** Baris pertama: nama tempat kalau ada. */
+  nama: string
+  /** Baris kedua: alamatnya. */
+  alamat: string
   label: string
   lat: number
   lng: number
@@ -293,29 +291,9 @@ let skipNextSearch = false
 async function runSearch(query: string) {
   searching.value = true
   try {
-    if (MAPBOX_TOKEN) {
-      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&autocomplete=true&limit=6&language=id&country=id`
-      const res = await fetch(url)
-      const data = await res.json()
-      searchResults.value = Array.isArray(data.features)
-        ? data.features.map((f: { place_name: string; center: [number, number] }) => ({
-            label: f.place_name,
-            lat: f.center[1],
-            lng: f.center[0],
-          }))
-        : []
-    } else {
-      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&countrycodes=id&limit=6`
-      const res = await fetch(url)
-      const data = await res.json()
-      searchResults.value = Array.isArray(data)
-        ? data.map((d: { display_name: string; lat: string; lon: string }) => ({
-            label: d.display_name,
-            lat: parseFloat(d.lat),
-            lng: parseFloat(d.lon),
-          }))
-        : []
-    }
+    // Titik yang sedang aktif dipakai sebagai bias: "Indomaret" harus berarti
+    // yang di dekat pengguna, bukan cabang di kota lain.
+    searchResults.value = await cariLokasi(query, { lat: lat.value, lng: lng.value })
   } catch {
     searchResults.value = []
   } finally {
@@ -651,15 +629,21 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
 <template>
   <LokasiSkeleton v-if="skelTampil" />
   <template v-else>
-    <div class="min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-6 overflow-x-hidden">
-      <!-- Tombol kembali: fixed, bukan absolute di dalam header ilustrasi. Kalau
-           ikut header, tombolnya ikut tergulung hilang begitu halaman di-scroll
-           dan user kehabisan jalan pulang (halaman ini tidak punya bottom nav).
-           z-40 supaya tetap di bawah overlay peta & dialog yang pakai z-50. -->
+    <div class="relative min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-6 overflow-x-hidden">
+      <!--
+        Menempel pada HALAMAN, bukan pada layar: dengan posisi tetap (fixed) ia
+        ikut turun saat digulung dan menutupi isi di bawahnya.
+
+        Konsekuensinya tombol ini tergulung hilang bersama header, dan halaman
+        ini TIDAK punya bottom nav — jalan pulangnya tinggal gestur kembali
+        peramban atau menggulung naik lagi. Itu pertukaran yang disengaja.
+
+        z-40 supaya tetap di bawah overlay peta & dialog yang pakai z-50.
+      -->
       <button
         type="button"
         aria-label="Kembali"
-        class="fixed top-4 left-4 z-40 w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-md transition-transform active:scale-95"
+        class="absolute top-4 left-4 z-40 w-10 h-10 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-md transition-transform active:scale-95"
         @click="goBackOrHome"
       >
         <Icon name="arrow-left" class="w-5 h-5 text-slate-800" />
@@ -702,13 +686,14 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
         </div>
       </div>
   
-      <!-- Full-Width Header: BisaBersih = ilustrasi malam. Sapaannya bagian dari
-           SVG (panel putih), jadi tidak ada overlay teks seperti dua hero lain. -->
+      <!-- Full-Width Header: BisaBersih mengikuti waktu nyata (pagi/siang/sore/malam)
+           lewat heroTimeOfDay, sama seperti dua hero lain. Sapaannya bagian dari
+           SVG (panel lime), jadi tidak ada overlay teks. -->
       <div
         v-else-if="route.query.category === 'bisabersih'"
         class="relative w-full overflow-hidden bg-[#0D1536] rounded-b-[2rem]"
       >
-        <BisaBersihHeroArt :greeting="greeting" :nama="firstName" :subtitle="subtitleText" />
+        <BisaBersihHeroArt :greeting="greeting" :nama="firstName" :subtitle="subtitleText" :time-of-day="heroTimeOfDay" />
       </div>
   
       <!-- Full-Width Header: ilustrasi PNG lokasi lainnya (pagi/sore/malam) -->
@@ -795,7 +780,17 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSi
                 @mousedown.prevent="pickSearchResult(result)"
               >
                 <Icon name="pin" class="w-4 h-4 text-(--color-on-surface-variant) shrink-0 mt-0.5" />
-                <span class="text-[13px] text-(--color-on-surface) leading-snug">{{ result.label }}</span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-[13px] font-bold text-(--color-on-surface) leading-snug truncate">
+                    {{ result.nama }}
+                  </span>
+                  <span
+                    v-if="result.alamat"
+                    class="block text-[11.5px] text-(--color-on-surface-variant) leading-snug"
+                  >
+                    {{ result.alamat }}
+                  </span>
+                </span>
               </button>
             </div>
             <div

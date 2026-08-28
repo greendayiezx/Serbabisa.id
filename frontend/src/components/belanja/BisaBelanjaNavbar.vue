@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import Icon from '@/components/icons/Icon.vue'
+import { useKembali } from '@/composables/useKembali'
 
 const props = defineProps<{
   step?: number
@@ -8,18 +9,16 @@ const props = defineProps<{
 
 const router = useRouter()
 
+const naik = useKembali()
+
 function goBackOrHome() {
-  // Dari halaman detail belanja (step ≥ 2) selalu kembali ke home,
-  // bukan ke halaman kategori yang mungkin ada di history.
+  // Dari halaman detail belanja (step ≥ 2) pemilih lokasi adalah induk yang
+  // benar, bukan halaman kategori — jadi dibedakan dari hierarki umum.
   if (props.step && props.step >= 2) {
-    router.push({ name: 'task-location', query: { category: 'bisabelanja' } })
+    router.replace({ name: 'task-location', query: { category: 'bisabelanja' } })
     return
   }
-  if (window.history.state?.back) {
-    router.back()
-  } else {
-    router.push({ name: 'home' })
-  }
+  naik()
 }
 </script>
 
@@ -29,6 +28,7 @@ function goBackOrHome() {
       <button
         type="button"
         class="w-9 h-9 rounded-full bg-slate-800/80 text-white flex items-center justify-center hover:bg-slate-700 active:scale-95 transition-all"
+        aria-label="Kembali"
         @click="goBackOrHome"
       >
         <Icon name="arrow-left" class="w-5 h-5 text-white" />

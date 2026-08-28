@@ -1,22 +1,61 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useKembali } from '@/composables/useKembali'
 import { useTaskStore } from '@/stores/task'
+import { rupiah } from '@/lib/rupiah'
 import AppLayout from '@/layouts/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
 import type { TaskStatus } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
+const kembali = useKembali()
 const taskStore = useTaskStore()
 
-onMounted(() => {
-  taskStore.fetchTask(Number(route.params.id))
-})
+/*
+ * Pemuat berputar, bukan skeleton: isi halaman ini berubah menurut status —
+ * ada kartu mitra atau tidak, ada tombol selesai atau tidak — jadi kerangka
+ * apa pun yang digambar punya peluang besar salah bentuk. Kerangka yang salah
+ * lebih mengganggu daripada tidak ada kerangka.
+ *
+ * Sebelum ini halaman berdiri kosong sampai datanya datang, tanpa satu pun
+ * tanda bahwa ada yang sedang dikerjakan.
+ */
+const memuat = ref(true)
+
+onMounted(muatTugas)
+
+async function muatTugas() {
+  try {
+    await ambilTugas()
+  } finally {
+    // Termasuk saat gagal: indikator harus berhenti, bukan berputar selamanya.
+    memuat.value = false
+  }
+}
+
+async function ambilTugas() {
+  const task = await taskStore.fetchTask(Number(route.params.id))
+
+  /*
+   * Permintaan penawaran punya halamannya sendiri.
+   *
+   * Ia bukan pekerjaan yang sedang berjalan — tidak ada mitra, status, atau
+   * harga untuk ditampilkan di sini. Yang relevan adalah nomor REQ-, ringkasan
+   * kantor, dan langkah berikutnya, dan semua itu sudah ada di halaman
+   * konfirmasinya. Jadi dari riwayat tugas, pengguna dibawa ke sana.
+   */
+  const nomor = task?.nomor_invoice ?? taskStore.currentTask?.nomor_invoice ?? ''
+  if (nomor.startsWith('REQ-')) {
+    router.replace({ name: 'kantor-permintaan-terkirim', params: { nomor } })
+  }
+}
 
 const statusChip: Record<TaskStatus, { label: string; class: string }> = {
   pending: { label: 'Menunggu Mitra', class: 'bg-(--color-primary-container) text-(--color-on-primary-container)' },
-  accepted: { label: 'Diterima', class: 'bg-(--color-secondary-container) text-(--color-on-secondary-container)' },
+  accepted: { label: 'Diterima', class: 'bg-transparent text-[#166534] px-0 py-0' },
   in_progress: { label: 'Dikerjakan', class: 'bg-(--color-tertiary-container) text-(--color-on-tertiary-container)' },
   completed: { label: 'Selesai', class: 'bg-(--color-lime) text-[#33430b]' },
   cancelled: { label: 'Dibatalkan', class: 'bg-(--color-surface-container-high) text-(--color-on-surface-variant)' },
@@ -38,9 +77,11 @@ async function markCompleted() {
 
 <template>
   <AppLayout>
-    <div v-if="taskStore.currentTask" class="flex flex-col">
+    <PemuatBerputar v-if="memuat" label="Memuat tugas…" />
+
+    <div v-else-if="taskStore.currentTask" class="flex flex-col">
       <div class="flex items-center gap-3 px-5 pt-4.5 pb-1">
-        <button type="button" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="router.back()">
+        <button type="button" aria-label="Kembali" class="w-8.5 h-8.5 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0" @click="kembali">
           <Icon name="arrow-left" class="w-[19px] h-[19px]" />
         </button>
         <h3 class="text-base font-extrabold flex-1 truncate">{{ taskStore.currentTask.judul }}</h3>
@@ -83,7 +124,7 @@ async function markCompleted() {
         </div>
         <div class="flex gap-2.5 items-start py-3 border-b border-(--color-outline)" v-if="taskStore.currentTask.harga || taskStore.currentTask.budget">
           <Icon name="wallet" class="w-4.5 h-4.5 text-(--color-on-primary-container) mt-0.5" />
-          <div><div class="text-[11.5px] text-(--color-on-surface-variant) font-semibold">{{ taskStore.currentTask.harga ? 'Harga' : 'Budget Diajukan' }}</div><div class="text-[13.5px] font-bold mt-0.5">Rp{{ (taskStore.currentTask.harga ?? taskStore.currentTask.budget ?? 0).toLocaleString('id-ID') }}</div></div>
+          <div><div class="text-[11.5px] text-(--color-on-surface-variant) font-semibold">{{ taskStore.currentTask.harga ? 'Harga' : 'Budget Diajukan' }}</div><div class="text-[13.5px] font-bold mt-0.5">{{ rupiah(taskStore.currentTask.harga ?? taskStore.currentTask.budget) }}</div></div>
         </div>
         <div class="flex gap-2.5 items-start py-3">
           <Icon name="clock" class="w-4.5 h-4.5 text-(--color-on-primary-container) mt-0.5" />

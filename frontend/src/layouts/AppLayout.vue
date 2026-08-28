@@ -7,6 +7,9 @@ import Icon from '@/components/icons/Icon.vue'
 const route = useRoute()
 const auth = useAuthStore()
 
+/** Sembunyikan nav bawah untuk layar yang butuh fokus penuh (mis. chat). */
+const props = defineProps<{ hideNav?: boolean }>()
+
 const navItems = computed(() => {
   if (auth.user?.role === 'mitra') {
     return [
@@ -25,12 +28,12 @@ const navItems = computed(() => {
 
 <template>
   <div class="min-h-screen flex flex-col bg-(--color-surface) text-(--color-on-surface)">
-    <main class="flex-1 max-w-screen-md mx-auto w-full pb-24 md:pb-0">
+    <main class="flex-1 max-w-screen-md mx-auto w-full" :class="hideNav ? 'pb-0' : 'pb-24 md:pb-0'">
       <slot />
     </main>
 
     <nav
-      v-if="auth.user"
+      v-if="auth.user && !props.hideNav"
       class="fixed bottom-0 inset-x-0 bg-(--color-surface-0) border-t border-(--color-outline) flex md:hidden pb-[env(safe-area-inset-bottom)]"
     >
       <RouterLink

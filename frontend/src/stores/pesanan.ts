@@ -20,6 +20,8 @@ export interface RincianBiaya {
 }
 
 export interface Pesanan {
+  /** Id Task di server — dipakai untuk membuka chat & pelacakan. 0 kalau dari cache lama. */
+  id: number
   invoice: string
   nomor: string
   /** ISO. Waktu pembayaran. */
@@ -27,6 +29,8 @@ export interface Pesanan {
   estimasiMulai: string
   estimasiSelesai: string
   metodePembayaran: string
+  /** Nama layanan (BisaBelanja / BisaBersih / …) untuk label di nota. */
+  layanan: string
   status: StatusPesanan
   toko: string
   alamat: string

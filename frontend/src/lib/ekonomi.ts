@@ -6,7 +6,7 @@
  * diubah lalu tes akan langsung menandai promo mana yang jadi merugi.
  */
 
-import { BIAYA_LAYANAN } from './ongkir'
+import { BIAYA_LAYANAN } from './belanja/ongkir'
 
 /**
  * Markup rata-rata per item, dihitung dari katalog (2.884 produk tersedia).

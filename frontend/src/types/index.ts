@@ -37,13 +37,34 @@ export interface Task {
   lokasi_alamat: string
   lokasi_lat: number
   lokasi_lng: number
-  harga: number | null
-  budget: number | null
+  /**
+   * Kolom decimal Laravel dikirim sebagai STRING ('17000.00'), bukan angka.
+   * Tipenya ditulis apa adanya supaya pemakainya terpaksa mengubahnya dulu —
+   * `'17000.00'.toLocaleString()` mengembalikan stringnya utuh, sehingga
+   * harganya tercetak "Rp17000.00" tanpa satu pun galat.
+   */
+  harga: number | string | null
+  budget: number | string | null
   catatan: string | null
+  nomor_invoice: string | null
+  /** Kapan pekerjaannya dijadwalkan; null untuk tugas tanpa jadwal. */
+  dijadwalkan_pada: string | null
+  /**
+   * Spesifikasi layanan yang ditulis saat checkout (kolom JSON).
+   *
+   * Isinya berbeda per layanan, jadi hanya kunci yang benar-benar dibaca
+   * lintas halaman yang dinyatakan di sini — sisanya biarkan tak bertipe
+   * daripada mengarang bentuk yang tidak dijamin server.
+   */
+  detail_layanan?: {
+    layanan?: string
+    jumlah_cleaner?: number
+    [kunci: string]: unknown
+  } | null
   created_at: string
   category?: Category | null
-  mitra?: Pick<User, 'id' | 'name'> | null
-  customer?: Pick<User, 'id' | 'name'>
+  mitra?: Pick<User, 'id' | 'name' | 'phone'> | null
+  customer?: Pick<User, 'id' | 'name' | 'phone'>
 }
 
 export interface Bid {
