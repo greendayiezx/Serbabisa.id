@@ -19,11 +19,11 @@ class PromoAC
      */
     public const VOUCHER = [
         // Akuisisi: sekali seumur akun, ditagih dari pesanan Servis AC pertama.
-        'ACBARU25' => ['min' => 100_000, 'potongan' => 25_000, 'pengguna_baru' => true],
+        'ACBARU25' => ['min' => 100_000, 'potongan' => 25_000, 'pengguna_baru' => true, 'layanan' => 'cuci'],
 
         // Banner "Cuci AC diskon 20%". Dibatasi Rp50.000 supaya paket termahal
         // tidak memotong margin lebih dalam daripada paket termurah.
-        'GERCEPAC' => ['min' => 100_000, 'persen' => 20, 'maks' => 50_000],
+        'GERCEPAC' => ['min' => 100_000, 'persen' => 20, 'maks' => 50_000, 'layanan' => 'cuci'],
 
         /*
          * Khusus pemeriksaan freon, dan hanya untuk pelanggan baru.
@@ -37,11 +37,18 @@ class PromoAC
 
         // Bertingkat menurut jumlah unit: satu kunjungan teknisi mengerjakan
         // beberapa AC, jadi biaya perjalanannya makin terbagi.
-        'ACHEMAT2' => ['min' => 200_000, 'potongan' => 30_000, 'min_unit' => 2],
+        /*
+         * Keduanya dirancang untuk tagihan CUCI beberapa unit, dan hanya masuk
+         * akal di sana. Pada pemeriksaan freon, tagihan sebesar minimumnya baru
+         * tercapai pada 7-9 unit — kunjungan yang marginnya sudah tipis — jadi
+         * potongan ini akan menghabiskannya. Penanda layanan yang menahannya,
+         * bukan minimum transaksi.
+         */
+        'ACHEMAT2' => ['min' => 200_000, 'potongan' => 30_000, 'min_unit' => 2, 'layanan' => 'cuci'],
         // Minimum 250rb, bukan 300rb: tiga unit paket termurah bertagihan
         // Rp280.000 setelah potongan bundling — minimum yang lebih tinggi
         // membuat promo ini justru tidak berlaku pada kasus yang ia tuju.
-        'ACHEMAT3' => ['min' => 250_000, 'potongan' => 50_000, 'min_unit' => 3],
+        'ACHEMAT3' => ['min' => 250_000, 'potongan' => 50_000, 'min_unit' => 3, 'layanan' => 'cuci'],
     ];
 
     /**
@@ -82,7 +89,9 @@ class PromoAC
             return [
                 'potongan' => 0,
                 'berlaku' => false,
-                'alasan' => 'Promo ini hanya untuk pemeriksaan freon.',
+                'alasan' => $v['layanan'] === 'freon'
+                    ? 'Promo ini hanya untuk pemeriksaan Cek & Tambah Freon.'
+                    : 'Promo ini hanya untuk pesanan Cuci AC.',
             ];
         }
 

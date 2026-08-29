@@ -23,8 +23,23 @@ class FreonTarif
     /** Unit kedua dan seterusnya dalam satu kunjungan. */
     public const BIAYA_UNIT_TAMBAHAN = 25_000;
 
-    /** Bagian biaya nyata pemeriksaan: transport + waktu teknisi. */
-    public const BIAYA_NYATA_PEMERIKSAAN = 28_000;
+    /**
+     * Biaya nyata satu kunjungan pemeriksaan, dipisah dua.
+     *
+     * Pemisahan ini bukan kosmetik. Transport dibayar SEKALI per kunjungan,
+     * berapa pun unit yang diperiksa; yang bertambah tiap unit hanya waktu
+     * teknisi. Menghitung seluruh Rp28.000 sebagai biaya PER UNIT membuat unit
+     * kedua dan seterusnya tampak rugi Rp3.000 — padahal justru di situlah
+     * kunjungan paling efisien — dan pada 9 unit tagihannya benar-benar jatuh
+     * di bawah biaya.
+     */
+    public const BIAYA_TRANSPORT = 18_000;
+
+    /** Waktu teknisi memeriksa satu unit. */
+    public const BIAYA_PERIKSA_UNIT = 10_000;
+
+    /** Satu unit: transport + satu pemeriksaan. Acuan kunjungan tunggal. */
+    public const BIAYA_NYATA_PEMERIKSAAN = self::BIAYA_TRANSPORT + self::BIAYA_PERIKSA_UNIT;
 
     /**
      * Biaya pemeriksaan dipotong dari total kalau pelanggan menyetujui
@@ -83,7 +98,7 @@ class FreonTarif
             'biaya_pemeriksaan' => self::BIAYA_PEMERIKSAAN,
             'biaya_unit_tambahan' => $tambahan,
             'total' => $total,
-            'biaya' => self::BIAYA_NYATA_PEMERIKSAAN * $jumlah,
+            'biaya' => self::BIAYA_TRANSPORT + self::BIAYA_PERIKSA_UNIT * $jumlah,
         ];
     }
 

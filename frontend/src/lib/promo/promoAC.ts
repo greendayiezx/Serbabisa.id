@@ -47,6 +47,7 @@ export const PROMO_AC: PromoAC[] = [
   },
   {
     kode: 'ACBARU25',
+    layanan: 'cuci',
     judul: 'Pertama kali servis AC',
     ringkas: 'Potongan Rp25.000 untuk pesanan Servis AC pertama.',
     minTransaksi: 100_000,
@@ -61,6 +62,7 @@ export const PROMO_AC: PromoAC[] = [
   },
   {
     kode: 'GERCEPAC',
+    layanan: 'cuci',
     judul: 'Cuci AC diskon 20%',
     ringkas: 'Potongan 20%, maksimal Rp50.000.',
     minTransaksi: 100_000,
@@ -74,6 +76,7 @@ export const PROMO_AC: PromoAC[] = [
   },
   {
     kode: 'ACHEMAT2',
+    layanan: 'cuci',
     judul: 'Cuci 2 unit lebih hemat',
     ringkas: 'Potongan Rp30.000 untuk minimal 2 unit.',
     minTransaksi: 200_000,
@@ -87,6 +90,7 @@ export const PROMO_AC: PromoAC[] = [
   },
   {
     kode: 'ACHEMAT3',
+    layanan: 'cuci',
     judul: 'Cuci 3 unit sekaligus',
     ringkas: 'Potongan Rp50.000 untuk minimal 3 unit.',
     // 3 unit paket termurah bertagihan Rp280.000 setelah potongan bundling;
@@ -132,8 +136,8 @@ export function hitungPromoAC(
       berlaku: false,
       alasan:
         promo.layanan === 'freon'
-          ? 'Hanya untuk pemeriksaan freon'
-          : 'Hanya untuk cuci AC',
+          ? 'Hanya untuk pemeriksaan Cek & Tambah Freon'
+          : 'Hanya untuk pesanan Cuci AC',
     }
   }
 

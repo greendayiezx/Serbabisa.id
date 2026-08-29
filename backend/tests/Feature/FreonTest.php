@@ -119,6 +119,53 @@ class FreonTest extends TestCase
         $res->assertJsonPath('rincian.total_ditagih', FreonTarif::BIAYA_PEMERIKSAAN - $potongan);
     }
 
+    /**
+     * Pemeriksaan harus untung pada SETIAP jumlah unit.
+     *
+     * Unit tambahan dijual Rp25.000. Kalau biaya nyatanya dihitung penuh per
+     * unit, kunjungan banyak-unit justru merugi — padahal transport hanya
+     * dibayar sekali. Uji ini yang menahan tarif dan model biaya tetap sejalan.
+     */
+    public function test_pemeriksaan_untung_pada_tiap_jumlah_unit(): void
+    {
+        $tarif = new FreonTarif;
+
+        for ($unit = 1; $unit <= 10; $unit++) {
+            $r = $tarif->pemeriksaan($unit);
+            $margin = $r['total'] - $r['biaya'];
+
+            $this->assertGreaterThan(
+                0.15,
+                $margin / $r['total'],
+                "Pemeriksaan {$unit} unit menyisakan margin terlalu tipis.",
+            );
+        }
+    }
+
+    /**
+     * Promo cuci AC tidak boleh menempel pada pemeriksaan freon.
+     *
+     * ACHEMAT2 dirancang untuk tagihan cuci beberapa unit. Pada pemeriksaan,
+     * tagihan sebesar minimumnya baru tercapai di 7 unit — dan potongan
+     * Rp30.000 di situ melahap seluruh marginnya.
+     */
+    public function test_promo_cuci_ditolak_pada_pemeriksaan_freon(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $res = $this->postJson('/api/servis-ac/freon/checkout', $this->payload([
+            'unit' => 7,
+            'promo_kode' => 'ACHEMAT2',
+        ]));
+
+        $tarif = (new FreonTarif)->pemeriksaan(7);
+
+        $res->assertCreated();
+        $res->assertJsonPath('rincian.potongan_promo', 0);
+        $res->assertJsonPath('rincian.total_ditagih', $tarif['total']);
+        $this->assertStringContainsString('Cuci AC', (string) $res->json('rincian.promo_ditolak'));
+    }
+
     public function test_pekerjaan_lanjutan_tidak_masuk_tagihan_tanpa_persetujuan(): void
     {
         Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
