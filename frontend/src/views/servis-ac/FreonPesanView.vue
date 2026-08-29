@@ -135,7 +135,7 @@ function lanjut() {
         >
           <Icon name="arrow-left" class="w-5 h-5" />
         </button>
-        <h1 class="flex-1 text-center text-[16px] font-extrabold pr-10">Cek &amp; Tambah Freon</h1>
+        <h1 class="flex-1 text-left text-[16px] font-extrabold pr-10">Cek &amp; Tambah Freon</h1>
       </div>
     </header>
 

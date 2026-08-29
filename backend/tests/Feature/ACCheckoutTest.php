@@ -38,6 +38,8 @@ class ACCheckoutTest extends TestCase
             'kondisi' => ['kurang-dingin'],
             'tanggal' => '2026-09-12',
             'waktu' => '10:00',
+            'nama_penerima' => 'Budi Uji',
+            'telepon_penerima' => '081200003333',
             'lokasi_alamat' => 'Rumah Uji, Jakarta',
             'lokasi_lat' => -6.2,
             'lokasi_lng' => 106.8,
@@ -157,6 +159,37 @@ class ACCheckoutTest extends TestCase
         $this->assertNotNull($task->dijadwalkan_pada);
         // Baris layanan + baris biaya kunjungan.
         $this->assertCount(2, $task->items);
+    }
+
+    /**
+     * Kontak di lokasi wajib.
+     *
+     * Teknisi yang sudah berangkat lalu tidak menemukan siapa pun berarti satu
+     * kunjungan terbuang — dan biayanya nyata, bukan sekadar jadwal meleset.
+     */
+    public function test_kontak_penerima_wajib(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $this->postJson('/api/servis-ac/checkout', $this->payload(['nama_penerima' => null]))
+            ->assertStatus(422)->assertJsonValidationErrors('nama_penerima');
+
+        $this->postJson('/api/servis-ac/checkout', $this->payload(['telepon_penerima' => null]))
+            ->assertStatus(422)->assertJsonValidationErrors('telepon_penerima');
+    }
+
+    public function test_kontak_penerima_tersimpan(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $this->postJson('/api/servis-ac/checkout', $this->payload([
+            'nama_penerima' => 'Sinta Penghuni',
+            'telepon_penerima' => '087700001111',
+        ]))->assertCreated();
+
+        $task = Task::latest('id')->first();
+        $this->assertSame('Sinta Penghuni', $task->nama_penerima);
+        $this->assertSame('087700001111', $task->telepon_penerima);
     }
 
     public function test_tipe_asing_ditolak(): void

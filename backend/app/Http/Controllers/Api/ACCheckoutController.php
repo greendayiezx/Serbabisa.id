@@ -48,6 +48,14 @@ class ACCheckoutController extends Controller
             'tanggal' => ['required', 'date'],
             'waktu' => ['required', 'string'],
 
+            /*
+             * Kontak yang ditemui teknisi di lokasi — belum tentu pemilik akun.
+             * Wajib: teknisi yang sudah berangkat dan tidak menemukan siapa pun
+             * berarti satu kunjungan terbuang, dan biayanya nyata.
+             */
+            'nama_penerima' => ['required', 'string', 'max:100'],
+            'telepon_penerima' => ['required', 'string', 'max:30'],
+
             'address_id' => ['nullable', 'integer'],
             'lokasi_alamat' => ['required_without:address_id', 'string', 'max:255'],
             'lokasi_lat' => ['required_without:address_id', 'numeric'],
@@ -97,6 +105,8 @@ class ACCheckoutController extends Controller
                 'harga' => $totalDitagih,
                 'catatan' => $data['catatan'] ?? null,
                 'dijadwalkan_pada' => $jadwal,
+                'nama_penerima' => $data['nama_penerima'],
+                'telepon_penerima' => $data['telepon_penerima'],
                 'detail_layanan' => [
                     'layanan' => 'servis-ac',
                     'paket' => $rincian['paket'],

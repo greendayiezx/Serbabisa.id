@@ -1,41 +1,35 @@
 <script setup lang="ts">
 /**
- * Pemesanan Servis AC — detail unit, paket, jadwal, dan pembayaran.
+ * Pemesanan Servis AC — langkah 1: lokasi, detail unit, dan paket.
  *
- * Satu halaman, bukan dua: jumlah unit menentukan harga, dan harga menentukan
- * promo mana yang bisa dipakai. Memisahkannya berarti pengguna bolak-balik
- * hanya untuk melihat angkanya berubah.
+ * Jadwal, promo, catatan, dan data pemesan pindah ke halaman konfirmasi.
+ * Pemisahannya mengikuti apa yang menentukan harga: semua yang di halaman ini
+ * mengubah angka di footer, sementara yang di halaman berikutnya tidak.
  *
- * Seperti checkout lain di aplikasi ini, yang dikirim hanya PILIHAN. Total di
- * layar adalah estimasi; yang menagih App\Services\ACTarif di server.
+ * Peta tampil langsung sebagai pratinjau dan penyuntingannya dibuka sebagai
+ * overlay layar penuh — pola yang sama dengan BisaBersih Rumah dan Kantor,
+ * supaya alamat bisa diubah tanpa meninggalkan halaman dan kehilangan isian.
  */
-import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import PemilihLokasi from '@/components/PemilihLokasi.vue'
-import MetodeBayarIcon from '@/components/MetodeBayarIcon.vue'
-import DatePickerField from '@/components/DatePickerField.vue'
-import TimePickerField from '@/components/TimePickerField.vue'
 import { useServisACStore } from '@/stores/servisAC'
 import { useLocationStore } from '@/stores/location'
-import { pesanServisAC } from '@/api/servisAC'
-import { pesanError } from '@/api/belanja'
+import { TILE_OPTIONS, TILE_URL } from '@/lib/mapTiles'
 import { rupiah } from '@/lib/rupiah'
-import { LABEL_METODE, type MetodeId } from '@/lib/metodeBayar'
 import {
-  DISKON_RUTIN_PERSEN,
   KAPASITAS_AC,
   KONDISI_AC,
   PAKET_AC,
-  RUTIN_AC,
   TERAKHIR_CUCI,
   TIPE_AC,
   hitungHargaAC,
 } from '@/lib/servis-ac/hargaAC'
-import { PROMO_AC, cariPromoAC, hitungPromoAC } from '@/lib/promo/promoAC'
 
-const route = useRoute()
 const router = useRouter()
 const kembali = useKembali()
 const acStore = useServisACStore()
@@ -48,40 +42,31 @@ const kapasitas = ref('1')
 const terakhirCuci = ref('3-6-bulan')
 const kondisi = ref<string[]>([])
 const paket = ref('standard')
-const catatan = ref('')
 
-/* Jadwal rutin: potongannya untuk kunjungan BERIKUTNYA, bukan yang ini. */
-const rutinAktif = ref(false)
-const rutin = ref('3-bulan')
-
-onMounted(() => {
-  const lokasi = locationStore.draft
-  alamatLokal.value = lokasi?.alamat ?? ''
-  latLokal.value = lokasi?.lat ?? 0
-  lngLokal.value = lokasi?.lng ?? 0
-
-  // Kode dari katalog promo kembali lewat ?promo=, lalu lewat pemeriksaan yang
-  // sama dengan pilihan manual.
-  const dariKatalog = String(route.query.promo ?? '')
-  if (dariKatalog) pilihPromo(dariKatalog.toUpperCase())
-})
-
-/**
- * Katalog promo Servis AC. Jumlah unit ikut dikirim karena sebagian promo
- * mensyaratkannya — tanpa itu katalog akan menandai promo bisa dipakai padahal
- * belum.
+/*
+ * Isian dipulihkan dari draf kalau pengguna kembali dari halaman konfirmasi —
+ * mengulang dari nol setiap kali tombol kembali ditekan adalah cara tercepat
+ * membuat orang berhenti memesan.
  */
-function keKatalogPromo() {
-  router.push({
-    name: 'promo-layanan',
-    params: { layanan: 'ac' },
-    query: {
-      dari: '/tasks/new/servis-ac/pesan',
-      nilai: String(rincian.value.total),
-      unit: String(unit.value),
-    },
-  })
-}
+onMounted(async () => {
+  const d = acStore.draft
+  if (d) {
+    unit.value = d.unit
+    tipe.value = d.tipe
+    kapasitas.value = d.kapasitas
+    terakhirCuci.value = d.terakhirCuci
+    kondisi.value = [...d.kondisi]
+    paket.value = d.paket
+  }
+
+  const lokasi = locationStore.draft
+  alamatLokal.value = d?.alamat || lokasi?.alamat || ''
+  latLokal.value = d?.lat || lokasi?.lat || 0
+  lngLokal.value = d?.lng || lokasi?.lng || 0
+
+  await nextTick()
+  initPeta()
+})
 
 function tambahUnit() {
   if (unit.value < 20) unit.value++
@@ -120,135 +105,91 @@ function terimaLokasi(l: { alamat: string; lat: number; lng: number }) {
   lngLokal.value = l.lng
   locationStore.setDraft({ alamat: l.alamat, lat: l.lat, lng: l.lng })
   pemilihTampil.value = false
+
+  const titik: L.LatLngTuple = [l.lat, l.lng]
+  peta?.setView(titik, peta.getZoom())
+  penanda?.setLatLng(titik)
 }
 
-/* ────────── Jadwal ────────── */
-const tanggal = ref('')
-const waktu = ref('')
-const ditandaiJadwal = ref(false)
+/*
+ * Peta pratinjau: hanya untuk dilihat. Interaksinya dimatikan supaya gerakan
+ * jari saat menggulung halaman tidak berubah jadi menggeser peta — pinnya
+ * dipindahkan lewat overlay PemilihLokasi, tempat pencariannya ada.
+ */
+const petaEl = ref<HTMLDivElement | null>(null)
+let peta: L.Map | null = null
+let penanda: L.Marker | null = null
+let pengamat: ResizeObserver | null = null
+
+const pinIcon = L.divIcon({
+  className: '',
+  html: `<svg viewBox="0 0 24 24" width="40" height="40" stroke="#1e9bf0" stroke-width="2" fill="rgba(255,255,255,0.95)" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2))"><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5" fill="#1e9bf0" stroke="none"/></svg>`,
+  iconSize: [40, 40],
+  iconAnchor: [20, 40],
+})
+
+function initPeta() {
+  if (!petaEl.value) return
+
+  const titik: L.LatLngTuple = [latLokal.value || -6.2088, lngLokal.value || 106.8456]
+  peta = L.map(petaEl.value, {
+    center: titik,
+    zoom: 16,
+    zoomControl: false,
+    attributionControl: false,
+    dragging: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    boxZoom: false,
+    keyboard: false,
+    touchZoom: false,
+  })
+  L.tileLayer(TILE_URL, TILE_OPTIONS).addTo(peta)
+  penanda = L.marker(titik, { icon: pinIcon }).addTo(peta)
+
+  pengamat = new ResizeObserver(() => peta?.invalidateSize())
+  pengamat.observe(petaEl.value)
+  requestAnimationFrame(() => peta?.invalidateSize())
+}
+
+onBeforeUnmount(() => {
+  pengamat?.disconnect()
+  peta?.remove()
+  peta = null
+})
 
 /* ────────── Harga ────────── */
 const rincian = computed(() => hitungHargaAC(paket.value, unit.value))
 
-/* ────────── Promo ────────── */
-const promoKode = ref<string | null>(null)
-const kodeInput = ref('')
-const promoPesan = ref<{ ok: boolean; teks: string } | null>(null)
-
-const promoTerpakai = computed(() => cariPromoAC(promoKode.value))
-const hasilPromo = computed(() =>
-  hitungPromoAC(promoTerpakai.value, rincian.value.total, unit.value),
-)
-
-const semuaPromo = computed(() =>
-  PROMO_AC.map((p) => {
-    const hasil = hitungPromoAC(p, rincian.value.total, unit.value)
-    return {
-      promo: p,
-      hasil,
-      alasan: hasil.alasan ?? (hasil.kurang > 0 ? `Kurang ${rupiah(hasil.kurang)} lagi` : null),
-    }
-  }),
-)
-
-
-const total = computed(() => rincian.value.total - hasilPromo.value.potongan)
-
-function pilihPromo(kode: string) {
-  // Dicari dari SEMUA promo, bukan hanya yang tampil: kode yang diketik sendiri
-  // harus tetap dapat alasan penolakan yang benar.
-  const d = semuaPromo.value.find((x) => x.promo.kode === kode)
-  if (!d) return
-
-  if (!d.hasil.berlaku) {
-    promoPesan.value = { ok: false, teks: d.alasan ?? 'Promo ini belum bisa dipakai.' }
-    return
-  }
-
-  promoKode.value = d.promo.kode
-  kodeInput.value = ''
-  promoPesan.value = { ok: true, teks: `${d.promo.kode} dipakai — hemat ${rupiah(d.hasil.potongan)}.` }
-}
-
-function pakaiKode() {
-  const kode = kodeInput.value.trim().toUpperCase()
-  if (!kode) return
-
-  if (!cariPromoAC(kode)) {
-    promoPesan.value = { ok: false, teks: 'Kode promo tidak ditemukan.' }
-    return
-  }
-
-  pilihPromo(kode)
-}
-
-function lepasPromo() {
-  promoKode.value = null
-  promoPesan.value = null
-}
-
-/* ────────── Metode pembayaran ────────── */
-const METODE: MetodeId[] = ['bca', 'mandiri', 'bni', 'gopay', 'ovo', 'qris']
-const metodeDipilih = ref<MetodeId>('bca')
-const sheetOpen = ref(false)
-const metodeLabel = computed(() => LABEL_METODE[metodeDipilih.value] ?? metodeDipilih.value)
-
-/* ────────── Kirim ────────── */
-const memproses = ref(false)
-const galat = ref<string | null>(null)
 const rincianTampil = ref(false)
+const galat = ref<string | null>(null)
 
-async function lanjutBayar() {
-  if (memproses.value) return
-
+/**
+ * Lanjut ke konfirmasi.
+ *
+ * Pilihan disimpan ke store, bukan dikirim lewat query: isinya majemuk
+ * (kondisi bisa lebih dari satu) dan tidak ada gunanya terbaca di URL.
+ */
+function lanjut() {
   if (!alamatLokal.value) {
     galat.value = 'Lokasi servis belum diisi.'
     return
   }
-  if (!tanggal.value || !waktu.value) {
-    galat.value = 'Jadwal kunjungan belum dipilih.'
-    ditandaiJadwal.value = true
-    document.getElementById('jadwal')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    return
-  }
 
-  memproses.value = true
   galat.value = null
+  acStore.set({
+    paket: paket.value,
+    unit: unit.value,
+    tipe: tipe.value,
+    kapasitas: kapasitas.value,
+    terakhirCuci: terakhirCuci.value,
+    kondisi: [...kondisi.value],
+    alamat: alamatLokal.value,
+    lat: latLokal.value,
+    lng: lngLokal.value,
+  })
 
-  try {
-    const hasil = await pesanServisAC({
-      paket: paket.value,
-      unit: unit.value,
-      tipe: tipe.value,
-      kapasitas: kapasitas.value,
-      terakhir_cuci: terakhirCuci.value,
-      kondisi: [...kondisi.value],
-      rutin: rutinAktif.value ? rutin.value : null,
-      catatan: catatan.value || undefined,
-      tanggal: tanggal.value,
-      waktu: waktu.value,
-      lokasi_alamat: alamatLokal.value,
-      lokasi_lat: latLokal.value,
-      lokasi_lng: lngLokal.value,
-      metode: metodeDipilih.value,
-      promo_kode: promoTerpakai.value?.kode,
-    })
-
-    const nomor = hasil.nomor_invoice ?? String(hasil.id)
-    acStore.nomorTerakhir = nomor
-    acStore.hapus()
-
-    if (hasil.rincian?.promo_ditolak) {
-      // Pesanan tetap dibuat, tapi tanpa potongan — pengguna harus tahu.
-      galat.value = `Promo tidak terpakai: ${hasil.rincian.promo_ditolak}`
-    }
-
-    router.replace({ name: 'servis-ac-selesai', params: { nomor } })
-  } catch (e) {
-    galat.value = pesanError(e)
-  } finally {
-    memproses.value = false
-  }
+  router.push({ name: 'servis-ac-konfirmasi' })
 }
 </script>
 
@@ -264,26 +205,52 @@ async function lanjutBayar() {
         >
           <Icon name="arrow-left" class="w-5 h-5" />
         </button>
-        <h1 class="flex-1 text-center text-[17px] font-extrabold pr-10">Servis AC</h1>
+        <h1 class="flex-1 text-left text-[17px] font-extrabold pr-10">Cuci AC</h1>
       </div>
     </header>
 
     <main class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
-      <!-- Lokasi -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="text-[14px] font-extrabold">Lokasi Servis</h2>
+      <!--
+        Lokasi: peta pratinjau, pinnya disunting lewat overlay.
+
+        isolate wajib. Panel Leaflet punya z-index sendiri (ubin 400, penanda
+        600) dan tanpa stacking context sendiri ia naik menembus elemen lain di
+        halaman — termasuk footer yang melayang.
+      -->
+      <section
+        class="isolate bg-(--color-surface-0) rounded-2xl overflow-hidden border border-(--color-outline)/25"
+      >
+        <button
+          type="button"
+          aria-label="Ubah lokasi servis"
+          class="relative block w-full text-left"
+          @click="pemilihTampil = true"
+        >
+          <div
+            ref="petaEl"
+            class="w-full h-36 bg-(--color-surface-container) pointer-events-none"
+            :style="{ visibility: pemilihTampil ? 'hidden' : 'visible' }"
+          ></div>
+        </button>
+
+        <div class="p-4 flex items-start justify-between gap-3">
+          <div class="flex items-start gap-2.5 min-w-0">
+            <Icon name="pin" class="w-5 h-5 text-(--color-azure) shrink-0 mt-0.5" />
+            <div class="min-w-0">
+              <p class="text-[11px] text-(--color-on-surface-variant)">Lokasi Servis</p>
+              <p class="text-[13px] font-bold leading-snug">
+                {{ alamatLokal || 'Alamat belum dipilih' }}
+              </p>
+            </div>
+          </div>
           <button
             type="button"
-            class="text-[12.5px] font-bold text-(--color-azure) active:scale-95 transition-transform"
+            class="shrink-0 text-[12px] font-bold text-(--color-azure) px-3 py-1 rounded-full border border-(--color-azure) active:scale-95 transition-transform"
             @click="pemilihTampil = true"
           >
             Ubah
           </button>
         </div>
-        <p class="mt-1 text-[13px] leading-snug text-(--color-on-surface-variant)">
-          {{ alamatLokal || 'Belum diisi' }}
-        </p>
       </section>
 
       <!-- Detail AC -->
@@ -464,155 +431,6 @@ async function lanjutBayar() {
         </div>
       </section>
 
-      <!-- Jadwal -->
-      <section id="jadwal" class="bg-(--color-surface-0) rounded-2xl p-5">
-        <h2 class="text-[15px] font-display font-extrabold mb-4 flex items-center gap-2">
-          <Icon name="clock" class="w-5 h-5 text-(--color-azure)" />
-          Jadwal Kunjungan
-        </h2>
-
-        <div class="grid grid-cols-2 gap-3">
-          <DatePickerField v-model="tanggal" wajib :ditandai="ditandaiJadwal" />
-          <TimePickerField v-model="waktu" wajib :ditandai="ditandaiJadwal" />
-        </div>
-
-        <p
-          v-if="ditandaiJadwal && (!tanggal || !waktu)"
-          class="text-[11.5px] font-semibold text-(--color-error) mt-2.5"
-        >
-          Pilih tanggal dan waktu kunjungan dulu ya.
-        </p>
-      </section>
-
-      <!-- Jadwal rutin -->
-      <section class="bg-(--color-primary-container)/40 rounded-2xl p-5 border border-(--color-azure)/25">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex-1 min-w-0">
-            <h3 class="text-[13.5px] font-extrabold flex items-center gap-2">
-              <span class="material-symbols-outlined text-[20px]" data-icon="event_repeat">
-                event_repeat
-              </span>
-              Jadwalkan cuci rutin
-            </h3>
-            <!--
-              Potongannya untuk kunjungan BERIKUTNYA, bukan yang ini. Ditulis
-              terang-terangan supaya tidak dikira memotong tagihan sekarang.
-            -->
-            <p class="mt-1 text-[11.5px] text-(--color-on-surface-variant) leading-snug">
-              Diskon {{ DISKON_RUTIN_PERSEN }}% untuk kunjungan berikutnya — tagihan hari ini
-              tidak berubah.
-            </p>
-
-            <div v-if="rutinAktif" class="mt-3 flex gap-2">
-              <button
-                v-for="r in RUTIN_AC"
-                :key="r.id"
-                type="button"
-                class="flex-1 py-2 rounded-full border text-[12.5px] font-semibold transition-colors"
-                :class="
-                  rutin === r.id
-                    ? 'bg-(--color-azure) border-(--color-azure) text-white'
-                    : 'border-(--color-azure)/40 text-(--color-on-primary-container)'
-                "
-                @click="rutin = r.id"
-              >
-                {{ r.nama }}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            role="switch"
-            :aria-checked="rutinAktif"
-            aria-label="Aktifkan jadwal rutin"
-            class="relative w-11 h-6 rounded-full shrink-0 transition-colors"
-            :class="rutinAktif ? 'bg-(--color-azure)' : 'bg-(--color-outline)'"
-            @click="rutinAktif = !rutinAktif"
-          >
-            <span
-              class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform"
-              :class="rutinAktif ? 'translate-x-5' : ''"
-            />
-          </button>
-        </div>
-      </section>
-
-      <!-- Promo -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <h3 class="text-[14px] font-display font-extrabold mb-3">Kode Promo</h3>
-
-        <div
-          v-if="promoTerpakai"
-          class="flex items-center gap-3 rounded-xl bg-(--color-azure)/8 border border-(--color-azure)/30 px-3.5 py-2.5"
-        >
-          <Icon name="check-circle" class="w-4.5 h-4.5 text-(--color-azure) shrink-0" />
-          <div class="flex-1 min-w-0">
-            <p class="text-[12px] font-bold truncate">{{ promoTerpakai.kode }}</p>
-            <p class="text-[11px] text-(--color-on-surface-variant) truncate">
-              {{ promoTerpakai.judul }}
-            </p>
-          </div>
-          <button
-            type="button"
-            class="shrink-0 text-[11.5px] font-bold text-(--color-error) active:scale-95 transition-transform"
-            @click="lepasPromo"
-          >
-            Lepas
-          </button>
-        </div>
-
-        <div v-else class="flex gap-2">
-          <div class="relative flex-1">
-            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-(--color-on-surface-variant)">
-              <Icon name="receipt" class="w-4 h-4" />
-            </span>
-            <input
-              v-model="kodeInput"
-              type="text"
-              placeholder="Masukkan kode promo"
-              class="w-full rounded-xl bg-(--color-surface-container) pl-9 pr-3 py-3 text-[13px] font-semibold uppercase border-2 border-transparent focus:border-(--color-azure) outline-none placeholder:normal-case placeholder:font-normal"
-              @keyup.enter="pakaiKode"
-            />
-          </div>
-          <button
-            type="button"
-            class="shrink-0 px-5 rounded-xl bg-(--color-azure) text-white text-[13px] font-bold active:scale-95 transition-transform"
-            @click="pakaiKode"
-          >
-            Pakai
-          </button>
-        </div>
-
-        <p
-          v-if="promoPesan"
-          class="mt-2 flex items-center gap-1.5 text-[11.5px] font-semibold"
-          :class="promoPesan.ok ? 'text-(--color-on-secondary-container)' : 'text-(--color-error)'"
-        >
-          <Icon :name="promoPesan.ok ? 'check' : 'alert'" class="w-3.5 h-3.5 shrink-0" />
-          {{ promoPesan.teks }}
-        </p>
-
-        <button
-          type="button"
-          class="mt-4 text-[12.5px] font-bold text-(--color-azure) active:scale-95 transition-transform"
-          @click="keKatalogPromo"
-        >
-          Lihat semua promo Servis AC →
-        </button>
-      </section>
-
-      <!-- Catatan -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <h3 class="text-[14px] font-display font-extrabold mb-2">Catatan untuk teknisi</h3>
-        <textarea
-          v-model="catatan"
-          rows="3"
-          placeholder="Misal: AC di lantai 2, rumah pagar hijau"
-          class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none resize-none"
-        />
-      </section>
-
       <PemilihLokasi
         :tampil="pemilihTampil"
         :alamat="alamatLokal"
@@ -640,13 +458,6 @@ async function lanjutBayar() {
               <template v-if="b.potongan">&minus;</template>{{ rupiah(b.nilai) }}
             </span>
           </div>
-          <div
-            v-if="hasilPromo.potongan"
-            class="flex justify-between gap-3 text-[12.5px] text-(--color-error)"
-          >
-            <span>Promo {{ promoTerpakai?.kode }}</span>
-            <span class="font-bold whitespace-nowrap">&minus;{{ rupiah(hasilPromo.potongan) }}</span>
-          </div>
         </div>
 
         <button
@@ -657,7 +468,7 @@ async function lanjutBayar() {
         >
           <span class="text-[13px] font-bold">Total Estimasi</span>
           <span class="flex items-center gap-1.5 text-(--color-azure)">
-            <span class="text-[20px] font-extrabold">{{ rupiah(total) }}</span>
+            <span class="text-[20px] font-extrabold">{{ rupiah(rincian.total) }}</span>
             <Icon
               name="chevron-down"
               class="w-4 h-4 transition-transform"
@@ -666,26 +477,14 @@ async function lanjutBayar() {
           </span>
         </button>
 
-        <div class="flex items-center gap-3">
-          <button
-            type="button"
-            class="flex items-center gap-1 text-[12.5px] font-semibold text-(--color-on-surface-variant) shrink-0 active:scale-95 transition-transform"
-            @click="sheetOpen = true"
-          >
-            {{ metodeLabel }}
-            <Icon name="chevron-down" class="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            class="flex-1 h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40"
-            :disabled="memproses"
-            @click="lanjutBayar"
-          >
-            {{ memproses ? 'Memproses…' : 'Lanjut ke Pembayaran' }}
-            <Icon v-if="!memproses" name="arrow-right" class="w-4 h-4" />
-          </button>
-        </div>
+        <button
+          type="button"
+          class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+          @click="lanjut"
+        >
+          Lanjut
+          <Icon name="arrow-right" class="w-4 h-4" />
+        </button>
 
         <p v-if="galat" role="alert" class="mt-2 text-[12px] font-semibold text-(--color-error)">
           {{ galat }}
@@ -693,51 +492,5 @@ async function lanjutBayar() {
       </div>
     </footer>
 
-    <!-- Sheet metode pembayaran -->
-    <Teleport to="body">
-      <div v-if="sheetOpen" class="fixed inset-0 z-[60] flex items-end md:items-center md:justify-center">
-        <div class="absolute inset-0 bg-black/45" @click="sheetOpen = false"></div>
-
-        <div
-          class="relative w-full md:w-96 max-h-[85dvh] bg-(--color-surface-0) rounded-t-[28px] md:rounded-[28px] flex flex-col shadow-(--shadow-float)"
-        >
-          <div class="w-10 h-1.5 bg-(--color-outline) rounded-full mx-auto mt-3 mb-1 shrink-0 md:hidden"></div>
-
-          <div class="flex items-center justify-between px-5 py-3.5 shrink-0">
-            <h3 class="font-extrabold text-[17px]">Mau bayar pakai apa?</h3>
-            <button
-              type="button"
-              aria-label="Tutup"
-              class="w-8 h-8 rounded-full bg-(--color-surface-container) flex items-center justify-center active:scale-90 transition-transform"
-              @click="sheetOpen = false"
-            >
-              <Icon name="x" class="w-4 h-4" />
-            </button>
-          </div>
-
-          <div class="overflow-y-auto flex-1 pb-6 px-5">
-            <div class="flex flex-col gap-2">
-              <button
-                v-for="m in METODE"
-                :key="m"
-                type="button"
-                class="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors"
-                :class="metodeDipilih === m ? 'bg-(--color-azure)/8' : 'active:bg-(--color-surface-container)'"
-                @click="metodeDipilih = m; sheetOpen = false"
-              >
-                <MetodeBayarIcon :id="m" />
-                <span class="flex-1 min-w-0 text-[14px] font-bold truncate">{{ LABEL_METODE[m] }}</span>
-                <span
-                  v-if="metodeDipilih === m"
-                  class="w-5 h-5 rounded-full bg-(--color-azure) flex items-center justify-center shrink-0"
-                >
-                  <Icon name="check" class="w-3 h-3 text-white" />
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>

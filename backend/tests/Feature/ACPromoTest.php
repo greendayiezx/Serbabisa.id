@@ -37,6 +37,8 @@ class ACPromoTest extends TestCase
             'kapasitas' => '1',
             'tanggal' => '2026-09-12',
             'waktu' => '10:00',
+            'nama_penerima' => 'Budi Uji',
+            'telepon_penerima' => '081200003333',
             'lokasi_alamat' => 'Rumah Uji, Jakarta',
             'lokasi_lat' => -6.2,
             'lokasi_lng' => 106.8,

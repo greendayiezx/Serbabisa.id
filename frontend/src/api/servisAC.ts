@@ -19,6 +19,10 @@ export interface PayloadAC {
   tanggal: string
   waktu: string
 
+  /** Kontak yang ditemui teknisi di lokasi; belum tentu pemilik akun. */
+  nama_penerima: string
+  telepon_penerima: string
+
   lokasi_alamat: string
   lokasi_lat: number
   lokasi_lng: number
