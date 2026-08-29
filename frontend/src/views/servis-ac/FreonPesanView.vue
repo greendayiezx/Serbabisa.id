@@ -15,6 +15,7 @@ import Icon from '@/components/icons/Icon.vue'
 import DatePickerField from '@/components/DatePickerField.vue'
 import { useFreonStore } from '@/stores/freon'
 import { useLocationStore } from '@/stores/location'
+import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
 import { rupiah } from '@/lib/rupiah'
 import { KAPASITAS_AC, TIPE_AC } from '@/lib/servis-ac/hargaAC'
 import {
@@ -90,6 +91,20 @@ onMounted(() => {
 const rincian = computed(() => hitungPemeriksaan(unit.value))
 
 const alamat = computed(() => locationStore.draft?.alamat ?? '')
+const lat = computed(() => locationStore.draft?.lat ?? -6.2088)
+const lng = computed(() => locationStore.draft?.lng ?? 106.8456)
+
+/*
+ * "Ganti lokasi" membuka lembar pilihan, bukan berpindah halaman. Berpindah
+ * berarti meninggalkan form — dan isian keluhan, unit, serta jadwal ikut
+ * ditinggalkan bersamanya.
+ */
+const lembarLokasi = ref(false)
+
+function terimaLokasi(l: { alamat: string; lat: number; lng: number }) {
+  locationStore.setDraft(l)
+  lembarLokasi.value = false
+}
 
 const galat = ref<string | null>(null)
 
@@ -141,6 +156,18 @@ function lanjut() {
 
     <main class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
       <!--
+        Dikatakan di muka, bukan di halaman tagihan: biaya pemeriksaan kembali
+        ke pelanggan kalau pekerjaannya jadi dilanjutkan.
+      -->
+      <div class="flex gap-2 px-1">
+        <Icon name="alert" class="w-4 h-4 shrink-0 text-(--color-azure) mt-0.5" />
+        <p class="text-[12px] leading-snug text-(--color-on-surface-variant)">
+          Biaya pemeriksaan dipotong dari total servis kalau Anda melanjutkan pengerjaan pada
+          kunjungan yang sama.
+        </p>
+      </div>
+
+      <!--
         Lokasi di paling atas, sebelum keluhan: ia yang menentukan teknisi mana
         yang bisa datang, dan alamat yang salah membuat seluruh isian di
         bawahnya sia-sia.
@@ -157,25 +184,12 @@ function lanjut() {
           <button
             type="button"
             class="shrink-0 px-4 py-2 rounded-full border-[1.5px] border-(--color-azure) text-(--color-azure) text-[12.5px] font-extrabold active:scale-95 transition-transform"
-            @click="router.push({ name: 'task-location' })"
+            @click="lembarLokasi = true"
           >
             Ganti lokasi
           </button>
         </div>
       </section>
-
-      <!--
-        Dikatakan di muka, bukan di halaman tagihan: biaya pemeriksaan kembali
-        ke pelanggan kalau pekerjaannya jadi dilanjutkan. Tanpa kotak — ini
-        keterangan, bukan peringatan yang perlu merebut perhatian dari isian.
-      -->
-      <div class="flex gap-2 px-1 -mt-0.5">
-        <Icon name="alert" class="w-4 h-4 shrink-0 text-(--color-azure) mt-0.5" />
-        <p class="text-[12px] leading-snug text-(--color-on-surface-variant)">
-          Biaya pemeriksaan dipotong dari total servis kalau Anda melanjutkan pengerjaan pada
-          kunjungan yang sama.
-        </p>
-      </div>
 
       <!-- 1. Keluhan -->
       <section class="bg-(--color-surface-0) rounded-2xl p-5">
@@ -357,6 +371,14 @@ function lanjut() {
         </div>
       </section>
 
+      <SheetPilihLokasi
+        :tampil="lembarLokasi"
+        :alamat="alamat"
+        :lat="lat"
+        :lng="lng"
+        @tutup="lembarLokasi = false"
+        @pilih="terimaLokasi"
+      />
     </main>
 
     <footer class="fixed bottom-0 inset-x-0 z-40 bg-(--color-surface-0) shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
