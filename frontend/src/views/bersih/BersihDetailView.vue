@@ -8,6 +8,10 @@ import BisaBersihNavbar from '@/components/bersih/BisaBersihNavbar.vue'
 import { LANGGANAN_BERSIH, hematPersen } from '@/lib/promo/promoBersih'
 import promoBisaBersih from '@/assets/PromoBisaBersih.svg'
 import promoGratisKunjungan from '@/assets/Promo Gratis biaya kunjungan.svg'
+import promoOffice100 from '@/assets/PromoOffice100.svg'
+import promoACHemat20 from '@/assets/PromoACHEMAT20.svg'
+import promoDeep100 from '@/assets/PromoDeep100.svg'
+import promoBersihBaru from '@/assets/PromoBersihBaru.svg'
 import imgBisaKinclong from '@/assets/BisaKinclong.png'
 import imgFreshHome from '@/assets/FreshHome.jpg'
 
@@ -154,6 +158,13 @@ const bannerHero = [
   // Alt mengikuti yang TERGAMBAR, bukan nama berkasnya: isinya promo voucher,
   // sementara berkasnya bernama "Gratis biaya kunjungan".
   { src: promoGratisKunjungan, alt: 'Voucher BisaBersih, potongan hingga Rp200.000' },
+  {
+    src: promoBersihBaru,
+    alt: 'BERSIHBARU50, potongan Rp50.000, khusus pelanggan baru',
+  },
+  { src: promoDeep100, alt: 'DEEP100, potongan Rp100.000 untuk Deep Cleaning' },
+  { src: promoOffice100, alt: 'OFFICE100, potongan Rp100.000 untuk cleaning kantor' },
+  { src: promoACHemat20, alt: 'ACHEMAT20, potongan Rp20.000 untuk minimal 2 unit AC' },
 ]
 
 const trackHero = ref<HTMLElement | null>(null)
@@ -169,13 +180,6 @@ function keHero(i: number) {
   const el = trackHero.value
   if (!el) return
   el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' })
-}
-
-function geserHero(arah: 'kiri' | 'kanan') {
-  const jumlah = bannerHero.length
-  const berikut =
-    arah === 'kanan' ? (heroAktif.value + 1) % jumlah : (heroAktif.value - 1 + jumlah) % jumlah
-  keHero(berikut)
 }
 
 /**
@@ -346,28 +350,11 @@ onBeforeUnmount(() => {
           </div>
 
           <!--
-            Panah melingkar tembus pandang, bukan tombol solid: ia melayang di
-            atas ilustrasi, dan kotak putih di situ akan memotong gambarnya.
+            Hanya titik, tanpa panah: bannernya sudah bisa digeser dengan jari,
+            dan panah melingkar di atas ilustrasi menutupi bagian gambar yang
+            justru ingin dilihat.
           -->
           <template v-if="bannerHero.length > 1">
-            <button
-              type="button"
-              aria-label="Promo sebelumnya"
-              class="absolute left-2 top-[calc(50%-20px)] -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-black/30 backdrop-blur-xs text-white flex items-center justify-center active:scale-90 transition-transform"
-              @click="hentikanHero(); geserHero('kiri')"
-            >
-              <Icon name="chevron-left" class="w-4 h-4" />
-            </button>
-
-            <button
-              type="button"
-              aria-label="Promo berikutnya"
-              class="absolute right-2 top-[calc(50%-20px)] -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-black/30 backdrop-blur-xs text-white flex items-center justify-center active:scale-90 transition-transform"
-              @click="hentikanHero(); geserHero('kanan')"
-            >
-              <Icon name="chevron-right" class="w-4 h-4" />
-            </button>
-
             <!--
               Titik penanda: berapa banner yang ada, dan sedang di mana. Yang
               aktif dibuat memanjang, bukan sekadar lebih terang — bedanya tetap
