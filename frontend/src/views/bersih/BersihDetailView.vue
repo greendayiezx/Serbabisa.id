@@ -6,6 +6,7 @@ import Skeleton from '@/components/ui/Skeleton.vue'
 import Icon from '@/components/icons/Icon.vue'
 import BisaBersihNavbar from '@/components/bersih/BisaBersihNavbar.vue'
 import { LANGGANAN_BERSIH, hematPersen } from '@/lib/promo/promoBersih'
+import promoBisaBersih from '@/assets/PromoBisaBersih.svg'
 import imgBisaKinclong from '@/assets/BisaKinclong.png'
 import imgFreshHome from '@/assets/FreshHome.jpg'
 
@@ -247,27 +248,40 @@ onBeforeUnmount(() => {
       <!-- TopAppBar: fixed sticky navbar matching BisaAngkut & BisaBelanja -->
       <BisaBersihNavbar />
 
-      <main class="pt-[64px] pb-28 flex flex-col gap-5">
-        <!-- Hero Section -->
-        <section class="relative mx-4 mt-4 rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.10)] group">
+      <main class="pt-[64px] pb-28">
+        <!--
+          Hero menyentuh tepi kiri-kanan, tanpa hamparan teks di atasnya:
+          gambarnya sudah memuat judul dan promonya sendiri, dan menumpuk teks
+          kedua di situ hanya menutupi karya yang sudah utuh.
+        -->
+        <section class="w-full pb-14" style="background: #002578">
           <img
-            alt="Clean Home Hero Banner"
-            class="w-full h-[200px] object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAug0RL3fedrwmBwP9aaLYfp1cx80r3fve20LvRXUnpYDuinNXpSa97KYzkZglha7fCq0NETgO3Pxi8ZwM-yhaYpkFf0NdH376O7z08of2wnFzW5EzfeNNCPQiWrseVVlBFTsCe3a6_hnz9hjKWQwxSKl4rAE3-go3doQxGMiXWRTkPafZqFMjCsvsbFv-CszoNpLR06KqfkNjQoZIGfcvABzlopC8IK88xPofcIKeCXdHdui0LFaDW"
+            :src="promoBisaBersih"
+            alt="BisaBersih — promo layanan kebersihan"
+            class="block w-full h-auto"
           />
-          <div class="absolute inset-0 bg-gradient-to-t from-[#1A1A1A]/80 to-transparent z-10 rounded-[2rem] pointer-events-none"></div>
-          <div class="absolute bottom-0 left-0 w-full p-5 z-20">
-            <div
-              class="inline-block bg-(--color-lime) text-[#33430b] text-[11px] font-semibold px-3 py-1 rounded-full mb-2 shadow-sm"
-            >
-              Promo 20% Off for First Order
-            </div>
-            <h2 class="font-display font-extrabold text-[20px] text-white mb-1">Spotless Home, Instantly.</h2>
-            <p class="text-[13px] text-white/90">Professional cleaning at your fingertips.</p>
-          </div>
         </section>
 
-        <!-- Service Categories (Grid) -->
+        <!--
+          Kartu isi naik menutupi bagian bawah hero.
+
+          Pita 32px di bawah gambar memakai warna baris terakhir gambarnya
+          (#002578, diambil dari pikselnya). Tanpa pita itu, kenaikan kartu
+          memakan baris teks terakhir hero — "untuk layanan kebersihan pertama
+          Anda" terpotong separuh. Sekarang yang tertutup hanya pitanya.
+
+          Margin atas negatiflah yang membuat lengkungnya terbaca: tanpa itu
+          sudut membulat hanya menempel pada tepi gambar dan tidak terlihat
+          "terangkat". Radius 32px, sejalan dengan anjuran 24-40px — di bawah
+          16px lengkungannya terasa patah, bukan halus.
+
+          Warnanya memakai token permukaan, bukan #ffffff mati: halaman ini
+          punya tema gelap, dan putih paksa akan menyala di tengah latar gelap.
+        -->
+        <div
+          class="relative z-[2] -mt-8 rounded-t-[32px] bg-(--color-surface) shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pt-6 flex flex-col gap-5"
+        >
+          <!-- Service Categories (Grid) -->
         <!-- Promo Hari Ini -->
         <section class="mx-4">
           <div class="flex justify-between items-end mb-3">
@@ -2119,6 +2133,7 @@ onBeforeUnmount(() => {
             </g>
           </svg>
         </section>
+        </div>
       </main>
 
       <!-- Sticky footer CTA -->
