@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\CleanerController;
 use App\Http\Controllers\Api\DisputeController;
 use App\Http\Controllers\Api\ACCheckoutController;
 use App\Http\Controllers\Api\ACPerbaikanController;
+use App\Http\Controllers\Api\PenawaranACController;
 use App\Http\Controllers\Api\DeepCheckoutController;
 use App\Http\Controllers\Api\FreonController;
 use App\Http\Controllers\Api\InvoiceController;
@@ -118,6 +119,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Pasang/pindah AC: TIDAK menagih apa pun. Yang tercatat permintaan
     // penawaran bernomor REQ-, harganya menyusul setelah foto atau survei.
     Route::post('/servis-ac/pasang/permintaan', [ACPerbaikanController::class, 'permintaan']);
+
+    // Penawaran pemasangan: dibaca, disetujui, atau diminta revisinya.
+    // Persetujuannya mengikat, jadi server menuntut pernyataan setuju yang
+    // eksplisit — bukan sekadar halaman yang terbuka.
+    Route::get('/servis-ac/penawaran/{nomor}', [PenawaranACController::class, 'show']);
+    Route::post('/servis-ac/penawaran/{nomor}/setujui', [PenawaranACController::class, 'setujui']);
+    Route::post('/servis-ac/penawaran/{nomor}/revisi', [PenawaranACController::class, 'revisi']);
 
     Route::post('/servis-ac/freon/checkout', [FreonController::class, 'store']);
     Route::post('/servis-ac/freon/{nomor}/setujui', [FreonController::class, 'setujui']);

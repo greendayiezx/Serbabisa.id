@@ -253,6 +253,29 @@ const router = createRouter({
       meta: { induk: 'servis-ac-pesan', roles: ['customer'] as Role[] },
     },
     {
+      /*
+       * Penawaran pemasangan. Nomornya nomor PERMINTAAN (REQ-), bukan nomor
+       * penawaran: satu permintaan bisa melahirkan beberapa penawaran setelah
+       * revisi, dan yang tetap adalah permintaannya.
+       */
+      path: '/tasks/servis-ac/penawaran/:nomor',
+      name: 'servis-ac-penawaran',
+      component: () => import('@/views/servis-ac/ACPenawaranView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/servis-ac/penawaran/:nomor/disetujui',
+      name: 'servis-ac-penawaran-disetujui',
+      component: () => import('@/views/servis-ac/ACPenawaranDisetujuiView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/servis-ac/penawaran/:nomor/revisi',
+      name: 'servis-ac-penawaran-revisi',
+      component: () => import('@/views/servis-ac/ACPenawaranRevisiView.vue'),
+      meta: { induk: 'servis-ac-penawaran', roles: ['customer'] as Role[] },
+    },
+    {
       // Perbaikan & Pasang AC: halaman masuk yang bercabang tiga.
       path: '/tasks/new/servis-ac/perbaikan',
       name: 'servis-ac-perbaikan',
