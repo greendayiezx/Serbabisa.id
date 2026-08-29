@@ -23,38 +23,34 @@
  * elemen tetap tampil utuh tanpa animasi — tidak ada yang mengandalkan
  * keyframe untuk sekadar terlihat.
  */
-import { useId } from 'vue'
+import { useId } from "vue";
 
 withDefaults(
   defineProps<{
-    judulBaris1?: string
-    judulBaris2?: string
-    penjelasBaris1?: string
-    penjelasBaris2?: string
+    judulBaris1?: string;
+    judulBaris2?: string;
     /** Teks badge bulat di kiri; ganti sesuai janji yang benar-benar ditanggung. */
-    badgeJudul?: string
-    badgeCatatan?: string
-    labelKiri?: string
-    labelTengah?: string
-    labelKanan?: string
+    badgeJudul?: string;
+    badgeCatatan?: string;
+    labelKiri?: string;
+    labelTengah?: string;
+    labelKanan?: string;
     /** Selebar layar tanpa sudut membulat, untuk halaman tanpa navbar. */
-    penuh?: boolean
+    penuh?: boolean;
   }>(),
   {
-    judulBaris1: 'AC Dingin Lagi,',
-    judulBaris2: 'Rumah Nyaman Lagi',
-    penjelasBaris1: 'Cuci AC profesional dengan teknisi',
-    penjelasBaris2: 'terverifikasi dan berpengalaman.',
-    badgeJudul: 'Teknisi Terverifikasi',
-    badgeCatatan: 'Dipilih dan diperiksa Serbabisa',
-    labelKiri: 'Cuci Standard',
-    labelTengah: 'Cuci Premium',
-    labelKanan: 'Cek Freon',
+    judulBaris1: "AC Dingin Lagi,",
+    judulBaris2: "Rumah Nyaman Lagi",
+    badgeJudul: "Teknisi Terverifikasi",
+    badgeCatatan: "Dipilih dan diperiksa Serbabisa",
+    labelKiri: "Cuci Standard",
+    labelTengah: "Cuci Premium",
+    labelKanan: "Cek Freon",
     penuh: false,
   },
-)
+);
 
-const uid = useId()
+const uid = useId();
 </script>
 
 <template>
@@ -67,11 +63,13 @@ const uid = useId()
       :aria-labelledby="`${uid}-judul ${uid}-desk`"
       preserveAspectRatio="xMidYMid meet"
     >
-      <title :id="`${uid}-judul`">Cuci AC - {{ judulBaris1 }} {{ judulBaris2 }}</title>
+      <title :id="`${uid}-judul`">
+        Cuci AC - {{ judulBaris1 }} {{ judulBaris2 }}
+      </title>
 
       <desc :id="`${uid}-desk`">
-        Ilustrasi layanan cuci AC dengan teknisi terverifikasi, podium layanan, dan efek angin
-        sejuk.
+        Ilustrasi layanan cuci AC dengan teknisi terverifikasi, podium layanan,
+        dan efek angin sejuk.
       </desc>
 
       <defs>
@@ -148,8 +146,20 @@ const uid = useId()
         </linearGradient>
 
         <!-- Small shadow -->
-        <filter :id="`${uid}-small-shadow`" x="-30%" y="-30%" width="160%" height="180%">
-          <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#06376D" flood-opacity=".20" />
+        <filter
+          :id="`${uid}-small-shadow`"
+          x="-30%"
+          y="-30%"
+          width="160%"
+          height="180%"
+        >
+          <feDropShadow
+            dx="0"
+            dy="6"
+            stdDeviation="6"
+            flood-color="#06376D"
+            flood-opacity=".20"
+          />
         </filter>
       </defs>
 
@@ -283,90 +293,86 @@ const uid = useId()
           {{ judulBaris2 }}
         </text>
 
-        <!-- Supporting text -->
-        <text
-          x="32"
-          y="182"
-          fill="#DDF8FC"
-          font-family="Inter, Arial, sans-serif"
-          font-size="15"
-          font-weight="500"
-        >
-          {{ penjelasBaris1 }}
-        </text>
+        <!--
+          GUARANTEE BADGE
 
-        <text
-          x="32"
-          y="204"
-          fill="#DDF8FC"
-          font-family="Inter, Arial, sans-serif"
-          font-size="15"
-          font-weight="500"
-        >
-          {{ penjelasBaris2 }}
-        </text>
+          Digeser lewat pembungkus, bukan lewat transform pada grupnya sendiri:
+          grup itu dianimasikan (scale saat berdenyut), dan transform dari CSS
+          menimpa transform dari atribut — badge-nya akan melompat balik ke
+          posisi lama tiap kali animasinya berjalan.
+        -->
+        <g transform="translate(0 62)">
+          <g class="guarantee-badge">
+            <circle
+              cx="65"
+              cy="241"
+              r="32"
+              :fill="`url(#${uid}-lime)`"
+              :filter="`url(#${uid}-small-shadow)`"
+            />
 
-        <!-- GUARANTEE BADGE -->
-        <g class="guarantee-badge">
-          <circle
-            cx="65"
-            cy="241"
-            r="32"
-            :fill="`url(#${uid}-lime)`"
-            :filter="`url(#${uid}-small-shadow)`"
-          />
+            <circle cx="65" cy="241" r="25" fill="#FFFFFF" opacity=".15" />
 
-          <circle cx="65" cy="241" r="25" fill="#FFFFFF" opacity=".15" />
+            <!-- Shield -->
+            <path
+              d="M65 223 L79 228 V239 C79 249 72 255 65 258 C58 255 51 249 51 239 V228 Z"
+              fill="#0B4C9D"
+            />
 
-          <!-- Shield -->
-          <path
-            d="M65 223 L79 228 V239 C79 249 72 255 65 258 C58 255 51 249 51 239 V228 Z"
-            fill="#0B4C9D"
-          />
+            <!-- Check -->
+            <path
+              d="M57 240 L63 246 L74 234"
+              fill="none"
+              stroke="#D8F64A"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
 
-          <!-- Check -->
-          <path
-            d="M57 240 L63 246 L74 234"
-            fill="none"
-            stroke="#D8F64A"
-            stroke-width="4"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+            <text
+              x="108"
+              y="236"
+              fill="#FFFFFF"
+              font-family="Inter, Arial, sans-serif"
+              font-size="16"
+              font-weight="800"
+            >
+              {{ badgeJudul }}
+            </text>
 
-          <text
-            x="108"
-            y="236"
-            fill="#FFFFFF"
-            font-family="Inter, Arial, sans-serif"
-            font-size="16"
-            font-weight="800"
-          >
-            {{ badgeJudul }}
-          </text>
-
-          <text
-            x="108"
-            y="256"
-            fill="#DDF8FC"
-            font-family="Inter, Arial, sans-serif"
-            font-size="12.5"
-            font-weight="500"
-          >
-            {{ badgeCatatan }}
-          </text>
+            <text
+              x="108"
+              y="256"
+              fill="#DDF8FC"
+              font-family="Inter, Arial, sans-serif"
+              font-size="12.5"
+              font-weight="500"
+            >
+              {{ badgeCatatan }}
+            </text>
+          </g>
         </g>
       </g>
 
       <!-- ================= 04. PODIUM GROUP ================= -->
       <g class="layer-podium">
         <!-- Ground shadow -->
-        <ellipse cx="531" cy="355" rx="185" ry="17" fill="#063E78" opacity=".22" />
+        <ellipse
+          cx="531"
+          cy="355"
+          rx="185"
+          ry="17"
+          fill="#063E78"
+          opacity=".22"
+        />
 
         <!-- LEFT PODIUM -->
         <g class="podium podium-left">
           <path d="M345 260 H423 L434 271 H356 Z" fill="#66D1E6" />
-          <path d="M356 271 H434 V348 H356 Z" :fill="`url(#${uid}-podium-side)`" />
+          <path
+            d="M356 271 H434 V348 H356 Z"
+            :fill="`url(#${uid}-podium-side)`"
+          />
           <path d="M365 280H425V338H365Z" fill="#FFFFFF" opacity=".045" />
 
           <circle cx="395" cy="286" r="13" fill="#B5E61D" />
@@ -398,7 +404,10 @@ const uid = useId()
         <!-- CENTER PODIUM -->
         <g class="podium podium-center">
           <path d="M435 205 H539 L551 217 H447 Z" fill="#70D8E9" />
-          <path d="M447 217 H551 V348 H447 Z" :fill="`url(#${uid}-podium-main)`" />
+          <path
+            d="M447 217 H551 V348 H447 Z"
+            :fill="`url(#${uid}-podium-main)`"
+          />
           <path d="M458 227H540V337H458Z" fill="#FFFFFF" opacity=".055" />
 
           <circle cx="499" cy="234" r="15" :fill="`url(#${uid}-gold)`" />
@@ -430,7 +439,10 @@ const uid = useId()
         <!-- RIGHT PODIUM -->
         <g class="podium podium-right">
           <path d="M565 260 H643 L654 271 H576 Z" fill="#66D1E6" />
-          <path d="M576 271 H654 V348 H576 Z" :fill="`url(#${uid}-podium-side)`" />
+          <path
+            d="M576 271 H654 V348 H576 Z"
+            :fill="`url(#${uid}-podium-side)`"
+          />
           <path d="M585 280H645V338H585Z" fill="#FFFFFF" opacity=".045" />
 
           <circle cx="615" cy="286" r="13" fill="#B5E61D" />
@@ -492,11 +504,25 @@ const uid = useId()
       <!-- ================= 06. CENTER AC INDOOR ICON ================= -->
       <g class="icon-ac">
         <!-- AC shadow -->
-        <ellipse cx="499" cy="202" rx="67" ry="10" fill="#053E7B" opacity=".18" />
+        <ellipse
+          cx="499"
+          cy="202"
+          rx="67"
+          ry="10"
+          fill="#053E7B"
+          opacity=".18"
+        />
 
         <!-- AC unit -->
         <g :filter="`url(#${uid}-small-shadow)`">
-          <rect x="445" y="120" width="108" height="69" rx="18" :fill="`url(#${uid}-ac-body)`" />
+          <rect
+            x="445"
+            y="120"
+            width="108"
+            height="69"
+            rx="18"
+            :fill="`url(#${uid}-ac-body)`"
+          />
 
           <!-- Top highlight -->
           <path
@@ -508,7 +534,14 @@ const uid = useId()
           />
 
           <!-- Display -->
-          <rect x="468" y="140" width="29" height="14" rx="7" :fill="`url(#${uid}-ac-screen)`" />
+          <rect
+            x="468"
+            y="140"
+            width="29"
+            height="14"
+            rx="7"
+            :fill="`url(#${uid}-ac-screen)`"
+          />
           <circle cx="477" cy="147" r="2.5" fill="#B5E61D" />
           <circle cx="486" cy="147" r="2.5" fill="#FFFFFF" opacity=".8" />
 
@@ -590,7 +623,10 @@ const uid = useId()
           />
 
           <!-- neck -->
-          <path d="M606 202 V211 C609 215 618 215 621 211 V202 Z" fill="#F2B48B" />
+          <path
+            d="M606 202 V211 C609 215 618 215 621 211 V202 Z"
+            fill="#F2B48B"
+          />
 
           <!-- face -->
           <circle cx="614" cy="192" r="17" fill="#F4BB91" />
@@ -616,7 +652,12 @@ const uid = useId()
           <circle cx="617" cy="178" r="3.5" fill="#B5E61D" />
 
           <!-- shirt detail -->
-          <path d="M612 216V249" stroke="#D8F7FB" stroke-width="3" opacity=".8" />
+          <path
+            d="M612 216V249"
+            stroke="#D8F7FB"
+            stroke-width="3"
+            opacity=".8"
+          />
         </g>
 
         <!-- Tool -->
