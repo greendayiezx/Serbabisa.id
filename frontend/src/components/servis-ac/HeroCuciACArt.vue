@@ -17,7 +17,7 @@
  * 4. Mode `penuh` untuk dipakai tanpa navbar: sudutnya dilempengkan dan
  *    viewBox-nya ditinggikan 80 satuan ke atas. Ruang itu bukan hiasan —
  *    tombol kembali melayang di pojok kiri atas, dan tanpanya ia menimpa
- *    pil "BISABERSIH" yang duduk di y=32.
+ *    baris pertama judul.
  *
  * Semua animasi mati sendiri saat prefers-reduced-motion: reduce, dan tiap
  * elemen tetap tampil utuh tanpa animasi — tidak ada yang mengandalkan
@@ -253,30 +253,18 @@ const uid = useId()
 
       <!-- ================= 03. HEADLINE AREA ================= -->
       <g class="layer-text">
-        <!-- Small category pill -->
-        <g>
-          <rect x="32" y="32" width="112" height="28" rx="14" fill="#FFFFFF" fill-opacity=".12" />
-          <circle cx="49" cy="46" r="5" fill="#B5E61D" />
-          <text
-            x="61"
-            y="51"
-            fill="#FFFFFF"
-            font-family="Inter, Arial, sans-serif"
-            font-size="11"
-            font-weight="700"
-            letter-spacing=".4"
-          >
-            BISABERSIH
-          </text>
-        </g>
-
         <!-- Headline -->
+        <!--
+          Ukuran naik 31 -> 38, dan jarak antar-baris ikut dilebarkan dari 36
+          jadi 50. Menaikkan ukuran huruf tanpa menggeser garis dasarnya
+          membuat kedua baris saling menyentuh.
+        -->
         <text
           x="32"
-          y="106"
+          y="100"
           fill="#FFFFFF"
           font-family="Inter, Arial, sans-serif"
-          font-size="31"
+          font-size="38"
           font-weight="900"
           letter-spacing="-1.1"
         >
@@ -285,10 +273,10 @@ const uid = useId()
 
         <text
           x="32"
-          y="142"
+          y="150"
           fill="#FFFFFF"
           font-family="Inter, Arial, sans-serif"
-          font-size="31"
+          font-size="38"
           font-weight="900"
           letter-spacing="-1.1"
         >
@@ -298,10 +286,10 @@ const uid = useId()
         <!-- Supporting text -->
         <text
           x="32"
-          y="171"
+          y="182"
           fill="#DDF8FC"
           font-family="Inter, Arial, sans-serif"
-          font-size="12.5"
+          font-size="15"
           font-weight="500"
         >
           {{ penjelasBaris1 }}
@@ -309,10 +297,10 @@ const uid = useId()
 
         <text
           x="32"
-          y="189"
+          y="204"
           fill="#DDF8FC"
           font-family="Inter, Arial, sans-serif"
-          font-size="12.5"
+          font-size="15"
           font-weight="500"
         >
           {{ penjelasBaris2 }}
@@ -351,7 +339,7 @@ const uid = useId()
             y="236"
             fill="#FFFFFF"
             font-family="Inter, Arial, sans-serif"
-            font-size="13"
+            font-size="16"
             font-weight="800"
           >
             {{ badgeJudul }}
@@ -359,10 +347,10 @@ const uid = useId()
 
           <text
             x="108"
-            y="253"
+            y="256"
             fill="#DDF8FC"
             font-family="Inter, Arial, sans-serif"
-            font-size="10.5"
+            font-size="12.5"
             font-weight="500"
           >
             {{ badgeCatatan }}
@@ -396,11 +384,11 @@ const uid = useId()
 
           <text
             x="395"
-            y="367"
+            y="370"
             text-anchor="middle"
             fill="#FFFFFF"
             font-family="Inter, Arial, sans-serif"
-            font-size="9.5"
+            font-size="13"
             font-weight="700"
           >
             {{ labelKiri }}
@@ -428,11 +416,11 @@ const uid = useId()
 
           <text
             x="499"
-            y="367"
+            y="370"
             text-anchor="middle"
             fill="#FFFFFF"
             font-family="Inter, Arial, sans-serif"
-            font-size="9.5"
+            font-size="13"
             font-weight="800"
           >
             {{ labelTengah }}
@@ -460,11 +448,11 @@ const uid = useId()
 
           <text
             x="615"
-            y="367"
+            y="370"
             text-anchor="middle"
             fill="#FFFFFF"
             font-family="Inter, Arial, sans-serif"
-            font-size="9.5"
+            font-size="13"
             font-weight="700"
           >
             {{ labelKanan }}

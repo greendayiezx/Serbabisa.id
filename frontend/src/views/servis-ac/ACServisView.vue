@@ -189,11 +189,7 @@ function bukaKategori(id: string) {
               </span>
             </span>
 
-            <span
-              class="relative z-10 w-9 h-9 rounded-full bg-(--color-surface-container) text-(--color-azure) flex items-center justify-center"
-            >
-              <Icon name="arrow-right" class="w-4 h-4" />
-            </span>
+            <Icon name="arrow-right" class="relative z-10 w-5 h-5 text-(--color-azure)" />
 
             <!-- Watermark Icon transparan di pojok kanan bawah -->
             <div
