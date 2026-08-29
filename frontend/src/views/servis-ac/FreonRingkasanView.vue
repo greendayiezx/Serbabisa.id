@@ -203,10 +203,8 @@ async function konfirmasi() {
         <h2 class="text-[14px] font-display font-extrabold mb-4">Detail Layanan</h2>
 
         <div class="flex gap-3">
-          <span
-            class="w-10 h-10 shrink-0 rounded-full bg-(--color-primary-container) text-(--color-on-primary-container) flex items-center justify-center"
-          >
-            <span class="material-symbols-outlined text-[20px]" data-icon="ac_unit">ac_unit</span>
+          <span class="material-symbols-outlined text-[22px] text-(--color-azure) shrink-0 mt-0.5" data-icon="ac_unit">
+            ac_unit
           </span>
           <span class="min-w-0">
             <span class="block text-[13.5px] font-bold">Cek &amp; Tambah Freon</span>
@@ -220,9 +218,7 @@ async function konfirmasi() {
         <div class="h-px bg-(--color-outline)/20 my-4"></div>
 
         <div class="flex gap-3 mb-4">
-          <span class="w-10 h-10 shrink-0 rounded-full bg-(--color-surface-container) flex items-center justify-center">
-            <Icon name="pin" class="w-4 h-4 text-[#F97316]" />
-          </span>
+          <Icon name="pin" class="w-5 h-5 text-[#F97316] shrink-0 mt-0.5" />
           <span class="min-w-0">
             <span class="block text-[11px] uppercase tracking-wider text-(--color-on-surface-variant)">
               Lokasi
@@ -232,9 +228,7 @@ async function konfirmasi() {
         </div>
 
         <div class="flex gap-3">
-          <span class="w-10 h-10 shrink-0 rounded-full bg-(--color-surface-container) flex items-center justify-center">
-            <Icon name="clock" class="w-4 h-4 text-(--color-on-surface-variant)" />
-          </span>
+          <Icon name="clock" class="w-5 h-5 text-(--color-azure) shrink-0 mt-0.5" />
           <span class="min-w-0">
             <span class="block text-[11px] uppercase tracking-wider text-(--color-on-surface-variant)">
               Jadwal kedatangan

@@ -17,8 +17,18 @@ import type { Task } from '@/types'
 export function ruteTugas(task: Task): RouteLocationRaw {
   const invoice = task.nomor_invoice ?? ''
 
-  // Permintaan penawaran kantor: bernomor REQ-, belum jadi pesanan.
+  /*
+   * Permintaan penawaran bernomor REQ-, belum jadi pesanan. Ada dua jenisnya
+   * sekarang, dan halaman terkirim milik kantor tidak bisa menampilkan
+   * permintaan pemasangan AC — isinya perusahaan, luas, dan frekuensi.
+   * Sampai permintaan AC punya halamannya sendiri, ia dibuka di layar tugas
+   * generik yang setidaknya menampilkan isinya dengan benar.
+   */
   if (invoice.startsWith('REQ-')) {
+    if (task.detail_layanan?.layanan === 'pasang-ac') {
+      return { name: 'task-detail', params: { id: task.id } }
+    }
+
     return { name: 'kantor-permintaan-terkirim', params: { nomor: invoice } }
   }
 
@@ -56,7 +66,9 @@ export function ruteTugas(task: Task): RouteLocationRaw {
    * pelanggan menjawab rekomendasi teknisi, dan itu yang ia cari saat membuka
    * pesanannya.
    */
-  if (task.detail_layanan?.layanan === 'freon') {
+  // Perbaikan AC memakai halaman hasil yang sama: keadaannya identik —
+  // menunggu teknisi, lalu menjawab rekomendasinya.
+  if (task.detail_layanan?.layanan === 'freon' || task.detail_layanan?.layanan === 'perbaikan') {
     return { name: 'servis-ac-freon-hasil', params: { nomor: invoice } }
   }
 

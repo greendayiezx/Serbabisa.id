@@ -43,8 +43,14 @@ class ACDiagnosa extends Command
         }
 
         $detail = $task->detail_layanan ?? [];
-        if (($detail['layanan'] ?? null) !== 'freon') {
-            $this->error("Pesanan {$task->nomor_invoice} bukan Cek & Tambah Freon.");
+
+        /*
+         * Dua layanan memakai alur diagnosis yang sama: pemeriksaan freon dan
+         * perbaikan AC. Keduanya menagih kunjungan lebih dulu, lalu menunggu
+         * persetujuan atas rekomendasi — jadi perintah ini melayani keduanya.
+         */
+        if (! in_array($detail['layanan'] ?? null, ['freon', 'perbaikan'], true)) {
+            $this->error("Pesanan {$task->nomor_invoice} bukan pesanan yang perlu diagnosis.");
 
             return self::FAILURE;
         }
@@ -75,17 +81,34 @@ class ACDiagnosa extends Command
             return self::FAILURE;
         }
 
-        $diagnosis = [
-            'status_freon' => $bocor ? 'Tekanan di bawah standar' : 'Tekanan sedikit di bawah standar',
-            'indikasi_kebocoran' => $bocor ? 'Ditemukan pada sambungan pipa' : 'Tidak ditemukan',
-            'jenis_freon' => strtoupper((string) $this->option('freon')),
-            'rekomendasi' => $bocor
-                ? 'Perbaiki sambungan terlebih dahulu, kemudian isi freon sesuai kebutuhan agar tidak cepat habis lagi.'
-                : 'Isi freon sesuai kebutuhan; sistem tidak menunjukkan tanda kebocoran.',
-            'pekerjaan' => $pekerjaan,
-            'diperiksa_pada' => now()->toIso8601String(),
-            'keputusan' => null,
-        ];
+        /*
+         * Temuan contohnya mengikuti layanannya. Pesanan perbaikan yang diberi
+         * catatan "tekanan freon di bawah standar" akan membuat layar hasil
+         * bicara tentang pekerjaan yang tidak dipesan — dan itu satu-satunya
+         * hal yang dibaca pelanggan sebelum menyetujui biaya.
+         */
+        $perbaikan = ($detail['layanan'] ?? null) === 'perbaikan';
+
+        $diagnosis = $perbaikan
+            ? [
+                'status_freon' => 'Unit indoor & outdoor diperiksa',
+                'indikasi_kebocoran' => $bocor ? 'Ditemukan rembesan pada unit indoor' : 'Tidak ditemukan',
+                'rekomendasi' => 'Komponen yang bermasalah diganti, lalu unit diuji ulang sebelum ditinggalkan.',
+                'pekerjaan' => $pekerjaan,
+                'diperiksa_pada' => now()->toIso8601String(),
+                'keputusan' => null,
+            ]
+            : [
+                'status_freon' => $bocor ? 'Tekanan di bawah standar' : 'Tekanan sedikit di bawah standar',
+                'indikasi_kebocoran' => $bocor ? 'Ditemukan pada sambungan pipa' : 'Tidak ditemukan',
+                'jenis_freon' => strtoupper((string) $this->option('freon')),
+                'rekomendasi' => $bocor
+                    ? 'Perbaiki sambungan terlebih dahulu, kemudian isi freon sesuai kebutuhan agar tidak cepat habis lagi.'
+                    : 'Isi freon sesuai kebutuhan; sistem tidak menunjukkan tanda kebocoran.',
+                'pekerjaan' => $pekerjaan,
+                'diperiksa_pada' => now()->toIso8601String(),
+                'keputusan' => null,
+            ];
 
         $task->update(['detail_layanan' => [...$detail, 'diagnosis' => $diagnosis]]);
 

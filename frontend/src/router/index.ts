@@ -253,6 +253,27 @@ const router = createRouter({
       meta: { induk: 'servis-ac-pesan', roles: ['customer'] as Role[] },
     },
     {
+      // Perbaikan & Pasang AC: halaman masuk yang bercabang tiga.
+      path: '/tasks/new/servis-ac/perbaikan',
+      name: 'servis-ac-perbaikan',
+      component: () => import('@/views/servis-ac/ACPerbaikanView.vue'),
+      meta: { induk: 'servis-ac', roles: ['customer'] as Role[] },
+    },
+    {
+      // Perbaiki AC: yang ditagih hanya kunjungan diagnosisnya.
+      path: '/tasks/new/servis-ac/perbaiki',
+      name: 'servis-ac-perbaiki',
+      component: () => import('@/views/servis-ac/ACPerbaikiPesanView.vue'),
+      meta: { induk: 'servis-ac-perbaikan', roles: ['customer'] as Role[] },
+    },
+    {
+      // Pasang/pindah AC: permintaan penawaran, tanpa tagihan.
+      path: '/tasks/new/servis-ac/pasang',
+      name: 'servis-ac-pasang',
+      component: () => import('@/views/servis-ac/ACPasangPesanView.vue'),
+      meta: { induk: 'servis-ac-perbaikan', roles: ['customer'] as Role[] },
+    },
+    {
       // Cek & Tambah Freon: isian pemeriksaan.
       path: '/tasks/new/servis-ac/freon',
       name: 'servis-ac-freon',

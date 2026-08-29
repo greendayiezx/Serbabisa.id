@@ -83,11 +83,10 @@ const LANGKAH = [
 ]
 
 /**
- * Hanya "Cuci AC" yang punya alur pemesanan sendiri.
- *
- * Freon dan perbaikan butuh pengecekan teknisi lebih dulu — harganya tidak bisa
- * ditentukan dari layar. Keduanya diarahkan ke jalur tugas custom alih-alih
- * dibuatkan halaman yang menjanjikan harga yang belum bisa dihitung.
+ * Tiap kategori punya alurnya sendiri, dan ketiganya menghitung uang dengan
+ * cara yang berbeda: cuci dijual per paket, freon menagih pemeriksaannya dulu,
+ * dan perbaikan/pemasangan bercabang lagi — perbaikan menagih diagnosis,
+ * pemasangan tidak menagih apa pun sampai penawarannya keluar.
  */
 function bukaKategori(id: string) {
   if (id === 'cuci') {
@@ -96,6 +95,10 @@ function bukaKategori(id: string) {
   }
   if (id === 'freon') {
     router.push({ name: 'servis-ac-freon' })
+    return
+  }
+  if (id === 'perbaikan') {
+    router.push({ name: 'servis-ac-perbaikan' })
     return
   }
 

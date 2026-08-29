@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CleanerController;
 use App\Http\Controllers\Api\DisputeController;
 use App\Http\Controllers\Api\ACCheckoutController;
+use App\Http\Controllers\Api\ACPerbaikanController;
 use App\Http\Controllers\Api\DeepCheckoutController;
 use App\Http\Controllers\Api\FreonController;
 use App\Http\Controllers\Api\InvoiceController;
@@ -110,6 +111,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Cek & Tambah Freon: yang ditagih di muka hanya PEMERIKSAAN. Pekerjaan
     // lanjutan baru masuk tagihan setelah pelanggan menyetujui hasil diagnosis.
+    // Perbaikan AC: yang ditagih hanya kunjungan diagnosisnya. Hasil
+    // pemeriksaan dan persetujuannya memakai jalur freon — mekanismenya sama.
+    Route::post('/servis-ac/perbaikan/checkout', [ACPerbaikanController::class, 'store']);
+
+    // Pasang/pindah AC: TIDAK menagih apa pun. Yang tercatat permintaan
+    // penawaran bernomor REQ-, harganya menyusul setelah foto atau survei.
+    Route::post('/servis-ac/pasang/permintaan', [ACPerbaikanController::class, 'permintaan']);
+
     Route::post('/servis-ac/freon/checkout', [FreonController::class, 'store']);
     Route::post('/servis-ac/freon/{nomor}/setujui', [FreonController::class, 'setujui']);
     Route::post('/servis-ac/freon/{nomor}/tolak', [FreonController::class, 'tolak']);

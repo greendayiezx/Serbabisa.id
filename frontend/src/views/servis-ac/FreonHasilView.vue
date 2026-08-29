@@ -77,6 +77,17 @@ const rekomendasi = computed(() =>
 
 const sudahDijawab = computed(() => diagnosis.value?.keputusan != null)
 
+/*
+ * Halaman ini melayani dua pesanan yang keadaannya sama — menunggu teknisi,
+ * lalu menjawab rekomendasinya — tapi pekerjaannya berbeda. Kalimat tunggunya
+ * menyebut pekerjaan yang benar-benar dipesan.
+ */
+const teksMenunggu = computed(() =>
+  detail.value.layanan === 'perbaikan'
+    ? 'Teknisi akan datang sesuai jadwal, memeriksa unit indoor dan outdoor, lalu menuliskan hasil diagnosisnya di halaman ini.'
+    : 'Teknisi akan datang sesuai jadwal, memeriksa tekanan dan kemungkinan kebocoran, lalu menuliskan hasilnya di halaman ini.',
+)
+
 const BULAN = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
@@ -147,9 +158,14 @@ function keChat() {
           </span>
 
           <h2 class="mt-4 text-[18px] font-display font-extrabold">Menunggu pemeriksaan</h2>
+          <!--
+            Halaman ini dipakai dua layanan: pemeriksaan freon dan perbaikan.
+            Kalimatnya menyesuaikan — menjanjikan "memeriksa tekanan dan
+            kebocoran" pada pesanan perbaikan berarti menyebut pekerjaan yang
+            bukan pesanannya.
+          -->
           <p class="mt-1.5 text-[12.5px] leading-relaxed text-(--color-on-surface-variant)">
-            Teknisi akan datang sesuai jadwal, memeriksa tekanan dan kemungkinan kebocoran,
-            lalu menuliskan hasilnya di halaman ini.
+            {{ teksMenunggu }}
           </p>
 
           <div class="mt-5 pt-4 border-t border-(--color-outline)/15 flex flex-col gap-2 text-left">
