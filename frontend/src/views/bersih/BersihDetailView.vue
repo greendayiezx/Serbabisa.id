@@ -248,13 +248,18 @@ onBeforeUnmount(() => {
       <!-- TopAppBar: fixed sticky navbar matching BisaAngkut & BisaBelanja -->
       <BisaBersihNavbar />
 
-      <main class="pt-[64px] pb-28">
+      <!--
+        Tanpa jarak atas: navbarnya bening di puncak halaman, jadi hero boleh
+        menyentuh tepi atas layar. Jarak di sini justru menyisakan pita kosong
+        di atas gambar, dengan tombol kembali melayang di atas pita itu.
+      -->
+      <main class="pb-28">
         <!--
           Hero menyentuh tepi kiri-kanan, tanpa hamparan teks di atasnya:
           gambarnya sudah memuat judul dan promonya sendiri, dan menumpuk teks
           kedua di situ hanya menutupi karya yang sudah utuh.
         -->
-        <section class="w-full pb-14" style="background: #002578">
+        <section class="w-full" style="background: #0A326B">
           <img
             :src="promoBisaBersih"
             alt="BisaBersih — promo layanan kebersihan"
@@ -263,23 +268,10 @@ onBeforeUnmount(() => {
         </section>
 
         <!--
-          Kartu isi naik menutupi bagian bawah hero.
-
-          Pita 32px di bawah gambar memakai warna baris terakhir gambarnya
-          (#002578, diambil dari pikselnya). Tanpa pita itu, kenaikan kartu
-          memakan baris teks terakhir hero — "untuk layanan kebersihan pertama
-          Anda" terpotong separuh. Sekarang yang tertutup hanya pitanya.
-
-          Margin atas negatiflah yang membuat lengkungnya terbaca: tanpa itu
-          sudut membulat hanya menempel pada tepi gambar dan tidak terlihat
-          "terangkat". Radius 32px, sejalan dengan anjuran 24-40px — di bawah
-          16px lengkungannya terasa patah, bukan halus.
-
-          Warnanya memakai token permukaan, bukan #ffffff mati: halaman ini
-          punya tema gelap, dan putih paksa akan menyala di tengah latar gelap.
+          Kartu isi naik menutupi bagian bawah hero dan space birunya.
         -->
         <div
-          class="relative z-[2] -mt-8 rounded-t-[32px] bg-(--color-surface) shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pt-6 flex flex-col gap-5"
+          class="relative z-[2] -mt-5 rounded-t-[32px] bg-(--color-surface) shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pt-6 flex flex-col gap-5"
         >
           <!-- Service Categories (Grid) -->
         <!-- Promo Hari Ini -->
