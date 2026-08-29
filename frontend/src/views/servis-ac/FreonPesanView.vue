@@ -141,14 +141,39 @@ function lanjut() {
 
     <main class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
       <!--
-        Dikatakan di muka, bukan di halaman tagihan: biaya pemeriksaan kembali
-        ke pelanggan kalau pekerjaannya jadi dilanjutkan.
+        Lokasi di paling atas, sebelum keluhan: ia yang menentukan teknisi mana
+        yang bisa datang, dan alamat yang salah membuat seluruh isian di
+        bawahnya sia-sia.
       -->
-      <div class="rounded-2xl bg-(--color-primary-container)/40 border border-(--color-azure)/25 p-4 flex gap-3">
-        <Icon name="info" class="w-5 h-5 shrink-0 text-(--color-azure) mt-0.5" />
-        <p class="text-[12.5px] leading-snug text-(--color-on-surface-variant)">
-          Biaya pemeriksaan dipotong dari total servis kalau Anda melanjutkan pengerjaan
-          pada kunjungan yang sama.
+      <section class="bg-(--color-surface-0) rounded-2xl p-5">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-[12px] text-(--color-on-surface-variant)">Lokasi servis</p>
+            <p class="mt-0.5 text-[15px] font-display font-extrabold leading-snug">
+              {{ alamat || 'Belum diisi' }}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="shrink-0 px-4 py-2 rounded-full border-[1.5px] border-(--color-azure) text-(--color-azure) text-[12.5px] font-extrabold active:scale-95 transition-transform"
+            @click="router.push({ name: 'task-location' })"
+          >
+            Ganti lokasi
+          </button>
+        </div>
+      </section>
+
+      <!--
+        Dikatakan di muka, bukan di halaman tagihan: biaya pemeriksaan kembali
+        ke pelanggan kalau pekerjaannya jadi dilanjutkan. Tanpa kotak — ini
+        keterangan, bukan peringatan yang perlu merebut perhatian dari isian.
+      -->
+      <div class="flex gap-2 px-1 -mt-0.5">
+        <Icon name="alert" class="w-4 h-4 shrink-0 text-(--color-azure) mt-0.5" />
+        <p class="text-[12px] leading-snug text-(--color-on-surface-variant)">
+          Biaya pemeriksaan dipotong dari total servis kalau Anda melanjutkan pengerjaan pada
+          kunjungan yang sama.
         </p>
       </div>
 
@@ -332,22 +357,6 @@ function lanjut() {
         </div>
       </section>
 
-      <!-- Lokasi -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="text-[13px] font-extrabold">Lokasi Servis</h2>
-          <button
-            type="button"
-            class="text-[12.5px] font-bold text-(--color-azure) active:scale-95 transition-transform"
-            @click="router.push({ name: 'task-location' })"
-          >
-            Ubah
-          </button>
-        </div>
-        <p class="mt-1 text-[12.5px] leading-snug text-(--color-on-surface-variant)">
-          {{ alamat || 'Belum diisi' }}
-        </p>
-      </section>
     </main>
 
     <footer class="fixed bottom-0 inset-x-0 z-40 bg-(--color-surface-0) shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">

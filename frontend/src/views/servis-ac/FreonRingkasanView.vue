@@ -11,6 +11,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
+import LottieIcon from '@/components/LottieIcon.vue'
+import panahLottie from '@/assets/lottie/panah-konfirmasi.json'
 import MetodeBayarIcon from '@/components/MetodeBayarIcon.vue'
 import { useFreonStore } from '@/stores/freon'
 import { useLocationStore } from '@/stores/location'
@@ -356,6 +358,20 @@ async function konfirmasi() {
     </main>
 
     <footer class="fixed bottom-0 inset-x-0 z-40 bg-(--color-surface-0) shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
+      <!--
+        Hanya muncul kalau potongannya BENAR-BENAR terpakai. Kode yang sudah
+        diketik tapi ditolak syaratnya tidak menghemat apa pun, dan spanduk yang
+        tetap tampil di situ adalah janji yang tidak ditepati tagihannya.
+      -->
+      <div
+        v-if="hasilPromo.potongan"
+        class="bg-(--color-secondary-container) text-(--color-on-secondary-container) py-2 px-4"
+      >
+        <p class="max-w-[430px] mx-auto text-[12.5px] font-bold text-center">
+          🎉 Total hematmu {{ rupiah(hasilPromo.potongan) }} di pesanan ini!
+        </p>
+      </div>
+
       <div class="max-w-[430px] mx-auto px-4 pt-3 pb-[calc(0.875rem+env(safe-area-inset-bottom))]">
         <button
           type="button"
@@ -366,14 +382,24 @@ async function konfirmasi() {
           <Icon name="chevron-down" class="w-3.5 h-3.5" />
         </button>
 
+        <!--
+          Panahnya animasi Lottie di dalam tombol, bukan ikon diam: tombol ini
+          yang mengakhiri pemesanan, dan gerakan kecil ke kanan menandai arah
+          langkah berikutnya. Total dan tombol dipisah ke dua sisi supaya
+          angkanya terbaca tepat sebelum ditekan.
+        -->
         <button
           type="button"
-          class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40"
+          class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-between gap-2 pl-5 pr-1.5 active:scale-[0.98] transition-transform disabled:opacity-40"
           :disabled="memproses"
           @click="konfirmasi"
         >
-          {{ memproses ? 'Memproses…' : 'Konfirmasi Pesanan' }}
-          <Icon v-if="!memproses" name="arrow-right" class="w-4 h-4" />
+          <span>{{ memproses ? 'Memproses…' : 'Konfirmasi Pesanan' }}</span>
+          <span class="flex items-center gap-2 shrink-0">
+            <span class="text-[14.5px] font-extrabold">{{ rupiah(total) }}</span>
+            <LottieIcon v-if="!memproses" :data="panahLottie" :size="36" />
+            <span v-else class="w-9"></span>
+          </span>
         </button>
 
         <p v-if="galat" role="alert" class="mt-2 text-[12px] font-semibold text-(--color-error)">
