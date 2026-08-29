@@ -55,9 +55,6 @@ const rutinAktif = ref(false)
 const rutin = ref('3-bulan')
 
 onMounted(() => {
-  // Keluhan dari halaman sebelumnya langsung tercentang.
-  kondisi.value = [...acStore.keluhanAwal]
-
   const lokasi = locationStore.draft
   alamatLokal.value = lokasi?.alamat ?? ''
   latLokal.value = lokasi?.lat ?? 0

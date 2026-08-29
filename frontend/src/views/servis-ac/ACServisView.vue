@@ -2,18 +2,17 @@
 /**
  * Servis AC — halaman masuk layanan.
  *
- * Isinya: banner promo, pemilihan keluhan ("AC Anda bermasalah apa?"), kategori
- * layanan, dan alur kerjanya. Keluhan yang dipilih di sini dititipkan ke store
- * dan langsung tercentang di form berikutnya — pengguna tidak ditanya dua kali
- * tentang hal yang sama.
+ * Isinya: banner promo, kategori layanan, dan alur kerjanya. Keluhannya
+ * ditanyakan di form pemesanan masing-masing layanan, bukan di sini: yang
+ * relevan berbeda antara cuci AC dan pemeriksaan freon, dan satu daftar di
+ * halaman masuk hanya cocok untuk salah satunya.
  */
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
-import { useServisACStore } from '@/stores/servisAC'
 import { useLocationStore } from '@/stores/location'
-import { KELUHAN_AWAL, PAKET_AC } from '@/lib/servis-ac/hargaAC'
+import { PAKET_AC } from '@/lib/servis-ac/hargaAC'
 import { BIAYA_PEMERIKSAAN } from '@/lib/servis-ac/hargaFreon'
 import { PROMO_AC } from '@/lib/promo/promoAC'
 import PromoCuciACArt from '@/components/servis-ac/PromoCuciACArt.vue'
@@ -21,7 +20,6 @@ import { rupiah } from '@/lib/rupiah'
 
 const router = useRouter()
 const kembali = useKembali()
-const acStore = useServisACStore()
 const locationStore = useLocationStore()
 
 /*
@@ -79,10 +77,6 @@ const LANGKAH = [
   { ikon: 'handyman', judul: 'Servis', catatan: 'Kerja profesional' },
   { ikon: 'payments', judul: 'Bayar', catatan: 'Setelah selesai' },
 ]
-
-function pilihKeluhan(id: string) {
-  acStore.setKeluhan(id)
-}
 
 /**
  * Hanya "Cuci AC" yang punya alur pemesanan sendiri.
@@ -151,41 +145,6 @@ function bukaKategori(id: string) {
         <p class="mt-2 px-1 text-[12px] text-(--color-on-surface-variant)">
           Kode <span class="font-bold text-(--color-on-surface)">{{ promoUtama.kode }}</span> ·
           potongan maksimal {{ rupiah(promoUtama.diskonMaks ?? 0) }}
-        </p>
-      </section>
-
-      <!-- Diagnosa keluhan -->
-      <section>
-        <h3 class="text-[16px] font-display font-extrabold mb-3">AC Anda bermasalah apa?</h3>
-        <div class="grid grid-cols-2 gap-3">
-          <button
-            v-for="k in KELUHAN_AWAL"
-            :key="k.id"
-            type="button"
-            class="rounded-2xl p-4 flex flex-col items-center text-center gap-3 border-2 transition-colors"
-            :class="
-              acStore.keluhanAwal.includes(k.id)
-                ? 'bg-(--color-primary-container)/50 border-(--color-azure)'
-                : 'bg-(--color-surface-0) border-(--color-outline)/30'
-            "
-            :aria-pressed="acStore.keluhanAwal.includes(k.id)"
-            @click="pilihKeluhan(k.id)"
-          >
-            <span
-              class="w-14 h-14 rounded-full flex items-center justify-center"
-              :class="
-                acStore.keluhanAwal.includes(k.id)
-                  ? 'bg-(--color-azure) text-white'
-                  : 'bg-(--color-surface-container) text-(--color-on-surface-variant)'
-              "
-            >
-              <span class="material-symbols-outlined text-[26px]" :data-icon="k.ikon">{{ k.ikon }}</span>
-            </span>
-            <span class="text-[13px] font-bold">{{ k.nama }}</span>
-          </button>
-        </div>
-        <p class="mt-2 text-[11.5px] text-(--color-on-surface-variant)">
-          Keluhannya langsung tercatat di form berikutnya.
         </p>
       </section>
 

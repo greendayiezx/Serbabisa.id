@@ -79,14 +79,6 @@ export const KONDISI_AC = [
   { id: 'tidak-ada-keluhan', nama: 'Tidak ada keluhan (perawatan rutin)' },
 ]
 
-/** Keluhan dari halaman awal, dipetakan ke id kondisi di form. */
-export const KELUHAN_AWAL = [
-  { id: 'kurang-dingin', nama: 'Tidak Dingin', ikon: 'severe_cold' },
-  { id: 'berdebu', nama: 'Berisik', ikon: 'volume_up' },
-  { id: 'bocor', nama: 'Bocor Air', ikon: 'water_drop' },
-  { id: 'berbau', nama: 'Bau Tak Sedap', ikon: 'air' },
-]
-
 export const RUTIN_AC = [
   { id: '3-bulan', nama: 'Tiap 3 Bulan' },
   { id: '6-bulan', nama: 'Tiap 6 Bulan' },
