@@ -16,6 +16,7 @@ import DatePickerField from '@/components/DatePickerField.vue'
 import { useFreonStore } from '@/stores/freon'
 import { useLocationStore } from '@/stores/location'
 import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
+import PilihanField from '@/components/PilihanField.vue'
 import { rupiah } from '@/lib/rupiah'
 import { KAPASITAS_AC, TIPE_AC } from '@/lib/servis-ac/hargaAC'
 import {
@@ -100,6 +101,25 @@ const lng = computed(() => locationStore.draft?.lng ?? 106.8456)
  * ditinggalkan bersamanya.
  */
 const lembarLokasi = ref(false)
+
+/*
+ * "Tidak tahu" perlu keterangan, dan tempat terbaiknya adalah di sebelah
+ * pilihannya sendiri — bukan paragraf di bawah kolom yang kerap terlewat.
+ * Katalognya tidak diubah: keterangan ini hanya untuk layar ini.
+ */
+const JENIS_FREON_PILIHAN = JENIS_FREON.map((f) =>
+  f.id === 'tidak-tahu'
+    ? { ...f, catatan: 'Teknisi yang membaca label unitnya di lokasi.' }
+    : f,
+)
+
+const TIPE_AC_PILIHAN = TIPE_AC.map((t) =>
+  t.id === 'tidak-tahu' ? { ...t, catatan: 'Teknisi memastikannya saat datang.' } : t,
+)
+
+const KAPASITAS_AC_PILIHAN = KAPASITAS_AC.map((k) =>
+  k.id === 'tidak-tahu' ? { ...k, catatan: 'Tertulis di label unit indoor.' } : k,
+)
 
 function terimaLokasi(l: { alamat: string; lat: number; lng: number }) {
   locationStore.setDraft(l)
@@ -267,58 +287,44 @@ function lanjut() {
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-          <label class="block">
-            <span class="block text-[11.5px] font-medium text-(--color-on-surface-variant) mb-1.5">
-              Tipe AC
-            </span>
-            <select
-              v-model="tipe"
-              class="w-full rounded-xl bg-(--color-surface-container) px-3 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
-            >
-              <option v-for="t in TIPE_AC" :key="t.id" :value="t.id">{{ t.nama }}</option>
-            </select>
-          </label>
+          <PilihanField
+            v-model="tipe"
+            label="Tipe AC"
+            judul-panel="Tipe AC"
+            ikon="grid"
+            :opsi="TIPE_AC_PILIHAN"
+          />
 
-          <label class="block">
-            <span class="block text-[11.5px] font-medium text-(--color-on-surface-variant) mb-1.5">
-              Kapasitas
-            </span>
-            <select
-              v-model="kapasitas"
-              class="w-full rounded-xl bg-(--color-surface-container) px-3 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
-            >
-              <option v-for="k in KAPASITAS_AC" :key="k.id" :value="k.id">{{ k.nama }}</option>
-            </select>
-          </label>
+          <PilihanField
+            v-model="kapasitas"
+            label="Kapasitas"
+            judul-panel="Kapasitas AC (PK)"
+            ikon="gauge"
+            :opsi="KAPASITAS_AC_PILIHAN"
+          />
 
-          <label class="block">
-            <span class="block text-[11.5px] font-medium text-(--color-on-surface-variant) mb-1.5">
-              Merek AC
-            </span>
-            <select
-              v-model="merek"
-              class="w-full rounded-xl bg-(--color-surface-container) px-3 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
-            >
-              <option v-for="m in MEREK_AC" :key="m.id" :value="m.id">{{ m.nama }}</option>
-            </select>
-          </label>
+          <PilihanField
+            v-model="merek"
+            label="Merek AC"
+            judul-panel="Merek AC"
+            ikon="bookmark"
+            :opsi="MEREK_AC"
+          />
 
-          <label class="block">
-            <span class="block text-[11.5px] font-medium text-(--color-on-surface-variant) mb-1.5">
-              Jenis freon
-            </span>
-            <select
-              v-model="jenisFreon"
-              class="w-full rounded-xl bg-(--color-surface-container) px-3 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
-            >
-              <option v-for="f in JENIS_FREON" :key="f.id" :value="f.id">{{ f.nama }}</option>
-            </select>
-          </label>
+          <PilihanField
+            v-model="jenisFreon"
+            label="Jenis freon"
+            judul-panel="Jenis freon"
+            ikon="package"
+            :opsi="JENIS_FREON_PILIHAN"
+          />
         </div>
 
         <!--
           "Tidak tahu" bukan jawaban malas: menebak jenis freon menghasilkan data
-          yang salah, dan teknisi tetap membaca label unitnya di lokasi.
+          yang salah, dan teknisi tetap membaca label unitnya di lokasi. Sejak
+          keterangan itu menempel pada pilihannya sendiri di dalam panel,
+          kalimat di sini tinggal penegasnya.
         -->
         <p class="mt-3 text-[11px] leading-snug text-(--color-on-surface-variant)">
           Tidak tahu jenis freonnya? Pilih "Tidak tahu" — teknisi akan membaca label
