@@ -7,11 +7,9 @@
  * relevan berbeda antara cuci AC dan pemeriksaan freon, dan satu daftar di
  * halaman masuk hanya cocok untuk salah satunya.
  */
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
-import { useLocationStore } from '@/stores/location'
 import { PAKET_AC } from '@/lib/servis-ac/hargaAC'
 import { BIAYA_PEMERIKSAAN } from '@/lib/servis-ac/hargaFreon'
 import { PROMO_AC } from '@/lib/promo/promoAC'
@@ -21,7 +19,6 @@ import { rupiah } from '@/lib/rupiah'
 
 const router = useRouter()
 const kembali = useKembali()
-const locationStore = useLocationStore()
 
 /*
  * Banner ini menjual CUCI AC, jadi promonya dicari menurut sifatnya — promo
@@ -42,14 +39,6 @@ const labelPodium = {
   tengah: PAKET_AC[1].nama,
   kanan: 'Cek Freon',
 }
-
-/** Kota/alamat singkat dari draf lokasi — sekadar penanda, bukan pilihan baru. */
-const lokasiSingkat = computed(() => {
-  const alamat = locationStore.draft?.alamat ?? ''
-  if (!alamat) return 'Pilih lokasi'
-  const bagian = alamat.split(',').map((x) => x.trim())
-  return bagian.length > 2 ? bagian[bagian.length - 3] : bagian[0]
-})
 
 const KATEGORI = [
   {
@@ -115,14 +104,18 @@ function bukaKategori(id: string) {
 </script>
 
 <template>
-  <div class="relative min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-28">
+  <div
+    class="relative min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-[calc(2.5rem+env(safe-area-inset-bottom))]"
+  >
     <!--
-      Hero selebar layar, jadi navbarnya dilepas. Tombol kembali dan pemilih
-      lokasi melayang di atasnya — menempel pada HALAMAN, bukan pada layar:
-      dengan posisi tetap (fixed) keduanya ikut turun saat digulung dan
-      berakhir menutupi isi di bawahnya.
+      Hero selebar layar, jadi navbarnya dilepas. Tombol kembali melayang di
+      atasnya — menempel pada HALAMAN, bukan pada layar: dengan posisi tetap
+      (fixed) ia ikut turun saat digulung dan berakhir menutupi isi di bawahnya.
+
+      Lokasi servis tidak lagi dipilih di sini; penentuannya ada di form
+      pemesanan masing-masing layanan, tempat alamatnya memang dipakai.
     -->
-    <div class="absolute top-4 inset-x-4 z-50 flex items-center justify-between gap-2">
+    <div class="absolute top-4 left-4 z-50">
       <button
         type="button"
         aria-label="Kembali"
@@ -130,16 +123,6 @@ function bukaKategori(id: string) {
         @click="kembali"
       >
         <Icon name="arrow-left" class="w-5 h-5" />
-      </button>
-
-      <button
-        type="button"
-        class="min-w-0 inline-flex items-center gap-1 max-w-[62%] px-3 py-1.5 rounded-full bg-white/90 dark:bg-[#1b2126]/90 text-(--color-azure) text-[11.5px] font-bold shadow-md backdrop-blur-xs active:scale-95 transition-transform"
-        @click="router.push({ name: 'task-location' })"
-      >
-        <Icon name="pin" class="w-3.5 h-3.5 shrink-0" />
-        <span class="truncate">{{ lokasiSingkat }}</span>
-        <Icon name="chevron-down" class="w-3 h-3 shrink-0" />
       </button>
     </div>
 
@@ -245,18 +228,5 @@ function bukaKategori(id: string) {
       </section>
     </main>
 
-    <!-- Aksi utama -->
-    <footer class="fixed bottom-0 inset-x-0 z-40 bg-(--color-surface-0) shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-      <div class="max-w-[430px] mx-auto px-4 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))]">
-        <button
-          type="button"
-          class="w-full h-12 rounded-full bg-(--color-lime) text-[#33430b] text-[15px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-          @click="router.push({ name: 'servis-ac-pesan' })"
-        >
-          <Icon name="sparkle" class="w-5 h-5" />
-          Pesan Servis AC Sekarang
-        </button>
-      </div>
-    </footer>
   </div>
 </template>

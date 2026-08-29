@@ -14,10 +14,11 @@
  *    tergambar sama sekali, jadi bajunya hilang dan badan putihnya tembus.
  * 3. Label podium dan teks badge dijadikan prop, dengan nilai bawaan dari
  *    katalog paket yang benar-benar dijual.
- * 4. Mode `penuh` untuk dipakai tanpa navbar: sudutnya dilempengkan dan
- *    viewBox-nya ditinggikan 80 satuan ke atas. Ruang itu bukan hiasan —
- *    tombol kembali melayang di pojok kiri atas, dan tanpanya ia menimpa
- *    baris pertama judul.
+ * 4. Mode `penuh` untuk dipakai tanpa navbar: sudutnya dilempengkan, dan
+ *    viewBox-nya ditinggikan 80 satuan ke atas untuk menampung judul yang
+ *    naik ke pita paling atas. Di mode itu judulnya rata KANAN — pojok kiri
+ *    atas ditempati tombol kembali yang melayang, dan judul rata kiri di
+ *    ketinggian itu pasti tertimpa olehnya.
  *
  * Semua animasi mati sendiri saat prefers-reduced-motion: reduce, dan tiap
  * elemen tetap tampil utuh tanpa animasi — tidak ada yang mengandalkan
@@ -265,13 +266,17 @@ const uid = useId();
       <g class="layer-text">
         <!-- Headline -->
         <!--
-          Ukuran naik 31 -> 38, dan jarak antar-baris ikut dilebarkan dari 36
-          jadi 50. Menaikkan ukuran huruf tanpa menggeser garis dasarnya
-          membuat kedua baris saling menyentuh.
+          Ukuran 38, jarak antar-baris 50: menaikkan huruf tanpa melebarkan
+          jaraknya membuat kedua baris saling menyentuh.
+
+          Di mode penuh judulnya naik ke pita atas dan rata kanan, menempati
+          tempat yang dulu dipakai pemilih lokasi. Rata kiri di ketinggian itu
+          akan tertimpa tombol kembali yang melayang di pojok kiri atas.
         -->
         <text
-          x="32"
-          y="100"
+          :x="penuh ? 718 : 32"
+          :y="penuh ? -32 : 100"
+          :text-anchor="penuh ? 'end' : 'start'"
           fill="#FFFFFF"
           font-family="Inter, Arial, sans-serif"
           font-size="38"
@@ -282,8 +287,9 @@ const uid = useId();
         </text>
 
         <text
-          x="32"
-          y="150"
+          :x="penuh ? 718 : 32"
+          :y="penuh ? 18 : 150"
+          :text-anchor="penuh ? 'end' : 'start'"
           fill="#FFFFFF"
           font-family="Inter, Arial, sans-serif"
           font-size="38"
@@ -301,7 +307,7 @@ const uid = useId();
           menimpa transform dari atribut — badge-nya akan melompat balik ke
           posisi lama tiap kali animasinya berjalan.
         -->
-        <g transform="translate(0 62)">
+        <g transform="translate(-25 120)">
           <g class="guarantee-badge">
             <circle
               cx="65"
@@ -334,7 +340,7 @@ const uid = useId();
               y="236"
               fill="#FFFFFF"
               font-family="Inter, Arial, sans-serif"
-              font-size="16"
+              font-size="20"
               font-weight="800"
             >
               {{ badgeJudul }}
@@ -345,7 +351,7 @@ const uid = useId();
               y="256"
               fill="#DDF8FC"
               font-family="Inter, Arial, sans-serif"
-              font-size="12.5"
+              font-size="15.5"
               font-weight="500"
             >
               {{ badgeCatatan }}
