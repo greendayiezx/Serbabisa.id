@@ -16,6 +16,7 @@ import { useLocationStore } from '@/stores/location'
 import { KELUHAN_AWAL, PAKET_AC } from '@/lib/servis-ac/hargaAC'
 import { BIAYA_PEMERIKSAAN } from '@/lib/servis-ac/hargaFreon'
 import { PROMO_AC } from '@/lib/promo/promoAC'
+import PromoCuciACArt from '@/components/servis-ac/PromoCuciACArt.vue'
 import { rupiah } from '@/lib/rupiah'
 
 const router = useRouter()
@@ -23,7 +24,14 @@ const kembali = useKembali()
 const acStore = useServisACStore()
 const locationStore = useLocationStore()
 
-const promoUtama = PROMO_AC[0]
+/*
+ * Banner ini menjual CUCI AC, jadi promonya dicari menurut sifatnya — promo
+ * cuci berbentuk persen — bukan menurut urutan katalog. Sempat memakai
+ * PROMO_AC[0], dan begitu CEKAC20 (promo pemeriksaan freon, potongan rupiah)
+ * masuk sebagai entri pertama, banner cuci ikut menampilkan angka promo yang
+ * bukan miliknya.
+ */
+const promoUtama = PROMO_AC.find((p) => p.layanan === 'cuci' && p.diskonPersen) ?? PROMO_AC[0]
 
 /** Kota/alamat singkat dari draf lokasi — sekadar penanda, bukan pilihan baru. */
 const lokasiSingkat = computed(() => {
@@ -132,23 +140,18 @@ function bukaKategori(id: string) {
 
     <main class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-6">
       <!-- Banner promo -->
-      <section
-        class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0A326B] to-(--color-azure) text-white p-5 min-h-[150px] flex flex-col justify-center"
-      >
-        <span
-          class="w-fit mb-2 px-2.5 py-1 rounded-full bg-(--color-lime) text-[#33430b] text-[10.5px] font-extrabold uppercase tracking-wider"
-        >
-          Promo Spesial
-        </span>
-        <h2 class="text-[22px] font-display font-extrabold leading-tight">
-          Cuci AC<br />Diskon {{ promoUtama.diskonPersen }}%
-        </h2>
-        <p class="mt-1.5 text-[12.5px] text-white/85">
-          Kode: <span class="font-bold">{{ promoUtama.kode }}</span> · maksimal
-          {{ rupiah(promoUtama.diskonMaks ?? 0) }}
-        </p>
+      <section>
+        <PromoCuciACArt :persen="promoUtama.diskonPersen ?? 0" />
 
-        <Icon name="sparkle" class="absolute -right-4 -bottom-4 w-28 h-28 text-white/10" />
+        <!--
+          Kode dan batas potongannya tetap ditulis di luar gambar: keduanya yang
+          menentukan berapa sebenarnya yang dipotong, dan itu tidak boleh cuma
+          terbaca oleh yang memperbesar banner.
+        -->
+        <p class="mt-2 px-1 text-[12px] text-(--color-on-surface-variant)">
+          Kode <span class="font-bold text-(--color-on-surface)">{{ promoUtama.kode }}</span> ·
+          potongan maksimal {{ rupiah(promoUtama.diskonMaks ?? 0) }}
+        </p>
       </section>
 
       <!-- Diagnosa keluhan -->
