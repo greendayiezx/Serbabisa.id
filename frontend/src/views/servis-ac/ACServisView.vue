@@ -2,7 +2,7 @@
 /**
  * Servis AC — halaman masuk layanan.
  *
- * Isinya: banner promo, kategori layanan, dan alur kerjanya. Keluhannya
+ * Isinya: hero layanan, banner promo, kategori layanan, dan alur kerjanya. Keluhannya
  * ditanyakan di form pemesanan masing-masing layanan, bukan di sini: yang
  * relevan berbeda antara cuci AC dan pemeriksaan freon, dan satu daftar di
  * halaman masuk hanya cocok untuk salah satunya.
@@ -15,6 +15,7 @@ import { useLocationStore } from '@/stores/location'
 import { PAKET_AC } from '@/lib/servis-ac/hargaAC'
 import { BIAYA_PEMERIKSAAN } from '@/lib/servis-ac/hargaFreon'
 import { PROMO_AC } from '@/lib/promo/promoAC'
+import HeroCuciACArt from '@/components/servis-ac/HeroCuciACArt.vue'
 import PromoCuciACArt from '@/components/servis-ac/PromoCuciACArt.vue'
 import { rupiah } from '@/lib/rupiah'
 
@@ -30,6 +31,17 @@ const locationStore = useLocationStore()
  * bukan miliknya.
  */
 const promoUtama = PROMO_AC.find((p) => p.layanan === 'cuci' && p.diskonPersen) ?? PROMO_AC[0]
+
+/*
+ * Label podium hero diambil dari katalog paket yang benar-benar dijual, bukan
+ * ditulis lepas di gambar. Podium tengah memajang paket menengah sebagai yang
+ * disarankan, dan podium kanan menunjuk layanan pemeriksaan freon.
+ */
+const labelPodium = {
+  kiri: PAKET_AC[0].nama,
+  tengah: PAKET_AC[1].nama,
+  kanan: 'Cek Freon',
+}
 
 /** Kota/alamat singkat dari draf lokasi — sekadar penanda, bukan pilihan baru. */
 const lokasiSingkat = computed(() => {
@@ -133,6 +145,13 @@ function bukaKategori(id: string) {
     </header>
 
     <main class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-6">
+      <!-- Hero layanan -->
+      <HeroCuciACArt
+        :label-kiri="labelPodium.kiri"
+        :label-tengah="labelPodium.tengah"
+        :label-kanan="labelPodium.kanan"
+      />
+
       <!-- Banner promo -->
       <section>
         <PromoCuciACArt :persen="promoUtama.diskonPersen ?? 0" />
@@ -177,7 +196,7 @@ function bukaKategori(id: string) {
             </span>
 
             <span
-              class="material-symbols-outlined absolute -bottom-4 -right-4 text-[92px] text-(--color-outline)/40 rotate-12 pointer-events-none"
+              class="material-symbols-outlined absolute -bottom-4 -right-4 text-[100px] text-(--color-surface-variant) opacity-30 rotate-12 pointer-events-none"
               :data-icon="k.ikon"
             >
               {{ k.ikon }}
