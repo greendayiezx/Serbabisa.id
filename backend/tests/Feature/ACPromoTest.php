@@ -118,6 +118,12 @@ class ACPromoTest extends TestCase
         $promo = new PromoAC;
 
         foreach (PromoAC::VOUCHER as $kode => $v) {
+            // Promo khusus pemeriksaan freon diuji di FreonTest — katalog harga
+            // cuci AC di sini memang bukan lahannya.
+            if (($v['layanan'] ?? 'cuci') !== 'cuci') {
+                continue;
+            }
+
             $terburuk = null;
 
             foreach (array_keys(ACTarif::PAKET) as $paket) {
@@ -186,6 +192,9 @@ class ACPromoTest extends TestCase
             }
             if (str_contains($blok, 'penggunaBaru: true')) {
                 $v['pengguna_baru'] = true;
+            }
+            if (preg_match("/layanan: '([a-z]+)',/", $blok, $c)) {
+                $v['layanan'] = $c[1];
             }
 
             $dariTs[$cocok[0]] = $v;

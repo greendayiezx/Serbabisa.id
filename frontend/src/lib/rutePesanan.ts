@@ -51,6 +51,15 @@ export function ruteTugas(task: Task): RouteLocationRaw {
     return { name: 'servis-ac-selesai', params: { nomor: invoice } }
   }
 
+  /*
+   * Cek & Tambah Freon berujung pada halaman hasil pemeriksaan: di situlah
+   * pelanggan menjawab rekomendasi teknisi, dan itu yang ia cari saat membuka
+   * pesanannya.
+   */
+  if (task.detail_layanan?.layanan === 'freon') {
+    return { name: 'servis-ac-freon-hasil', params: { nomor: invoice } }
+  }
+
   if (!bersih(task)) {
     return { name: 'task-detail', params: { id: task.id } }
   }

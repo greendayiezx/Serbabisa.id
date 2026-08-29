@@ -25,6 +25,16 @@ class PromoAC
         // tidak memotong margin lebih dalam daripada paket termurah.
         'GERCEPAC' => ['min' => 100_000, 'persen' => 20, 'maks' => 50_000],
 
+        /*
+         * Khusus pemeriksaan freon, dan hanya untuk pelanggan baru.
+         *
+         * Biaya pemeriksaan Rp50.000 sudah tipis: transport dan waktu teknisi
+         * saja Rp28.000. Dipotong Rp20.000, kunjungannya nyaris impas — itu
+         * masuk akal sebagai biaya menarik pelanggan pertama, tapi tidak sebagai
+         * promo yang boleh dipakai berulang.
+         */
+        'CEKAC20' => ['min' => 50_000, 'potongan' => 20_000, 'pengguna_baru' => true, 'layanan' => 'freon'],
+
         // Bertingkat menurut jumlah unit: satu kunjungan teknisi mengerjakan
         // beberapa AC, jadi biaya perjalanannya makin terbagi.
         'ACHEMAT2' => ['min' => 200_000, 'potongan' => 30_000, 'min_unit' => 2],
@@ -37,8 +47,18 @@ class PromoAC
     /**
      * @return array{potongan:int, berlaku:bool, alasan:?string}
      */
-    public function hitung(?string $kode, int $nilaiTransaksi, int $unit, ?User $user = null): array
-    {
+    /**
+     * @param  string  $layanan  'cuci' atau 'freon' — sebagian promo hanya
+     *                           berlaku pada salah satunya, dan tanpa penanda
+     *                           ini kode pemeriksaan bisa dipakai untuk cuci AC.
+     */
+    public function hitung(
+        ?string $kode,
+        int $nilaiTransaksi,
+        int $unit,
+        ?User $user = null,
+        string $layanan = 'cuci',
+    ): array {
         if (! $kode) {
             return ['potongan' => 0, 'berlaku' => false, 'alasan' => null];
         }
@@ -55,6 +75,14 @@ class PromoAC
                 'potongan' => 0,
                 'berlaku' => false,
                 'alasan' => 'Transaksi belum mencapai minimum Rp'.number_format($v['min'], 0, ',', '.').'.',
+            ];
+        }
+
+        if (isset($v['layanan']) && $v['layanan'] !== $layanan) {
+            return [
+                'potongan' => 0,
+                'berlaku' => false,
+                'alasan' => 'Promo ini hanya untuk pemeriksaan freon.',
             ];
         }
 

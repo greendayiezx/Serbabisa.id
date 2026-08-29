@@ -246,6 +246,27 @@ const router = createRouter({
       meta: { induk: 'servis-ac', roles: ['customer'] as Role[] },
     },
     {
+      // Cek & Tambah Freon: isian pemeriksaan.
+      path: '/tasks/new/servis-ac/freon',
+      name: 'servis-ac-freon',
+      component: () => import('@/views/servis-ac/FreonPesanView.vue'),
+      meta: { induk: 'servis-ac', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/servis-ac/freon/ringkasan',
+      name: 'servis-ac-freon-ringkasan',
+      component: () => import('@/views/servis-ac/FreonRingkasanView.vue'),
+      meta: { induk: 'servis-ac-freon', roles: ['customer'] as Role[] },
+    },
+    {
+      // Hasil pemeriksaan teknisi — dua keadaan: belum diperiksa & sudah ada
+      // temuan yang menunggu jawaban pelanggan.
+      path: '/tasks/new/servis-ac/freon/hasil/:nomor',
+      name: 'servis-ac-freon-hasil',
+      component: () => import('@/views/servis-ac/FreonHasilView.vue'),
+      meta: { roles: ['customer'] as Role[] },
+    },
+    {
       // Konfirmasi setelah pesanan tercatat.
       path: '/tasks/new/servis-ac/selesai/:nomor',
       name: 'servis-ac-selesai',

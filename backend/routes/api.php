@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\CleanerController;
 use App\Http\Controllers\Api\DisputeController;
 use App\Http\Controllers\Api\ACCheckoutController;
 use App\Http\Controllers\Api\DeepCheckoutController;
+use App\Http\Controllers\Api\FreonController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\KantorCheckoutController;
 use App\Http\Controllers\Api\KantorPermintaanController;
@@ -106,6 +107,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Servis AC: dijual per unit; biaya kunjungan & potongan bundling dihitung
     // ulang server.
     Route::post('/servis-ac/checkout', [ACCheckoutController::class, 'store']);
+
+    // Cek & Tambah Freon: yang ditagih di muka hanya PEMERIKSAAN. Pekerjaan
+    // lanjutan baru masuk tagihan setelah pelanggan menyetujui hasil diagnosis.
+    Route::post('/servis-ac/freon/checkout', [FreonController::class, 'store']);
+    Route::post('/servis-ac/freon/{nomor}/setujui', [FreonController::class, 'setujui']);
+    Route::post('/servis-ac/freon/{nomor}/tolak', [FreonController::class, 'tolak']);
 
     // BisaBersih Deep Cleaning: dijual per paket; luas & ruangan standar sudah
     // termasuk, kelebihannya dan layanan tambahan dihitung ulang server.

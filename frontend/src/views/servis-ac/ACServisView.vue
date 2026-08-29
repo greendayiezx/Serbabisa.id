@@ -14,6 +14,7 @@ import Icon from '@/components/icons/Icon.vue'
 import { useServisACStore } from '@/stores/servisAC'
 import { useLocationStore } from '@/stores/location'
 import { KELUHAN_AWAL, PAKET_AC } from '@/lib/servis-ac/hargaAC'
+import { BIAYA_PEMERIKSAAN } from '@/lib/servis-ac/hargaFreon'
 import { PROMO_AC } from '@/lib/promo/promoAC'
 import { rupiah } from '@/lib/rupiah'
 
@@ -41,9 +42,17 @@ const KATEGORI = [
     garis: 'border-(--color-azure)',
   },
   {
+    /*
+     * Namanya "Cek & Tambah Freon", bukan "Tambah Freon".
+     *
+     * AC yang kurang dingin belum tentu kekurangan freon — bisa filter kotor,
+     * kapasitor lemah, atau pipa bocor. Menamainya "Tambah Freon" membuat
+     * pelanggan mengira pengisian sudah pasti dibutuhkan, padahal yang dijual
+     * di muka adalah pemeriksaannya.
+     */
     id: 'freon',
-    nama: 'Tambah Freon',
-    catatan: 'Mulai dari Rp150.000',
+    nama: 'Cek & Tambah Freon',
+    catatan: `Pemeriksaan mulai ${rupiah(BIAYA_PEMERIKSAAN)}`,
     ikon: 'ac_unit',
     garis: 'border-(--color-lime)',
   },
@@ -77,6 +86,10 @@ function pilihKeluhan(id: string) {
 function bukaKategori(id: string) {
   if (id === 'cuci') {
     router.push({ name: 'servis-ac-pesan' })
+    return
+  }
+  if (id === 'freon') {
+    router.push({ name: 'servis-ac-freon' })
     return
   }
 

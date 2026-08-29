@@ -65,12 +65,21 @@ const unit = computed(() => {
 
 const kodeDipakai = computed(() => String(route.query.promo ?? '').toUpperCase() || null)
 
+/**
+ * Servis AC punya dua jalur pemesanan — cuci dan pemeriksaan freon — dan
+ * sebagian promonya hanya berlaku pada salah satunya. Tanpa konteks ini,
+ * katalog akan menawarkan kode yang pasti ditolak.
+ */
+const konteks = computed<'cuci' | 'freon'>(() =>
+  route.query.konteks === 'freon' ? 'freon' : 'cuci',
+)
+
 const daftar = computed<KartuPromo[]>(() => {
   const n = nilai.value
 
   if (layanan.value === 'ac') {
-    return PROMO_AC.map((p) => {
-      const hasil = hitungPromoAC(p, n ?? p.minTransaksi, unit.value)
+    return PROMO_AC.filter((p) => !p.layanan || p.layanan === konteks.value).map((p) => {
+      const hasil = hitungPromoAC(p, n ?? p.minTransaksi, unit.value, konteks.value)
       return {
         kode: p.kode,
         judul: p.judul,

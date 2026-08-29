@@ -19,10 +19,32 @@ export interface PromoAC {
   minUnit?: number
   /** Hanya untuk pesanan Servis AC pertama; diperiksa server dari riwayat. */
   penggunaBaru?: boolean
+  /**
+   * Layanan yang berhak memakainya.
+   *
+   * Tanpa penanda ini, kode pemeriksaan freon bisa dipasang pada pesanan cuci
+   * AC — dan potongannya baru ditolak server setelah pesanan terbuat.
+   */
+  layanan?: 'cuci' | 'freon'
   syarat: string[]
 }
 
 export const PROMO_AC: PromoAC[] = [
+  {
+    kode: 'CEKAC20',
+    judul: 'Pemeriksaan freon lebih murah',
+    ringkas: 'Potongan Rp20.000 untuk pemeriksaan pertama.',
+    minTransaksi: 50_000,
+    potongan: 20_000,
+    penggunaBaru: true,
+    layanan: 'freon',
+    syarat: [
+      'Hanya untuk pemeriksaan Cek & Tambah Freon.',
+      'Hanya untuk pesanan Servis AC pertama dari akun ini.',
+      'Biaya pemeriksaan tetap dipotong dari total servis kalau pengerjaan dilanjutkan.',
+      'Maksimal satu voucher per transaksi.',
+    ],
+  },
   {
     kode: 'ACBARU25',
     judul: 'Pertama kali servis AC',
@@ -99,8 +121,21 @@ export function hitungPromoAC(
   promo: PromoAC | null,
   nilaiTransaksi: number,
   unit: number,
+  layanan: 'cuci' | 'freon' = 'cuci',
 ): HasilPromoAC {
   if (!promo) return { potongan: 0, kurang: 0, berlaku: false, alasan: null }
+
+  if (promo.layanan && promo.layanan !== layanan) {
+    return {
+      potongan: 0,
+      kurang: 0,
+      berlaku: false,
+      alasan:
+        promo.layanan === 'freon'
+          ? 'Hanya untuk pemeriksaan freon'
+          : 'Hanya untuk cuci AC',
+    }
+  }
 
   const kurang = Math.max(0, promo.minTransaksi - nilaiTransaksi)
   if (kurang > 0) {
