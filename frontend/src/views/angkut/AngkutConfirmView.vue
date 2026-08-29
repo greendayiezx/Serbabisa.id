@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import { reverseGeocode } from '@/lib/geocode'
@@ -303,10 +303,8 @@ function lanjutkan() {
   router.push({ name: 'task-angkut-delivery' })
 }
 
-onMounted(async () => {
+onMounted(() => {
   document.addEventListener('click', handleOutsideClick)
-  await nextTick()
-  initMap()
 })
 
 onBeforeUnmount(() => {
@@ -327,6 +325,20 @@ onBeforeUnmount(() => {
  */
 const { tampil: skelTampil, tandaiSiap } = useSkeleton()
 onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSiap())))
+
+/*
+ * Peta dibuat SETELAH skeleton pergi, bukan di onMounted.
+ *
+ * Skeleton menempati seluruh template lewat v-if, jadi saat onMounted berjalan
+ * div petanya belum ada di DOM sama sekali dan ref-nya masih null. initMap
+ * berhenti di penjagaan null-nya, dan ketika skeleton hilang tidak ada lagi
+ * yang memanggilnya — petanya tidak pernah tergambar.
+ */
+watch(skelTampil, async (masihSkeleton) => {
+  if (masihSkeleton) return
+  await nextTick()
+  initMap()
+})
 </script>
 
 <template>

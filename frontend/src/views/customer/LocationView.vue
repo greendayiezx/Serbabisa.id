@@ -607,8 +607,6 @@ onMounted(async () => {
   }
   const [centerLat, centerLng] = currentCenter()
   await driverStore.loadNearby(centerLat, centerLng)
-  await nextTick()
-  initPreviewMap()
 })
 
 onBeforeUnmount(() => {
@@ -624,6 +622,20 @@ onBeforeUnmount(() => {
  */
 const { tampil: skelTampil, tandaiSiap } = useSkeleton()
 onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSiap())))
+
+/*
+ * Peta dibuat SETELAH skeleton pergi, bukan di onMounted.
+ *
+ * Skeleton menempati seluruh template lewat v-if, jadi saat onMounted berjalan
+ * div petanya belum ada di DOM sama sekali dan ref-nya masih null. initPreviewMap
+ * berhenti di penjagaan null-nya, dan ketika skeleton hilang tidak ada lagi
+ * yang memanggilnya — petanya tidak pernah tergambar.
+ */
+watch(skelTampil, async (masihSkeleton) => {
+  if (masihSkeleton) return
+  await nextTick()
+  initPreviewMap()
+})
 </script>
 
 <template>
