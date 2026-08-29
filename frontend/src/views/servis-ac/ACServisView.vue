@@ -57,6 +57,7 @@ const KATEGORI = [
     nama: 'Cuci AC',
     catatan: `Mulai dari ${rupiah(PAKET_AC[0].harga)}`,
     ikon: 'cleaning_services',
+    warnaIkon: 'text-(--color-azure)/20',
     garis: 'border-(--color-azure)',
   },
   {
@@ -72,6 +73,7 @@ const KATEGORI = [
     nama: 'Cek & Tambah Freon',
     catatan: `Pemeriksaan mulai ${rupiah(BIAYA_PEMERIKSAAN)}`,
     ikon: 'ac_unit',
+    warnaIkon: 'text-[#8BC53F]/30',
     garis: 'border-(--color-lime)',
   },
   {
@@ -79,6 +81,7 @@ const KATEGORI = [
     nama: 'Perbaikan & Pasang',
     catatan: 'Pengecekan teknisi',
     ikon: 'build',
+    warnaIkon: 'text-(--color-error)/20',
     garis: 'border-(--color-error)',
   },
 ]
@@ -112,46 +115,43 @@ function bukaKategori(id: string) {
 </script>
 
 <template>
-  <div class="min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-28">
-    <!-- Header: lokasi servis -->
-    <header class="sticky top-0 z-30 bg-(--color-surface-0)/90 backdrop-blur-md border-b border-(--color-outline)/15">
-      <div class="max-w-[430px] mx-auto h-16 px-4 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          aria-label="Kembali"
-          class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-          @click="kembali"
-        >
-          <Icon name="arrow-left" class="w-5 h-5" />
-        </button>
+  <div class="relative min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-28">
+    <!--
+      Hero selebar layar, jadi navbarnya dilepas. Tombol kembali dan pemilih
+      lokasi melayang di atasnya — menempel pada HALAMAN, bukan pada layar:
+      dengan posisi tetap (fixed) keduanya ikut turun saat digulung dan
+      berakhir menutupi isi di bawahnya.
+    -->
+    <div class="absolute top-4 inset-x-4 z-50 flex items-center justify-between gap-2">
+      <button
+        type="button"
+        aria-label="Kembali"
+        class="w-10 h-10 shrink-0 rounded-full bg-white/90 dark:bg-[#1b2126]/90 text-slate-800 dark:text-white flex items-center justify-center shadow-md active:scale-95 transition-transform"
+        @click="kembali"
+      >
+        <Icon name="arrow-left" class="w-5 h-5" />
+      </button>
 
-        <div class="flex flex-col items-center min-w-0">
-          <span class="text-[10.5px] uppercase tracking-wider text-(--color-on-surface-variant)">
-            Lokasi Servis
-          </span>
-          <button
-            type="button"
-            class="flex items-center gap-1 text-[13px] font-bold text-(--color-azure) max-w-[200px]"
-            @click="router.push({ name: 'task-location' })"
-          >
-            <Icon name="pin" class="w-4 h-4 shrink-0" />
-            <span class="truncate">{{ lokasiSingkat }}</span>
-            <Icon name="chevron-down" class="w-3.5 h-3.5 shrink-0" />
-          </button>
-        </div>
+      <button
+        type="button"
+        class="min-w-0 inline-flex items-center gap-1 max-w-[62%] px-3 py-1.5 rounded-full bg-white/90 dark:bg-[#1b2126]/90 text-(--color-azure) text-[11.5px] font-bold shadow-md backdrop-blur-xs active:scale-95 transition-transform"
+        @click="router.push({ name: 'task-location' })"
+      >
+        <Icon name="pin" class="w-3.5 h-3.5 shrink-0" />
+        <span class="truncate">{{ lokasiSingkat }}</span>
+        <Icon name="chevron-down" class="w-3 h-3 shrink-0" />
+      </button>
+    </div>
 
-        <span class="w-10 h-10"></span>
-      </div>
-    </header>
+    <!-- Hero layanan: menyentuh tepi kiri-kanan dan tepi atas layar -->
+    <HeroCuciACArt
+      penuh
+      :label-kiri="labelPodium.kiri"
+      :label-tengah="labelPodium.tengah"
+      :label-kanan="labelPodium.kanan"
+    />
 
-    <main class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-6">
-      <!-- Hero layanan -->
-      <HeroCuciACArt
-        :label-kiri="labelPodium.kiri"
-        :label-tengah="labelPodium.tengah"
-        :label-kanan="labelPodium.kanan"
-      />
-
+    <main class="max-w-[430px] mx-auto px-4 pt-6 flex flex-col gap-6">
       <!-- Banner promo -->
       <section>
         <PromoCuciACArt :persen="promoUtama.diskonPersen ?? 0" />
@@ -195,12 +195,29 @@ function bukaKategori(id: string) {
               <Icon name="arrow-right" class="w-4 h-4" />
             </span>
 
-            <span
-              class="material-symbols-outlined absolute -bottom-4 -right-4 text-[100px] text-(--color-surface-variant) opacity-30 rotate-12 pointer-events-none"
-              :data-icon="k.ikon"
+            <!-- Watermark Icon transparan di pojok kanan bawah -->
+            <div
+              class="absolute -bottom-3 -right-3 pointer-events-none select-none transition-opacity"
+              :class="k.warnaIkon"
             >
-              {{ k.ikon }}
-            </span>
+              <svg v-if="k.id === 'cuci'" viewBox="0 0 24 24" class="w-28 h-28 stroke-[1.6] stroke-current fill-none rotate-12">
+                <path d="M12 3v4M8 7h8v3a4 4 0 0 1-8 0V7zM4 14h16a1 1 0 0 1 1 1v2a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-2a1 1 0 0 1 1-1z" />
+                <path d="M7 14v4M12 14v4M17 14v4" />
+              </svg>
+              <svg v-else-if="k.id === 'freon'" viewBox="0 0 24 24" class="w-28 h-28 stroke-[1.6] stroke-current fill-none rotate-12">
+                <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07l14.14-14.14M12 6l-2.5-2.5M14.5 3.5L12 6M12 18l-2.5 2.5M14.5 20.5L12 18M6 12l-2.5-2.5M3.5 14.5L6 12M18 12l2.5-2.5M20.5 14.5L18 12" />
+              </svg>
+              <svg v-else-if="k.id === 'perbaikan'" viewBox="0 0 24 24" class="w-28 h-28 stroke-[1.6] stroke-current fill-none rotate-12">
+                <path d="M14.7 3.3a1 1 0 0 0-1.4 0l-4.7 4.7a6 6 0 0 0-7.1 8.6 1 1 0 0 0 1.4 0l3.3-3.3 2.8 2.8-3.3 3.3a1 1 0 0 0 0 1.4 6 6 0 0 0 8.6-7.1l4.7-4.7a1 1 0 0 0 0-1.4l-4.3-4.3z" />
+              </svg>
+              <span
+                v-else
+                class="material-symbols-outlined text-[100px] leading-none block rotate-12"
+                :data-icon="k.ikon"
+              >
+                {{ k.ikon }}
+              </span>
+            </div>
           </button>
         </div>
       </section>

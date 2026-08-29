@@ -14,6 +14,10 @@
  *    tergambar sama sekali, jadi bajunya hilang dan badan putihnya tembus.
  * 3. Label podium dan teks badge dijadikan prop, dengan nilai bawaan dari
  *    katalog paket yang benar-benar dijual.
+ * 4. Mode `penuh` untuk dipakai tanpa navbar: sudutnya dilempengkan dan
+ *    viewBox-nya ditinggikan 80 satuan ke atas. Ruang itu bukan hiasan —
+ *    tombol kembali melayang di pojok kiri atas, dan tanpanya ia menimpa
+ *    pil "BISABERSIH" yang duduk di y=32.
  *
  * Semua animasi mati sendiri saat prefers-reduced-motion: reduce, dan tiap
  * elemen tetap tampil utuh tanpa animasi — tidak ada yang mengandalkan
@@ -33,6 +37,8 @@ withDefaults(
     labelKiri?: string
     labelTengah?: string
     labelKanan?: string
+    /** Selebar layar tanpa sudut membulat, untuk halaman tanpa navbar. */
+    penuh?: boolean
   }>(),
   {
     judulBaris1: 'AC Dingin Lagi,',
@@ -44,6 +50,7 @@ withDefaults(
     labelKiri: 'Cuci Standard',
     labelTengah: 'Cuci Premium',
     labelKanan: 'Cek Freon',
+    penuh: false,
   },
 )
 
@@ -51,10 +58,10 @@ const uid = useId()
 </script>
 
 <template>
-  <div class="ac-hero">
+  <div class="ac-hero" :class="{ 'ac-hero--penuh': penuh }">
     <svg
       class="ac-hero__svg"
-      viewBox="0 0 750 400"
+      :viewBox="penuh ? '0 -80 750 480' : '0 0 750 400'"
       width="100%"
       role="img"
       :aria-labelledby="`${uid}-judul ${uid}-desk`"
@@ -148,8 +155,22 @@ const uid = useId()
 
       <!-- ================= 01. BACKGROUND ================= -->
       <g class="layer-background">
-        <rect x="4" y="4" width="742" height="392" rx="34" :fill="`url(#${uid}-ac-bg)`" />
-        <rect x="4" y="4" width="742" height="392" rx="34" :fill="`url(#${uid}-ac-glow)`" />
+        <rect
+          :x="penuh ? 0 : 4"
+          :y="penuh ? -80 : 4"
+          :width="penuh ? 750 : 742"
+          :height="penuh ? 480 : 392"
+          :rx="penuh ? 0 : 34"
+          :fill="`url(#${uid}-ac-bg)`"
+        />
+        <rect
+          :x="penuh ? 0 : 4"
+          :y="penuh ? -80 : 4"
+          :width="penuh ? 750 : 742"
+          :height="penuh ? 480 : 392"
+          :rx="penuh ? 0 : 34"
+          :fill="`url(#${uid}-ac-glow)`"
+        />
 
         <!-- Soft circles -->
         <circle cx="685" cy="52" r="75" fill="#FFFFFF" opacity=".045" />
@@ -645,6 +666,12 @@ const uid = useId()
   margin: 0 auto;
   overflow: hidden;
   border-radius: 34px;
+}
+
+/* Tanpa batas lebar dan tanpa sudut membulat: gambarnya menyentuh tepi layar. */
+.ac-hero--penuh {
+  max-width: none;
+  border-radius: 0;
 }
 
 .ac-hero__svg {
