@@ -297,6 +297,13 @@ const router = createRouter({
       meta: { induk: 'servis-ac-perbaikan', roles: ['customer'] as Role[] },
     },
     {
+      // Pasang/pindah AC langkah 2: lokasi & data pemesan, lalu dikirim.
+      path: '/tasks/new/servis-ac/pasang/konfirmasi',
+      name: 'servis-ac-pasang-konfirmasi',
+      component: () => import('@/views/servis-ac/ACPasangKonfirmasiView.vue'),
+      meta: { induk: 'servis-ac-pasang', roles: ['customer'] as Role[] },
+    },
+    {
       // Cek & Tambah Freon: isian pemeriksaan.
       path: '/tasks/new/servis-ac/freon',
       name: 'servis-ac-freon',

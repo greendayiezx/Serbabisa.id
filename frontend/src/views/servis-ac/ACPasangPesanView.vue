@@ -1,26 +1,23 @@
 <script setup lang="ts">
 /**
- * Pasang & Pindah AC — permintaan penawaran.
+ * Pasang & Pindah AC — langkah 1: apa yang dikerjakan.
  *
- * Halaman ini TIDAK menagih apa pun, dan tombolnya bukan "Bayar" melainkan
- * "Ajukan Permintaan Penawaran". Harga pemasangan bergerak menurut panjang
- * pipa, jalur kabel, bracket, ketinggian, dan akses lokasi — hal-hal yang tidak
- * bisa dibaca dari formulir. Menagih di muka berarti menagih tebakan, lalu
- * menaikkannya belakangan ketika kenyataannya terlihat.
+ * Lokasi dan data pemesan pindah ke halaman konfirmasi. Pemisahannya mengikuti
+ * jenis pertanyaannya: semua yang di sini tentang PEKERJAANNYA, sementara yang
+ * di halaman berikutnya tentang KE MANA teknisi datang dan menemui siapa.
  *
- * Yang ditampilkan cuma RENTANG, dan disebut sebagai rentang.
+ * Tidak ada yang ditagih di jalur ini. Harga pemasangan bergerak menurut
+ * panjang pipa, jalur kabel, bracket, ketinggian, dan akses lokasi — hal yang
+ * tidak bisa dibaca dari formulir. Yang ditampilkan cuma RENTANG, dan disebut
+ * sebagai rentang.
  */
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import PilihanField from '@/components/PilihanField.vue'
-import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
 import UnggahFoto, { type SlotFoto } from '@/components/servis-ac/UnggahFoto.vue'
-import { useLocationStore } from '@/stores/location'
-import { useAuthStore } from '@/stores/auth'
-import { ajukanPasangAC, type PermintaanPasang } from '@/api/perbaikanAC'
-import { pesanError } from '@/api/belanja'
+import { usePasangACStore } from '@/stores/pasangAC'
 import { rupiah } from '@/lib/rupiah'
 import { KAPASITAS_AC } from '@/lib/servis-ac/hargaAC'
 import { MEREK_AC } from '@/lib/servis-ac/hargaFreon'
@@ -38,9 +35,9 @@ import {
 } from '@/lib/servis-ac/perbaikanAC'
 
 const route = useRoute()
+const router = useRouter()
 const kembali = useKembali()
-const locationStore = useLocationStore()
-const authStore = useAuthStore()
+const pasangStore = usePasangACStore()
 
 /* ────────── Pilihan ────────── */
 const jenisPekerjaan = ref('pasang-baru')
@@ -80,23 +77,28 @@ const SLOT_FOTO: SlotFoto[] = [
 ]
 const foto = ref<Record<string, string>>({})
 
-/* ────────── Kontak & lokasi ────────── */
-const namaPenerima = ref('')
-const telepon = ref('')
-
-const alamat = computed(() => locationStore.draft?.alamat ?? '')
-const lat = computed(() => locationStore.draft?.lat ?? -6.2088)
-const lng = computed(() => locationStore.draft?.lng ?? 106.8456)
-const lembarLokasi = ref(false)
-
-function terimaLokasi(l: { alamat: string; lat: number; lng: number }) {
-  locationStore.setDraft(l)
-  lembarLokasi.value = false
-}
-
 onMounted(() => {
-  namaPenerima.value = authStore.user?.name ?? ''
-  telepon.value = authStore.user?.phone ?? ''
+  /*
+   * Isian dipulihkan dari draf kalau pengguna kembali dari halaman konfirmasi.
+   * Mengulang dari nol tiap kali tombol kembali ditekan — termasuk mengunggah
+   * ulang enam foto — adalah cara tercepat membuat orang berhenti memesan.
+   */
+  const d = pasangStore.draft
+  if (d) {
+    jenisPekerjaan.value = d.jenisPekerjaan
+    unit.value = d.unit
+    ketersediaan.value = d.ketersediaan
+    kebutuhan.value = d.kebutuhan
+    merek.value = d.merek
+    kapasitas.value = d.kapasitas
+    lokasiIndoor.value = d.lokasiIndoor
+    lokasiOutdoor.value = d.lokasiOutdoor
+    material.value = [...d.material]
+    caraPenawaran.value = d.caraPenawaran
+    catatan.value = d.catatan
+    foto.value = { ...d.foto }
+    return
+  }
 
   // Kartu "Pindah AC" di halaman masuk sudah menyatakan jenis pekerjaannya;
   // menanyakannya lagi di sini hanya mengulang ketukan yang sudah dilakukan.
@@ -104,63 +106,31 @@ onMounted(() => {
   if (JENIS_PEKERJAAN.some((j) => j.id === dari)) jenisPekerjaan.value = dari
 })
 
-/* ────────── Kirim ────────── */
-const memproses = ref(false)
-const galat = ref<string | null>(null)
-const hasil = ref<PermintaanPasang | null>(null)
+/* ────────── Lanjut ────────── */
 
-async function ajukan() {
-  if (memproses.value) return
+/**
+ * Pilihan disimpan ke store, bukan lewat query: isinya majemuk — material bisa
+ * lebih dari satu, dan fotonya data URL berukuran besar yang tidak punya
+ * urusan apa pun di URL.
+ */
+function lanjut() {
+  pasangStore.set({
+    jenisPekerjaan: jenisPekerjaan.value,
+    unit: unit.value,
+    ketersediaan: ketersediaan.value,
+    kebutuhan: kebutuhan.value,
+    merek: merek.value,
+    kapasitas: kapasitas.value,
+    lokasiIndoor: lokasiIndoor.value,
+    lokasiOutdoor: lokasiOutdoor.value,
+    material: [...material.value],
+    caraPenawaran: caraPenawaran.value,
+    catatan: catatan.value,
+    foto: { ...foto.value },
+  })
 
-  if (!alamat.value) {
-    galat.value = 'Lokasi pemasangan belum diisi.'
-    return
-  }
-  if (!namaPenerima.value.trim() || !telepon.value.trim()) {
-    galat.value = 'Nama dan nomor telepon belum diisi.'
-    return
-  }
-
-  memproses.value = true
-  galat.value = null
-
-  try {
-    hasil.value = await ajukanPasangAC({
-      jenis_pekerjaan: jenisPekerjaan.value,
-      unit: unit.value,
-      ketersediaan_unit: ketersediaan.value,
-      kebutuhan: kebutuhan.value,
-      merek: merek.value,
-      kapasitas: kapasitas.value,
-      lokasi_indoor: lokasiIndoor.value,
-      lokasi_outdoor: lokasiOutdoor.value,
-      material: [...material.value],
-      cara_penawaran: caraPenawaran.value,
-      catatan: catatan.value || undefined,
-      nama_penerima: namaPenerima.value.trim(),
-      telepon_penerima: telepon.value.trim(),
-      lokasi_alamat: alamat.value,
-      lokasi_lat: lat.value,
-      lokasi_lng: lng.value,
-      foto: Object.entries(foto.value).map(([id, data]) => ({
-        label: SLOT_FOTO.find((s) => s.id === id)?.label ?? id,
-        data,
-      })),
-    })
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  } catch (e) {
-    galat.value = pesanError(e)
-  } finally {
-    memproses.value = false
-  }
+  router.push({ name: 'servis-ac-pasang-konfirmasi' })
 }
-
-const LANGKAH_SETELAH = [
-  'Foto atau lokasi diverifikasi',
-  'Survei dijadwalkan kalau dibutuhkan',
-  'Penawaran dikirim ke Anda',
-  'Anda menyetujui sebelum pekerjaan dimulai',
-]
 </script>
 
 <template>
@@ -179,82 +149,7 @@ const LANGKAH_SETELAH = [
       </div>
     </header>
 
-    <!-- ============ Setelah permintaan terkirim ============ -->
-    <main v-if="hasil" class="max-w-[430px] mx-auto px-4 pt-6 flex flex-col gap-4">
-      <section class="bg-(--color-surface-0) rounded-2xl p-6 text-center">
-        <span
-          class="w-16 h-16 rounded-full bg-(--color-secondary-container) flex items-center justify-center mx-auto mb-4"
-        >
-          <Icon name="check-circle" class="w-8 h-8 text-(--color-on-secondary-container)" />
-        </span>
-        <h2 class="text-[19px] font-display font-extrabold mb-1.5">Permintaan terkirim</h2>
-        <p class="text-[13px] leading-snug text-(--color-on-surface-variant)">
-          Nomor permintaan Anda
-        </p>
-        <p class="mt-1 text-[17px] font-extrabold tracking-wide">{{ hasil.nomor }}</p>
-      </section>
-
-      <!--
-        Kalau server menaikkan pilihannya jadi survei, alasannya dikatakan.
-        Jawaban yang berubah tanpa penjelasan terbaca sebagai kesalahan sistem.
-      -->
-      <section
-        v-if="hasil.survei_diwajibkan"
-        class="bg-(--color-surface-0) rounded-2xl p-5 flex gap-2.5"
-      >
-        <Icon name="alert" class="w-5 h-5 shrink-0 text-(--color-azure) mt-0.5" />
-        <p class="text-[12.5px] leading-snug text-(--color-on-surface-variant)">
-          Pekerjaan ini kami jadwalkan lewat <strong class="text-(--color-on-surface)">survei
-          lokasi</strong>, bukan estimasi foto. Jarak, ketinggian, dan jalur pipanya tidak bisa
-          dinilai dari gambar — dan penawaran yang salah ukur akan berubah di lapangan.
-        </p>
-      </section>
-
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <h3 class="text-[14px] font-display font-extrabold mb-3">Setelah ini</h3>
-        <ol class="flex flex-col gap-3">
-          <li v-for="(l, i) in LANGKAH_SETELAH" :key="l" class="flex items-start gap-3">
-            <span
-              class="w-6 h-6 rounded-full bg-(--color-surface-container) text-[11px] font-extrabold flex items-center justify-center shrink-0"
-            >
-              {{ i + 1 }}
-            </span>
-            <span class="text-[12.5px] leading-snug pt-0.5">{{ l }}</span>
-          </li>
-        </ol>
-      </section>
-
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <p class="text-[11.5px] leading-relaxed text-(--color-on-surface-variant)">
-          Sebagai gambaran awal, paket pemasangan lengkap berada di rentang
-          <strong class="text-(--color-on-surface)">
-            {{ rupiah(hasil.estimasi_mulai) }}–{{ rupiah(hasil.estimasi_sampai) }}</strong
-          >. Angka final ditentukan setelah foto diperiksa atau lokasi disurvei, dan Anda menyetujui
-          penawarannya sebelum pekerjaan dimulai.
-        </p>
-      </section>
-    </main>
-
-    <!-- ============ Formulir ============ -->
-    <main v-else class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0">
-            <p class="text-[12px] text-(--color-on-surface-variant)">Lokasi pemasangan</p>
-            <p class="mt-0.5 text-[15px] font-display font-extrabold leading-snug">
-              {{ alamat || 'Belum diisi' }}
-            </p>
-          </div>
-          <button
-            type="button"
-            class="shrink-0 px-4 py-2 rounded-full border-[1.5px] border-(--color-azure) text-(--color-azure) text-[12.5px] font-extrabold active:scale-95 transition-transform"
-            @click="lembarLokasi = true"
-          >
-            Ganti lokasi
-          </button>
-        </div>
-      </section>
-
+    <main class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
       <!-- 1. Jenis pekerjaan -->
       <section class="bg-(--color-surface-0) rounded-2xl p-5">
         <h2 class="text-[12px] font-extrabold uppercase tracking-wider text-(--color-azure) mb-4">
@@ -418,32 +313,6 @@ const LANGKAH_SETELAH = [
         </div>
       </section>
 
-      <!-- 7. Kontak -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <h2 class="text-[12px] font-extrabold uppercase tracking-wider text-(--color-azure) mb-4">
-          7. Data Pemesan
-        </h2>
-
-        <label class="block mb-3">
-          <span class="text-[12.5px] font-bold">Nama lengkap</span>
-          <input
-            v-model="namaPenerima"
-            type="text"
-            class="mt-1.5 w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
-          />
-        </label>
-
-        <label class="block">
-          <span class="text-[12.5px] font-bold">Nomor telepon</span>
-          <input
-            v-model="telepon"
-            type="tel"
-            inputmode="tel"
-            class="mt-1.5 w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
-          />
-        </label>
-      </section>
-
       <section class="bg-(--color-surface-0) rounded-2xl p-5">
         <h3 class="text-[14px] font-display font-extrabold mb-2">Catatan</h3>
         <textarea
@@ -454,23 +323,9 @@ const LANGKAH_SETELAH = [
         />
       </section>
 
-      <SheetPilihLokasi
-        :tampil="lembarLokasi"
-        :alamat="alamat"
-        :lat="lat"
-        :lng="lng"
-        judul-peta="Set lokasi pemasangan"
-        @tutup="lembarLokasi = false"
-        @pilih="terimaLokasi"
-      />
     </main>
 
-    <!--
-      Tombolnya "Ajukan Permintaan Penawaran", bukan "Bayar". Yang dikirim
-      memang permintaan — tidak ada tagihan yang dibuat di sini.
-    -->
     <footer
-      v-if="!hasil"
       class="fixed bottom-0 inset-x-0 z-40 bg-(--color-surface-0) shadow-[0_-10px_40px_rgba(0,0,0,0.08)]"
     >
       <div class="max-w-[430px] mx-auto px-4 pt-3 pb-[calc(0.875rem+env(safe-area-inset-bottom))]">
@@ -483,17 +338,12 @@ const LANGKAH_SETELAH = [
 
         <button
           type="button"
-          class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40"
-          :disabled="memproses"
-          @click="ajukan"
+          class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+          @click="lanjut"
         >
-          {{ memproses ? 'Mengirim…' : 'Ajukan Permintaan Penawaran' }}
-          <Icon v-if="!memproses" name="arrow-right" class="w-4 h-4" />
+          Lanjut
+          <Icon name="arrow-right" class="w-4 h-4" />
         </button>
-
-        <p v-if="galat" role="alert" class="mt-2 text-[12px] font-semibold text-(--color-error)">
-          {{ galat }}
-        </p>
       </div>
     </footer>
   </div>

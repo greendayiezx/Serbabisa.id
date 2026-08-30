@@ -31,7 +31,6 @@ const LAYANAN = [
     ikon: 'wrench',
     judul: 'Perbaiki AC',
     isi: 'AC tidak dingin, bocor, berisik, mati total, atau muncul kode error.',
-    labelHarga: 'Biaya pemeriksaan',
     harga: `Mulai ${rupiah(BIAYA_PEMERIKSAAN_PERBAIKAN)}`,
     tombol: 'Periksa Sekarang',
     garis: 'border-(--color-azure)',
@@ -42,7 +41,6 @@ const LAYANAN = [
     ikon: 'plus-square',
     judul: 'Pasang AC',
     isi: 'Pemasangan unit baru dengan estimasi material yang transparan.',
-    labelHarga: 'Paket lengkap',
     harga: `${rupiah(PASANG_MULAI)} – ${rupiah(PASANG_SAMPAI)}`,
     tombol: 'Ajukan Pemasangan',
     garis: 'border-(--color-lime)',
@@ -53,7 +51,6 @@ const LAYANAN = [
     ikon: 'truck',
     judul: 'Pindah AC',
     isi: 'Bongkar dan pasang kembali AC ke lokasi yang berbeda.',
-    labelHarga: 'Harga',
     harga: 'Setelah survei lokasi',
     tombol: 'Pesan Survei',
     garis: 'border-(--color-error)',
@@ -90,10 +87,18 @@ function buka(l: (typeof LAYANAN)[number]) {
         <h2 class="text-[20px] font-display font-extrabold leading-tight mb-2">
           Butuh AC kembali dingin atau ingin memasang unit baru?
         </h2>
-        <p class="text-[13px] leading-snug text-(--color-on-surface-variant)">
+        <p class="text-[13px] leading-snug text-(--color-on-surface-variant) mb-3">
           Teknisi BisaBersih siap membantu. Harga dikonfirmasi sebelum pekerjaan dimulai — bukan
           setelahnya.
         </p>
+        <div class="rounded-xl border border-(--color-azure)/30 bg-(--color-azure)/8 p-3.5 flex items-start gap-2.5">
+          <Icon name="alert" class="w-4 h-4 text-(--color-azure) shrink-0 mt-0.5" />
+          <p class="text-[11.5px] leading-relaxed text-(--color-on-surface-variant)">
+            Harga pemasangan bergantung panjang pipa, jalur kabel, bracket, kapasitas AC, akses lokasi,
+            dan tingkat kesulitannya. Material tambahan seperti pipa dihitung per meter. Angka final
+            dikonfirmasi setelah foto diperiksa atau lokasi disurvei.
+          </p>
+        </div>
       </section>
 
       <button
@@ -104,12 +109,8 @@ function buka(l: (typeof LAYANAN)[number]) {
         :class="l.garis"
         @click="buka(l)"
       >
-        <div class="flex items-center gap-3 mb-2.5">
-          <span
-            class="w-11 h-11 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0"
-          >
-            <Icon :name="l.ikon" class="w-5 h-5 text-(--color-azure)" />
-          </span>
+        <div class="flex items-center gap-2.5 mb-2.5">
+          <Icon :name="l.ikon" class="w-5 h-5 text-(--color-azure) shrink-0" />
           <h3 class="text-[17px] font-display font-extrabold">{{ l.judul }}</h3>
         </div>
 
@@ -117,12 +118,7 @@ function buka(l: (typeof LAYANAN)[number]) {
           {{ l.isi }}
         </p>
 
-        <div class="rounded-xl bg-(--color-surface-container) px-3.5 py-2.5 mb-3.5">
-          <p class="text-[10.5px] uppercase tracking-wider text-(--color-on-surface-variant)">
-            {{ l.labelHarga }}
-          </p>
-          <p class="text-[15px] font-extrabold text-(--color-azure)">{{ l.harga }}</p>
-        </div>
+        <p class="text-[15px] font-extrabold text-(--color-azure) mb-3.5">{{ l.harga }}</p>
 
         <span
           class="w-full h-11 rounded-full bg-(--color-azure) text-white text-[13.5px] font-extrabold flex items-center justify-center gap-2"
@@ -131,17 +127,6 @@ function buka(l: (typeof LAYANAN)[number]) {
           <Icon name="arrow-right" class="w-4 h-4" />
         </span>
       </button>
-
-      <!--
-        Ditulis di halaman masuk, bukan disimpan sampai halaman penawaran:
-        orang berhak tahu apa yang menggerakkan harganya sebelum mengisi
-        formulir panjang.
-      -->
-      <p class="px-1 text-[11.5px] leading-relaxed text-(--color-on-surface-variant)">
-        Harga pemasangan bergantung panjang pipa, jalur kabel, bracket, kapasitas AC, akses lokasi,
-        dan tingkat kesulitannya. Material tambahan seperti pipa dihitung per meter. Angka final
-        dikonfirmasi setelah foto diperiksa atau lokasi disurvei.
-      </p>
     </main>
   </div>
 </template>
