@@ -1,16 +1,17 @@
 <script setup lang="ts">
 /**
- * Pasang & Pindah AC — langkah 2: ke mana teknisi datang dan menemui siapa.
+ * Perbaiki AC — langkah 2: ke mana teknisi datang dan menemui siapa.
  *
- * Dipisah dari langkah 1 menurut jenis pertanyaannya: yang di sana tentang
- * PEKERJAANNYA, yang di sini tentang alamat dan orangnya. Keduanya dikirim
- * bersama dari halaman ini.
+ * Susunannya sengaja sama persis dengan konfirmasi Pasang & Pindah AC: lokasi
+ * berpeta di paling atas, ringkasan pekerjaan, lalu data pemesan. Dua alur yang
+ * menanyakan hal yang sama tidak boleh menanyakannya dengan dua cara berbeda —
+ * yang dipelajari pengguna di satu alur harus berlaku di alur lainnya.
  *
- * Tetap tidak ada yang ditagih. Tombolnya "Ajukan Permintaan Penawaran", bukan
- * "Bayar" — harga pemasangan baru bisa disebut setelah foto diperiksa atau
- * lokasi disurvei.
+ * Bedanya cuma satu, dan memang harus berbeda: di sini ADA yang ditagih —
+ * kunjungan diagnosisnya. Tombolnya menyebut itu, dan angkanya terbaca di
+ * footer sebelum ditekan.
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -19,39 +20,50 @@ import Icon from '@/components/icons/Icon.vue'
 import KontakPenerima from '@/components/KontakPenerima.vue'
 import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
 import { useLocationStore } from '@/stores/location'
-import { usePasangACStore } from '@/stores/pasangAC'
-import { ajukanPasangAC, type PermintaanPasang } from '@/api/perbaikanAC'
+import { usePerbaikiACStore } from '@/stores/perbaikiAC'
+import { pesanPerbaikanAC } from '@/api/perbaikanAC'
 import { pesanError } from '@/api/belanja'
 import { TILE_OPTIONS, TILE_URL } from '@/lib/mapTiles'
 import { rupiah } from '@/lib/rupiah'
-import {
-  JENIS_PEKERJAAN,
-  MATERIAL_PASANG,
-  PASANG_MULAI,
-  PASANG_SAMPAI,
-} from '@/lib/servis-ac/perbaikanAC'
+import { KELUHAN_PERBAIKAN, biayaPemeriksaanPerbaikan } from '@/lib/servis-ac/perbaikanAC'
+import { MEREK_AC } from '@/lib/servis-ac/hargaFreon'
+import { TIPE_AC } from '@/lib/servis-ac/hargaAC'
 
 const router = useRouter()
 const kembali = useKembali()
 const locationStore = useLocationStore()
-const pasangStore = usePasangACStore()
+const perbaikiStore = usePerbaikiACStore()
 
-const draft = computed(() => pasangStore.draft)
+const draft = computed(() => perbaikiStore.draft)
 
-const namaJenis = computed(
-  () =>
-    JENIS_PEKERJAAN.find((j) => j.id === draft.value?.jenisPekerjaan)?.nama ??
-    draft.value?.jenisPekerjaan ??
-    '',
-)
-
-const namaMaterial = computed(() =>
-  (draft.value?.material ?? [])
-    .map((id) => MATERIAL_PASANG.find((m) => m.id === id)?.nama ?? id)
+const namaKeluhan = computed(() =>
+  (draft.value?.keluhan ?? [])
+    .map((id) => KELUHAN_PERBAIKAN.find((k) => k.id === id)?.nama ?? id)
     .join(', '),
 )
 
+const namaUnit = computed(() => {
+  const d = draft.value
+  if (!d) return ''
+  const tipe = TIPE_AC.find((t) => t.id === d.tipe)?.nama ?? d.tipe
+  const merek = MEREK_AC.find((m) => m.id === d.merek)?.nama ?? d.merek
+  return `${d.unit} unit · ${merek} ${tipe} · ${d.kapasitas} PK`
+})
+
 const jumlahFoto = computed(() => Object.keys(draft.value?.foto ?? {}).length)
+const biaya = computed(() => biayaPemeriksaanPerbaikan(draft.value?.unit ?? 1))
+
+const BULAN = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+]
+
+const jadwalTeks = computed(() => {
+  const d = draft.value
+  if (!d?.tanggal) return ''
+  const t = new Date(`${d.tanggal}T00:00:00`)
+  return `${t.getDate()} ${BULAN[t.getMonth()]} ${t.getFullYear()} · ${d.slot}`
+})
 
 /* ────────── Lokasi ────────── */
 const alamat = computed(() => locationStore.draft?.alamat ?? '')
@@ -125,12 +137,12 @@ const ditandai = ref(false)
 
 onMounted(async () => {
   /*
-   * Tanpa draf tidak ada yang bisa diajukan — dan menampilkan halaman kosong
+   * Tanpa draf tidak ada yang bisa dipesan — dan menampilkan halaman kosong
    * hanya membuat orang menekan tombol yang pasti gagal. Terjadi kalau URL ini
    * dibuka langsung atau halaman disegarkan.
    */
-  if (!pasangStore.draft) {
-    router.replace({ name: 'servis-ac-pasang' })
+  if (!perbaikiStore.draft) {
+    router.replace({ name: 'servis-ac-perbaiki' })
     return
   }
 
@@ -141,35 +153,22 @@ onMounted(async () => {
 /* ────────── Kirim ────────── */
 const memproses = ref(false)
 const galat = ref<string | null>(null)
-const hasil = ref<PermintaanPasang | null>(null)
-
-/*
- * Peta dilepas begitu permintaan terkirim: formulirnya diganti layar konfirmasi
- * lewat v-if, jadi wadah petanya hilang dari DOM dan Leaflet yang masih memegang
- * elemen mati itu akan ribut saat halaman diubah ukurannya.
- */
-watch(hasil, (terkirim) => {
-  if (!terkirim) return
-  pengamat?.disconnect()
-  peta?.remove()
-  peta = null
-})
 
 const SLOT_LABEL: Record<string, string> = {
-  'dinding-indoor': 'Dinding indoor',
-  'lokasi-outdoor': 'Lokasi outdoor',
-  'jalur-pipa': 'Jalur pipa',
-  'stop-kontak': 'Stop kontak',
-  pembuangan: 'Pembuangan air',
-  akses: 'Akses lokasi',
+  indoor: 'Unit indoor',
+  outdoor: 'Unit outdoor',
+  label: 'Label spesifikasi',
+  'kode-error': 'Kode error',
+  kebocoran: 'Titik bocor',
+  lainnya: 'Lainnya',
 }
 
-async function ajukan() {
+async function kirim() {
   const d = draft.value
   if (!d || memproses.value) return
 
   if (!alamat.value) {
-    galat.value = 'Lokasi pemasangan belum diisi.'
+    galat.value = 'Lokasi servis belum diisi.'
     return
   }
   if (!namaPenerima.value.trim() || !telepon.value.trim()) {
@@ -182,18 +181,18 @@ async function ajukan() {
   galat.value = null
 
   try {
-    hasil.value = await ajukanPasangAC({
-      jenis_pekerjaan: d.jenisPekerjaan,
+    const hasil = await pesanPerbaikanAC({
       unit: d.unit,
-      ketersediaan_unit: d.ketersediaan,
-      kebutuhan: d.kebutuhan,
+      keluhan: [...d.keluhan],
+      menyala: d.menyala,
+      mulai_terjadi: d.mulaiTerjadi,
       merek: d.merek,
+      tipe: d.tipe,
       kapasitas: d.kapasitas,
-      lokasi_indoor: d.lokasiIndoor,
-      lokasi_outdoor: d.lokasiOutdoor,
-      material: [...d.material],
-      cara_penawaran: d.caraPenawaran,
+      kode_error: d.kodeError || undefined,
       catatan: d.catatan || undefined,
+      tanggal: d.tanggal,
+      slot: d.slot,
       nama_penerima: namaPenerima.value.trim(),
       telepon_penerima: telepon.value.trim(),
       lokasi_alamat: alamat.value,
@@ -205,23 +204,22 @@ async function ajukan() {
       })),
     })
 
-    // Drafnya dibuang setelah terkirim: membukanya lagi harus jadi permintaan
-    // baru, bukan mengirim ulang yang sama.
-    pasangStore.hapus()
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    const nomor = hasil.nomor_invoice ?? String(hasil.id)
+    // Drafnya dibuang: membuka halaman ini lagi harus jadi pesanan baru, bukan
+    // mengirim ulang yang sama.
+    perbaikiStore.hapus()
+
+    /*
+     * Halaman hasil pemeriksaan dipakai bersama dengan Cek & Tambah Freon:
+     * keadaannya sama — menunggu teknisi, lalu menjawab rekomendasinya.
+     */
+    router.replace({ name: 'servis-ac-freon-hasil', params: { nomor } })
   } catch (e) {
     galat.value = pesanError(e)
   } finally {
     memproses.value = false
   }
 }
-
-const LANGKAH_SETELAH = [
-  'Foto atau lokasi diverifikasi',
-  'Survei dijadwalkan kalau dibutuhkan',
-  'Penawaran dikirim ke Anda',
-  'Anda menyetujui sebelum pekerjaan dimulai',
-]
 </script>
 
 <template>
@@ -236,80 +234,11 @@ const LANGKAH_SETELAH = [
         >
           <Icon name="arrow-left" class="w-5 h-5" />
         </button>
-        <h1 class="flex-1 text-left text-[16px] font-extrabold pr-10">
-          {{ hasil ? 'Permintaan Terkirim' : 'Lokasi & Data Pemesan' }}
-        </h1>
+        <h1 class="flex-1 text-left text-[16px] font-extrabold pr-10">Lokasi &amp; Data Pemesan</h1>
       </div>
     </header>
 
-    <!-- ============ Setelah permintaan terkirim ============ -->
-    <main v-if="hasil" class="max-w-[430px] mx-auto px-4 pt-6 flex flex-col gap-4">
-      <section class="bg-(--color-surface-0) rounded-2xl p-6 text-center">
-        <span
-          class="w-16 h-16 rounded-full bg-(--color-secondary-container) flex items-center justify-center mx-auto mb-4"
-        >
-          <Icon name="check-circle" class="w-8 h-8 text-(--color-on-secondary-container)" />
-        </span>
-        <h2 class="text-[19px] font-display font-extrabold mb-1.5">Permintaan terkirim</h2>
-        <p class="text-[13px] leading-snug text-(--color-on-surface-variant)">
-          Nomor permintaan Anda
-        </p>
-        <p class="mt-1 text-[17px] font-extrabold tracking-wide">{{ hasil.nomor }}</p>
-      </section>
-
-      <!--
-        Kalau server menaikkan pilihannya jadi survei, alasannya dikatakan.
-        Jawaban yang berubah tanpa penjelasan terbaca sebagai kesalahan sistem.
-      -->
-      <section
-        v-if="hasil.survei_diwajibkan"
-        class="bg-(--color-surface-0) rounded-2xl p-5 flex gap-2.5"
-      >
-        <Icon name="alert" class="w-5 h-5 shrink-0 text-(--color-azure) mt-0.5" />
-        <p class="text-[12.5px] leading-snug text-(--color-on-surface-variant)">
-          Pekerjaan ini kami jadwalkan lewat
-          <strong class="text-(--color-on-surface)">survei lokasi</strong>, bukan estimasi foto.
-          Jarak, ketinggian, dan jalur pipanya tidak bisa dinilai dari gambar — dan penawaran yang
-          salah ukur akan berubah di lapangan.
-        </p>
-      </section>
-
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <h3 class="text-[14px] font-display font-extrabold mb-3">Setelah ini</h3>
-        <ol class="flex flex-col gap-3">
-          <li v-for="(l, i) in LANGKAH_SETELAH" :key="l" class="flex items-start gap-3">
-            <span
-              class="w-6 h-6 rounded-full bg-(--color-surface-container) text-[11px] font-extrabold flex items-center justify-center shrink-0"
-            >
-              {{ i + 1 }}
-            </span>
-            <span class="text-[12.5px] leading-snug pt-0.5">{{ l }}</span>
-          </li>
-        </ol>
-      </section>
-
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <p class="text-[11.5px] leading-relaxed text-(--color-on-surface-variant)">
-          Sebagai gambaran awal, paket pemasangan lengkap berada di rentang
-          <strong class="text-(--color-on-surface)">
-            {{ rupiah(hasil.estimasi_mulai) }}–{{ rupiah(hasil.estimasi_sampai) }}</strong
-          >. Angka final ditentukan setelah foto diperiksa atau lokasi disurvei, dan Anda menyetujui
-          penawarannya sebelum pekerjaan dimulai.
-        </p>
-      </section>
-
-      <button
-        type="button"
-        class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-        @click="router.push({ name: 'task-list' })"
-      >
-        Lihat di Tugas Saya
-        <Icon name="arrow-right" class="w-4 h-4" />
-      </button>
-    </main>
-
-    <!-- ============ Formulir ============ -->
-    <main v-else-if="draft" class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
+    <main v-if="draft" class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
       <!--
         Lokasi di paling atas, dengan peta pratinjau seperti BisaAngkut: alamat
         yang salah membuat seluruh isian di bawahnya sia-sia, dan sebaris teks
@@ -324,7 +253,7 @@ const LANGKAH_SETELAH = [
       >
         <button
           type="button"
-          aria-label="Ubah lokasi pemasangan"
+          aria-label="Ubah lokasi servis"
           class="block w-full text-left"
           @click="lembarLokasi = true"
         >
@@ -337,12 +266,12 @@ const LANGKAH_SETELAH = [
 
         <div class="p-4 flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="text-[11px] text-(--color-on-surface-variant)">Lokasi pemasangan</p>
+            <p class="text-[11px] text-(--color-on-surface-variant)">Lokasi servis</p>
             <h3 class="text-[14px] font-display font-extrabold truncate">
               {{ alamatJudul || 'Lokasi belum dipilih' }}
             </h3>
             <p class="text-[11.5px] text-(--color-on-surface-variant) leading-snug line-clamp-2">
-              {{ alamat || 'Ketuk peta untuk menandai lokasi pemasangan' }}
+              {{ alamat || 'Ketuk peta untuk menandai lokasi servis' }}
             </p>
           </div>
 
@@ -359,7 +288,7 @@ const LANGKAH_SETELAH = [
       <!-- Ringkasan dari langkah sebelumnya -->
       <section class="bg-(--color-surface-0) rounded-2xl p-5">
         <div class="flex items-center justify-between gap-3 mb-3">
-          <h2 class="text-[14px] font-display font-extrabold">Pekerjaan</h2>
+          <h2 class="text-[14px] font-display font-extrabold">Pemeriksaan</h2>
           <button
             type="button"
             class="text-[12.5px] font-bold text-(--color-azure) active:scale-95 transition-transform"
@@ -371,16 +300,16 @@ const LANGKAH_SETELAH = [
 
         <div class="flex flex-col gap-2 text-[13px]">
           <div class="flex justify-between gap-3">
-            <span class="text-(--color-on-surface-variant)">Jenis</span>
-            <span class="font-bold text-right">{{ namaJenis }}</span>
+            <span class="text-(--color-on-surface-variant) shrink-0">Keluhan</span>
+            <span class="font-bold text-right leading-snug">{{ namaKeluhan }}</span>
           </div>
           <div class="flex justify-between gap-3">
-            <span class="text-(--color-on-surface-variant)">Unit</span>
-            <span class="font-bold">{{ draft.unit }} unit · {{ draft.kapasitas }} PK</span>
+            <span class="text-(--color-on-surface-variant) shrink-0">Unit</span>
+            <span class="font-bold text-right leading-snug">{{ namaUnit }}</span>
           </div>
-          <div v-if="namaMaterial" class="flex justify-between gap-3">
-            <span class="text-(--color-on-surface-variant) shrink-0">Material</span>
-            <span class="font-bold text-right leading-snug">{{ namaMaterial }}</span>
+          <div class="flex justify-between gap-3">
+            <span class="text-(--color-on-surface-variant) shrink-0">Jadwal</span>
+            <span class="font-bold text-right leading-snug">{{ jadwalTeks }}</span>
           </div>
           <div class="flex justify-between gap-3">
             <span class="text-(--color-on-surface-variant)">Foto terlampir</span>
@@ -400,37 +329,37 @@ const LANGKAH_SETELAH = [
         :ditandai="ditandai"
       />
 
+      <p class="px-1 text-[11.5px] leading-relaxed text-(--color-on-surface-variant)">
+        Nomor ini yang dihubungi teknisi saat tiba. Boleh berbeda dari pemilik akun — misalnya
+        penghuni atau pengurus rumah yang ada di lokasi.
+      </p>
 
       <SheetPilihLokasi
         :tampil="lembarLokasi"
         :alamat="alamat"
         :lat="lat"
         :lng="lng"
-        judul-peta="Set lokasi pemasangan"
         @tutup="lembarLokasi = false"
         @pilih="terimaLokasi"
       />
     </main>
 
-    <footer
-      v-if="!hasil"
-      class="fixed bottom-0 inset-x-0 z-40 bg-(--color-surface-0) shadow-[0_-10px_40px_rgba(0,0,0,0.08)]"
-    >
+    <footer class="fixed bottom-0 inset-x-0 z-40 bg-(--color-surface-0) shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
       <div class="max-w-[430px] mx-auto px-4 pt-3 pb-[calc(0.875rem+env(safe-area-inset-bottom))]">
         <div class="flex items-center justify-between gap-3 mb-3">
-          <span class="text-[12.5px] text-(--color-on-surface-variant)">Estimasi paket lengkap</span>
-          <span class="text-[15px] font-extrabold">
-            {{ rupiah(PASANG_MULAI) }}–{{ rupiah(PASANG_SAMPAI) }}
+          <span class="text-[12.5px] text-(--color-on-surface-variant)">
+            Biaya pemeriksaan{{ (draft?.unit ?? 1) > 1 ? ` · ${draft?.unit} unit` : '' }}
           </span>
+          <span class="text-[17px] font-extrabold">{{ rupiah(biaya) }}</span>
         </div>
 
         <button
           type="button"
           class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40"
           :disabled="memproses"
-          @click="ajukan"
+          @click="kirim"
         >
-          {{ memproses ? 'Mengirim…' : 'Ajukan Permintaan Penawaran' }}
+          {{ memproses ? 'Memproses…' : 'Pesan Pemeriksaan' }}
           <Icon v-if="!memproses" name="arrow-right" class="w-4 h-4" />
         </button>
 

@@ -1,28 +1,23 @@
 <script setup lang="ts">
 /**
- * Perbaiki AC — permintaan diagnosis.
+ * Perbaiki AC — langkah 1: apa yang rusak dan kapan diperiksa.
+ *
+ * Lokasi dan data pemesan pindah ke halaman konfirmasi. Pemisahannya mengikuti
+ * jenis pertanyaannya: yang di sini tentang UNITNYA, yang di sana tentang ke
+ * mana teknisi datang dan menemui siapa.
  *
  * Yang ditagih di muka HANYA kunjungan teknisi. Halaman ini tidak pernah
  * menyebut harga perbaikan, karena harga itu belum ada: kerusakan yang sama
  * bisa berarti kapasitor lemah atau kompresor mati, dan selisihnya berlipat.
- * Menyebut angka sekarang berarti menebak, lalu menagih tebakan itu.
- *
- * Setelah teknisi memeriksa, rekomendasinya muncul di halaman hasil — layar
- * yang sama dengan Cek & Tambah Freon, karena persetujuannya bekerja persis
- * sama.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import PilihanField from '@/components/PilihanField.vue'
-import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
 import UnggahFoto, { type SlotFoto } from '@/components/servis-ac/UnggahFoto.vue'
 import DatePickerField from '@/components/DatePickerField.vue'
-import { useLocationStore } from '@/stores/location'
-import { useAuthStore } from '@/stores/auth'
-import { pesanPerbaikanAC } from '@/api/perbaikanAC'
-import { pesanError } from '@/api/belanja'
+import { usePerbaikiACStore } from '@/stores/perbaikiAC'
 import { rupiah } from '@/lib/rupiah'
 import { KAPASITAS_AC, TIPE_AC } from '@/lib/servis-ac/hargaAC'
 import { MEREK_AC, SLOT_FREON } from '@/lib/servis-ac/hargaFreon'
@@ -34,8 +29,7 @@ import {
 
 const router = useRouter()
 const kembali = useKembali()
-const locationStore = useLocationStore()
-const authStore = useAuthStore()
+const perbaikiStore = usePerbaikiACStore()
 
 /* ────────── Keluhan ────────── */
 const keluhan = ref<string[]>([])
@@ -72,47 +66,45 @@ const SLOT_FOTO: SlotFoto[] = [
 ]
 const foto = ref<Record<string, string>>({})
 
-/* ────────── Jadwal & kontak ────────── */
+/* ────────── Jadwal ────────── */
 const tanggal = ref('')
 const slot = ref('')
-const namaPenerima = ref('')
-const telepon = ref('')
-
-/* ────────── Lokasi ────────── */
-const alamat = computed(() => locationStore.draft?.alamat ?? '')
-const lat = computed(() => locationStore.draft?.lat ?? -6.2088)
-const lng = computed(() => locationStore.draft?.lng ?? 106.8456)
-const lembarLokasi = ref(false)
-
-function terimaLokasi(l: { alamat: string; lat: number; lng: number }) {
-  locationStore.setDraft(l)
-  lembarLokasi.value = false
-}
 
 onMounted(() => {
-  namaPenerima.value = authStore.user?.name ?? ''
-  telepon.value = authStore.user?.phone ?? ''
+  /*
+   * Isian dipulihkan dari draf kalau pengguna kembali dari halaman konfirmasi.
+   * Mengulang dari nol tiap kali tombol kembali ditekan — termasuk mengunggah
+   * ulang fotonya — adalah cara tercepat membuat orang berhenti memesan.
+   */
+  const d = perbaikiStore.draft
+  if (!d) return
+
+  keluhan.value = [...d.keluhan]
+  menyala.value = d.menyala
+  mulaiTerjadi.value = d.mulaiTerjadi
+  unit.value = d.unit
+  merek.value = d.merek
+  tipe.value = d.tipe
+  kapasitas.value = d.kapasitas
+  kodeError.value = d.kodeError
+  catatan.value = d.catatan
+  tanggal.value = d.tanggal
+  slot.value = d.slot
+  foto.value = { ...d.foto }
 })
 
 const biaya = computed(() => biayaPemeriksaanPerbaikan(unit.value))
 
-/* ────────── Kirim ────────── */
-const memproses = ref(false)
+/* ────────── Lanjut ────────── */
 const galat = ref<string | null>(null)
 
-async function kirim() {
-  if (memproses.value) return
-
+/**
+ * Pilihan disimpan ke store, bukan lewat query: keluhannya majemuk dan fotonya
+ * data URL berukuran besar yang tidak punya urusan apa pun di URL.
+ */
+function lanjut() {
   if (!keluhan.value.length) {
     galat.value = 'Pilih dulu masalah AC-nya, minimal satu.'
-    return
-  }
-  if (!alamat.value) {
-    galat.value = 'Lokasi servis belum diisi.'
-    return
-  }
-  if (!namaPenerima.value.trim() || !telepon.value.trim()) {
-    galat.value = 'Nama dan nomor telepon belum diisi.'
     return
   }
   if (!tanggal.value || !slot.value) {
@@ -120,42 +112,23 @@ async function kirim() {
     return
   }
 
-  memproses.value = true
   galat.value = null
+  perbaikiStore.set({
+    keluhan: [...keluhan.value],
+    menyala: menyala.value,
+    mulaiTerjadi: mulaiTerjadi.value,
+    unit: unit.value,
+    merek: merek.value,
+    tipe: tipe.value,
+    kapasitas: kapasitas.value,
+    kodeError: munculKodeError.value ? kodeError.value : '',
+    catatan: catatan.value,
+    tanggal: tanggal.value,
+    slot: slot.value,
+    foto: { ...foto.value },
+  })
 
-  try {
-    const hasil = await pesanPerbaikanAC({
-      unit: unit.value,
-      keluhan: [...keluhan.value],
-      menyala: menyala.value,
-      mulai_terjadi: mulaiTerjadi.value,
-      merek: merek.value,
-      tipe: tipe.value,
-      kapasitas: kapasitas.value,
-      kode_error: munculKodeError.value ? kodeError.value || undefined : undefined,
-      catatan: catatan.value || undefined,
-      tanggal: tanggal.value,
-      slot: slot.value,
-      nama_penerima: namaPenerima.value.trim(),
-      telepon_penerima: telepon.value.trim(),
-      lokasi_alamat: alamat.value,
-      lokasi_lat: lat.value,
-      lokasi_lng: lng.value,
-      foto: Object.entries(foto.value).map(([id, data]) => ({
-        label: SLOT_FOTO.find((s) => s.id === id)?.label ?? id,
-        data,
-      })),
-    })
-
-    const nomor = hasil.nomor_invoice ?? String(hasil.id)
-    // Halaman hasil pemeriksaan dipakai bersama dengan Cek & Tambah Freon:
-    // keadaannya sama — menunggu teknisi, lalu menjawab rekomendasinya.
-    router.replace({ name: 'servis-ac-freon-hasil', params: { nomor } })
-  } catch (e) {
-    galat.value = pesanError(e)
-  } finally {
-    memproses.value = false
-  }
+  router.push({ name: 'servis-ac-perbaiki-konfirmasi' })
 }
 </script>
 
@@ -176,26 +149,7 @@ async function kirim() {
     </header>
 
     <main class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
-      <!-- Lokasi di paling atas: ia yang menentukan teknisi mana yang datang. -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0">
-            <p class="text-[12px] text-(--color-on-surface-variant)">Lokasi servis</p>
-            <p class="mt-0.5 text-[15px] font-display font-extrabold leading-snug">
-              {{ alamat || 'Belum diisi' }}
-            </p>
-          </div>
-          <button
-            type="button"
-            class="shrink-0 px-4 py-2 rounded-full border-[1.5px] border-(--color-azure) text-(--color-azure) text-[12.5px] font-extrabold active:scale-95 transition-transform"
-            @click="lembarLokasi = true"
-          >
-            Ganti lokasi
-          </button>
-        </div>
-      </section>
-
-      <div class="flex gap-2 px-1 -mt-0.5">
+      <div class="flex gap-2 px-1">
         <Icon name="alert" class="w-4 h-4 shrink-0 text-(--color-azure) mt-0.5" />
         <p class="text-[12px] leading-snug text-(--color-on-surface-variant)">
           Biaya pemeriksaan dipotong dari total servis kalau Anda melanjutkan perbaikan pada
@@ -361,35 +315,6 @@ async function kirim() {
         </div>
       </section>
 
-      <!-- 5. Data pemesan -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <h2 class="text-[12px] font-extrabold uppercase tracking-wider text-(--color-azure) mb-1">
-          5. Data Pemesan
-        </h2>
-        <p class="text-[11.5px] text-(--color-on-surface-variant) mb-4 leading-snug">
-          Yang akan ditemui teknisi di lokasi. Boleh berbeda dari pemilik akun.
-        </p>
-
-        <label class="block mb-3">
-          <span class="text-[12.5px] font-bold">Nama lengkap</span>
-          <input
-            v-model="namaPenerima"
-            type="text"
-            class="mt-1.5 w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
-          />
-        </label>
-
-        <label class="block">
-          <span class="text-[12.5px] font-bold">Nomor telepon</span>
-          <input
-            v-model="telepon"
-            type="tel"
-            inputmode="tel"
-            class="mt-1.5 w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
-          />
-        </label>
-      </section>
-
       <!-- Catatan -->
       <section class="bg-(--color-surface-0) rounded-2xl p-5">
         <h3 class="text-[14px] font-display font-extrabold mb-2">Catatan untuk teknisi</h3>
@@ -421,14 +346,6 @@ async function kirim() {
         </ul>
       </section>
 
-      <SheetPilihLokasi
-        :tampil="lembarLokasi"
-        :alamat="alamat"
-        :lat="lat"
-        :lng="lng"
-        @tutup="lembarLokasi = false"
-        @pilih="terimaLokasi"
-      />
     </main>
 
     <footer class="fixed bottom-0 inset-x-0 z-40 bg-(--color-surface-0) shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
@@ -442,12 +359,11 @@ async function kirim() {
 
         <button
           type="button"
-          class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40"
-          :disabled="memproses"
-          @click="kirim"
+          class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+          @click="lanjut"
         >
-          {{ memproses ? 'Memproses…' : 'Pesan Pemeriksaan' }}
-          <Icon v-if="!memproses" name="arrow-right" class="w-4 h-4" />
+          Lanjut
+          <Icon name="arrow-right" class="w-4 h-4" />
         </button>
 
         <p v-if="galat" role="alert" class="mt-2 text-[12px] font-semibold text-(--color-error)">

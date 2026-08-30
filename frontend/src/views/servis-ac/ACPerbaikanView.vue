@@ -2,15 +2,15 @@
 /**
  * Perbaikan & Pasang AC — halaman masuk.
  *
- * Sengaja bercabang sejak awal, bukan satu proses panjang. Perbaikan dan
- * pemasangan menanyakan hal yang berbeda, menghitung uang dengan cara yang
- * berbeda, dan dikerjakan teknisi dengan persiapan yang berbeda. Menyatukannya
- * berarti menanyai orang yang mau memasang AC tentang keluhan AC yang belum ia
- * punya.
+ * Dua cabang, bukan tiga. Perbaikan dan pemasangan memang layak dipisah:
+ * keduanya menanyakan hal yang berbeda dan menghitung uang dengan cara yang
+ * berbeda — perbaikan menagih kunjungan diagnosisnya, pemasangan tidak menagih
+ * apa pun sampai penawarannya keluar.
  *
- * Perbedaan itu juga terbaca di kartunya: perbaikan menyebut biaya pemeriksaan
- * yang pasti, pemasangan menyebut RENTANG, dan pindah AC tidak menyebut angka
- * sama sekali karena harganya memang belum bisa diketahui sebelum survei.
+ * Pindah AC TIDAK dipisah, meski sempat begitu. Ia mengisi formulir yang sama,
+ * mengirim permintaan yang sama, dan berakhir di penawaran yang sama — bedanya
+ * cuma satu pilihan di dalamnya. Menaruhnya sebagai menu tersendiri membuat
+ * orang mengira ada dua alur berbeda, lalu bertanya-tanya mana yang benar.
  */
 import { useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
@@ -39,30 +39,17 @@ const LAYANAN = [
   {
     id: 'pasang',
     ikon: 'plus-square',
-    judul: 'Pasang AC',
-    isi: 'Pemasangan unit baru dengan estimasi material yang transparan.',
+    judul: 'Pasang & Pindah AC',
+    isi: 'Pemasangan unit baru, bongkar-pasang, atau memindahkan AC ke lokasi lain.',
     harga: `${rupiah(PASANG_MULAI)} – ${rupiah(PASANG_SAMPAI)}`,
     tombol: 'Ajukan Pemasangan',
     garis: 'border-(--color-lime)',
     tujuan: 'servis-ac-pasang',
   },
-  {
-    id: 'pindah',
-    ikon: 'truck',
-    judul: 'Pindah AC',
-    isi: 'Bongkar dan pasang kembali AC ke lokasi yang berbeda.',
-    harga: 'Setelah survei lokasi',
-    tombol: 'Pesan Survei',
-    garis: 'border-(--color-error)',
-    tujuan: 'servis-ac-pasang',
-    // Jenis pekerjaannya sudah pasti, jadi formulirnya dibuka dengan pilihan
-    // itu terisi — tidak perlu ditanya ulang apa yang sudah diketuk.
-    query: { jenis: 'pindah-lokasi' },
-  },
 ] as const
 
 function buka(l: (typeof LAYANAN)[number]) {
-  router.push({ name: l.tujuan, query: 'query' in l ? l.query : undefined })
+  router.push({ name: l.tujuan })
 }
 </script>
 
@@ -88,8 +75,7 @@ function buka(l: (typeof LAYANAN)[number]) {
           Butuh AC kembali dingin atau ingin memasang unit baru?
         </h2>
         <p class="text-[13px] leading-snug text-(--color-on-surface-variant) mb-3">
-          Teknisi BisaBersih siap membantu. Harga dikonfirmasi sebelum pekerjaan dimulai — bukan
-          setelahnya.
+          Teknisi BisaBersih siap membantu. Harga dikonfirmasi sebelum pekerjaan dimulai.
         </p>
         <div class="rounded-xl border border-(--color-azure)/30 bg-(--color-azure)/8 p-3.5 flex items-start gap-2.5">
           <Icon name="alert" class="w-4 h-4 text-(--color-azure) shrink-0 mt-0.5" />
@@ -118,7 +104,14 @@ function buka(l: (typeof LAYANAN)[number]) {
           {{ l.isi }}
         </p>
 
-        <p class="text-[15px] font-extrabold text-(--color-azure) mb-3.5">{{ l.harga }}</p>
+        <p class="text-[15px] font-extrabold text-(--color-azure)">{{ l.harga }}</p>
+        <p
+          v-if="l.id === 'pasang'"
+          class="text-[11.5px] text-(--color-on-surface-variant) mb-3.5 mt-0.5"
+        >
+          Pindah AC selalu lewat survei lokasi — harganya menyusul.
+        </p>
+        <span v-else class="block mb-3.5"></span>
 
         <span
           class="w-full h-11 rounded-full bg-(--color-azure) text-white text-[13.5px] font-extrabold flex items-center justify-center gap-2"
