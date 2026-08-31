@@ -15,6 +15,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Icon from '@/components/icons/Icon.vue'
+import MenungguPemeriksaanArt from '@/components/servis-ac/MenungguPemeriksaanArt.vue'
 import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
 import apiClient from '@/api/client'
 import { setujuiDiagnosa, tolakDiagnosa } from '@/api/freon'
@@ -151,13 +152,9 @@ function keChat() {
       <template v-else-if="pesanan">
         <!-- Belum diperiksa -->
         <section v-if="!diagnosis" class="bg-(--color-surface-0) rounded-2xl p-6 text-center">
-          <span
-            class="w-16 h-16 mx-auto rounded-full bg-(--color-primary-container) text-(--color-on-primary-container) flex items-center justify-center"
-          >
-            <span class="material-symbols-outlined text-[30px]" data-icon="search">search</span>
-          </span>
+          <MenungguPemeriksaanArt class="max-w-[260px] mx-auto" />
 
-          <h2 class="mt-4 text-[18px] font-display font-extrabold">Menunggu pemeriksaan</h2>
+          <h2 class="mt-2 text-[18px] font-display font-extrabold">Menunggu pemeriksaan</h2>
           <!--
             Halaman ini dipakai dua layanan: pemeriksaan freon dan perbaikan.
             Kalimatnya menyesuaikan — menjanjikan "memeriksa tekanan dan
@@ -220,7 +217,16 @@ function keChat() {
                 </dt>
                 <dd class="text-[13px] font-bold mt-0.5">{{ diagnosis.indikasi_kebocoran }}</dd>
               </div>
-              <div class="rounded-xl bg-(--color-surface-container) p-3.5">
+              <!--
+                Hanya untuk pesanan pemeriksaan freon. Pada pesanan perbaikan,
+                teknisi tidak membaca jenis freon — dan label bernilai kosong
+                terbaca sebagai data yang hilang, bukan data yang memang tidak
+                ada.
+              -->
+              <div
+                v-if=diagnosis.jenis_freon
+                class="rounded-xl bg-(--color-surface-container) p-3.5"
+              >
                 <dt class="text-[11px] uppercase tracking-wider text-(--color-on-surface-variant)">
                   Jenis freon
                 </dt>

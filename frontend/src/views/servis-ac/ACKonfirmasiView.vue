@@ -188,6 +188,13 @@ async function konfirmasi() {
   galat.value = null
 
   try {
+    const catatanFinal = [
+      d.kondisiLainnya ? `Kondisi lain: ${d.kondisiLainnya}` : '',
+      catatan.value.trim(),
+    ]
+      .filter(Boolean)
+      .join(' · ')
+
     const hasil = await pesanServisAC({
       paket: d.paket,
       unit: d.unit,
@@ -196,7 +203,7 @@ async function konfirmasi() {
       terakhir_cuci: d.terakhirCuci,
       kondisi: [...d.kondisi],
       rutin: rutinAktif.value ? rutin.value : null,
-      catatan: catatan.value || undefined,
+      catatan: catatanFinal || undefined,
       tanggal: tanggal.value,
       waktu: waktu.value,
       nama_penerima: namaPemesan.value.trim(),

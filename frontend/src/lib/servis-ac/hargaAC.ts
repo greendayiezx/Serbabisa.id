@@ -77,6 +77,7 @@ export const KONDISI_AC = [
   { id: 'bocor', nama: 'Bocor air' },
   { id: 'berdebu', nama: 'Sangat berdebu' },
   { id: 'tidak-ada-keluhan', nama: 'Tidak ada keluhan (perawatan rutin)' },
+  { id: 'lainnya', nama: 'Lainnya' },
 ]
 
 export const RUTIN_AC = [

@@ -41,6 +41,7 @@ const tipe = ref('split')
 const kapasitas = ref('1')
 const terakhirCuci = ref('3-6-bulan')
 const kondisi = ref<string[]>([])
+const kondisiLainnya = ref('')
 const paket = ref('standard')
 
 /*
@@ -56,6 +57,7 @@ onMounted(async () => {
     kapasitas.value = d.kapasitas
     terakhirCuci.value = d.terakhirCuci
     kondisi.value = [...d.kondisi]
+    kondisiLainnya.value = d.kondisiLainnya || ''
     paket.value = d.paket
   }
 
@@ -80,6 +82,7 @@ function toggleKondisi(id: string) {
   const i = kondisi.value.indexOf(id)
   if (i >= 0) {
     kondisi.value.splice(i, 1)
+    if (id === 'lainnya') kondisiLainnya.value = ''
     return
   }
 
@@ -87,8 +90,12 @@ function toggleKondisi(id: string) {
    * "Tidak ada keluhan" meniadakan keluhan lain, dan sebaliknya — memilih
    * keduanya sekaligus membuat catatan untuk teknisi saling bertentangan.
    */
-  if (id === 'tidak-ada-keluhan') kondisi.value = []
-  else kondisi.value = kondisi.value.filter((k) => k !== 'tidak-ada-keluhan')
+  if (id === 'tidak-ada-keluhan') {
+    kondisi.value = []
+    kondisiLainnya.value = ''
+  } else {
+    kondisi.value = kondisi.value.filter((k) => k !== 'tidak-ada-keluhan')
+  }
 
   kondisi.value.push(id)
 }
@@ -184,6 +191,7 @@ function lanjut() {
     kapasitas: kapasitas.value,
     terakhirCuci: terakhirCuci.value,
     kondisi: [...kondisi.value],
+    kondisiLainnya: kondisi.value.includes('lainnya') ? kondisiLainnya.value.trim() : '',
     alamat: alamatLokal.value,
     lat: latLokal.value,
     lng: lngLokal.value,
@@ -378,6 +386,18 @@ function lanjut() {
             </span>
             <span class="text-[13px]">{{ k.nama }}</span>
           </button>
+
+          <div v-if="kondisi.includes('lainnya')" class="mt-1">
+            <label class="block">
+              <span class="sr-only">Kondisi AC lainnya</span>
+              <input
+                v-model="kondisiLainnya"
+                type="text"
+                placeholder="Tuliskan kondisi AC lainnya..."
+                class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none transition-colors"
+              />
+            </label>
+          </div>
         </div>
       </section>
 

@@ -57,7 +57,7 @@ class ACTarif
     public const TIPE = ['split', 'inverter', 'cassette', 'standing', 'tidak-tahu'];
     public const KAPASITAS = ['0.5', '1', '1.5', '2', 'tidak-tahu'];
     public const TERAKHIR_CUCI = ['<3-bulan', '3-6-bulan', '>6-bulan', 'belum-pernah'];
-    public const KONDISI = ['berbau', 'kurang-dingin', 'bocor', 'berdebu', 'tidak-ada-keluhan'];
+    public const KONDISI = ['berbau', 'kurang-dingin', 'bocor', 'berdebu', 'tidak-ada-keluhan', 'lainnya'];
 
     /** Jadwal rutin: potongannya berlaku untuk kunjungan BERIKUTNYA, bukan ini. */
     public const RUTIN = ['3-bulan', '6-bulan'];

@@ -15,9 +15,11 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Icon from '@/components/icons/Icon.vue'
 import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
+import PesananTerkirimArt from '@/components/servis-ac/PesananTerkirimArt.vue'
 import apiClient from '@/api/client'
 import { rupiah } from '@/lib/rupiah'
 import { tautanInvoicePdf } from '@/api/invoice'
+import { labelMetode } from '@/lib/metodeBayar'
 import { KAPASITAS_AC, KONDISI_AC, RUTIN_AC, TIPE_AC } from '@/lib/servis-ac/hargaAC'
 
 interface BarisPesanan {
@@ -156,11 +158,7 @@ const LANGKAH = [
       <template v-else-if="pesanan">
         <!-- Penanda berhasil -->
         <section class="bg-(--color-surface-0) rounded-2xl p-6 text-center">
-          <span
-            class="w-16 h-16 mx-auto rounded-full bg-(--color-secondary-container) text-(--color-on-secondary-container) flex items-center justify-center"
-          >
-            <Icon name="check-circle" class="w-9 h-9" />
-          </span>
+          <PesananTerkirimArt />
 
           <h1 class="mt-4 text-[19px] font-display font-extrabold">Pesanan servis terkirim</h1>
           <p class="mt-1.5 text-[12.5px] leading-relaxed text-(--color-on-surface-variant)">
@@ -249,6 +247,13 @@ const LANGKAH = [
               </span>
             </div>
 
+            <div v-if="pesanan.metode" class="flex justify-between gap-3 text-(--color-on-surface-variant)">
+              <span>Metode Pembayaran</span>
+              <span class="font-bold text-(--color-on-surface)">
+                {{ labelMetode(pesanan.metode) }}
+              </span>
+            </div>
+
             <div class="flex justify-between gap-3 pt-2.5 mt-1 border-t border-(--color-outline)/12">
               <span class="text-[13px] font-extrabold">Total</span>
               <span class="text-[15px] font-extrabold">{{ rupiah(pesanan.total) }}</span>
@@ -257,7 +262,6 @@ const LANGKAH = [
 
           <p class="mt-3 text-[11px] text-(--color-on-surface-variant)">
             Dibayar setelah pekerjaan selesai
-            <template v-if="pesanan.metode"> · {{ pesanan.metode.toUpperCase() }}</template>
           </p>
         </section>
 

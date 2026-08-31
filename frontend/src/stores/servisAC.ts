@@ -19,6 +19,7 @@ export interface DraftAC {
   kapasitas: string
   terakhirCuci: string
   kondisi: string[]
+  kondisiLainnya?: string
   alamat: string
   lat: number
   lng: number
