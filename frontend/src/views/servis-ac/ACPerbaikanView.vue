@@ -74,16 +74,18 @@ function buka(l: (typeof LAYANAN)[number]) {
         <h2 class="text-[20px] font-display font-extrabold leading-tight mb-2">
           Butuh AC kembali dingin atau ingin memasang unit baru?
         </h2>
-        <p class="text-[13px] leading-snug text-(--color-on-surface-variant) mb-3">
-          Teknisi BisaBersih siap membantu. Harga dikonfirmasi sebelum pekerjaan dimulai.
-        </p>
         <div class="rounded-xl border border-(--color-azure)/30 bg-(--color-azure)/8 p-3.5 flex items-start gap-2.5">
           <Icon name="alert" class="w-4 h-4 text-(--color-azure) shrink-0 mt-0.5" />
-          <p class="text-[11.5px] leading-relaxed text-(--color-on-surface-variant)">
-            Harga pemasangan bergantung panjang pipa, jalur kabel, bracket, kapasitas AC, akses lokasi,
-            dan tingkat kesulitannya. Material tambahan seperti pipa dihitung per meter. Angka final
-            dikonfirmasi setelah foto diperiksa atau lokasi disurvei.
-          </p>
+          <div class="flex flex-col gap-1.5 min-w-0">
+            <p class="text-[12.5px] font-bold leading-snug text-(--color-on-surface)">
+              Teknisi BisaBersih siap membantu. Harga dikonfirmasi sebelum pekerjaan dimulai.
+            </p>
+            <p class="text-[11.5px] leading-relaxed text-(--color-on-surface-variant)">
+              Harga pemasangan bergantung panjang pipa, jalur kabel, bracket, kapasitas AC, akses lokasi,
+              dan tingkat kesulitannya. Material tambahan seperti pipa dihitung per meter. Angka final
+              dikonfirmasi setelah foto diperiksa atau lokasi disurvei.
+            </p>
+          </div>
         </div>
       </section>
 

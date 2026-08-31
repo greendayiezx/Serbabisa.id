@@ -5,6 +5,7 @@ import L from 'leaflet'
 import { cariLokasi, reverseGeocode } from '@/lib/geocode'
 import 'leaflet/dist/leaflet.css'
 import Icon from '@/components/icons/Icon.vue'
+import PolaBisaBersih from '@/components/bersih/PolaBisaBersih.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import { useLocationStore, kunciAlamat, type PlaceItem, type SavedPlaceKey, type TaskLocation } from '@/stores/location'
 import { useAuthStore } from '@/stores/auth'
@@ -901,6 +902,13 @@ watch(skelTampil, async (masihSkeleton) => {
               Belum ada alamat tersimpan. Pilih lokasi lalu klik &ldquo;Simpan Rumah&rdquo; atau &ldquo;Simpan Kantor&rdquo;.
             </p>
             </div>
+
+            <!--
+              Hiasan penutup daftar, khusus BisaBersih. Ditaruh di bawah riwayat,
+              bukan di antara isinya: pola berulang di tengah daftar alamat akan
+              bersaing dengan hal yang sedang dicari orang.
+            -->
+            <PolaBisaBersih v-if=isBisaBersih />
           </div>
         </div>
       <!-- Clear All confirmation dialog: sibling of the content sheet, not nested
