@@ -19,8 +19,10 @@ withDefaults(
   defineProps<{
     /** Tinggi pita dalam piksel. */
     tinggi?: number
+    /** Sudut membulat; matikan saat pita dipakai selebar layar. */
+    bulat?: boolean
   }>(),
-  { tinggi: 132 },
+  { tinggi: 132, bulat: true },
 )
 
 const uid = useId()
@@ -72,7 +74,8 @@ function gaya(w?: string) {
     menyisipkan belasan nama benda di tengah daftar alamat.
   -->
   <div
-    class="w-full overflow-hidden rounded-2xl bg-(--color-surface-container) text-(--color-on-surface)"
+    class="w-full overflow-hidden bg-(--color-surface-container) text-(--color-on-surface)"
+    :class="bulat ? 'rounded-2xl' : ''"
     :style="{ height: `${tinggi}px` }"
     aria-hidden="true"
   >

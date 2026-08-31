@@ -902,15 +902,19 @@ watch(skelTampil, async (masihSkeleton) => {
               Belum ada alamat tersimpan. Pilih lokasi lalu klik &ldquo;Simpan Rumah&rdquo; atau &ldquo;Simpan Kantor&rdquo;.
             </p>
             </div>
-
-            <!--
-              Hiasan penutup daftar, khusus BisaBersih. Ditaruh di bawah riwayat,
-              bukan di antara isinya: pola berulang di tengah daftar alamat akan
-              bersaing dengan hal yang sedang dicari orang.
-            -->
-            <PolaBisaBersih v-if=isBisaBersih />
           </div>
         </div>
+
+      <!--
+        Hiasan penutup halaman, khusus BisaBersih.
+
+        Di LUAR kartu lokasi dan selebar layar: ia latar, bukan isi. Ditaruh di
+        dalam kartu, pola berulang akan bersaing dengan alamat yang sedang
+        dicari orang; dibatasi lebar kartu, ia terbaca sebagai satu blok lagi
+        yang harus diperhatikan.
+      -->
+      <PolaBisaBersih v-if="isBisaBersih" class="mt-4" :bulat="false" />
+
       <!-- Clear All confirmation dialog: sibling of the content sheet, not nested
            inside it — otherwise its fixed z-50 overlay inherits the sheet's own
            (lower) stacking context and ends up hit-testing BELOW the header's
