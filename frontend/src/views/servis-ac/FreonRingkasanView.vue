@@ -220,7 +220,7 @@ async function konfirmasi() {
         <div class="flex gap-3 mb-4">
           <Icon name="pin" class="w-5 h-5 text-[#F97316] shrink-0 mt-0.5" />
           <span class="min-w-0">
-            <span class="block text-[11px] uppercase tracking-wider text-(--color-on-surface-variant)">
+            <span class="block text-[11px] font-bold uppercase tracking-wider text-black">
               Lokasi
             </span>
             <span class="block text-[12.5px] leading-snug">{{ alamat || 'Belum diisi' }}</span>
@@ -230,7 +230,7 @@ async function konfirmasi() {
         <div class="flex gap-3">
           <Icon name="clock" class="w-5 h-5 text-(--color-azure) shrink-0 mt-0.5" />
           <span class="min-w-0">
-            <span class="block text-[11px] uppercase tracking-wider text-(--color-on-surface-variant)">
+            <span class="block text-[11px] font-bold uppercase tracking-wider text-black">
               Jadwal kedatangan
             </span>
             <span class="block text-[12.5px]">{{ jadwalTeks }}</span>

@@ -11,19 +11,17 @@
  * kunjungan diagnosisnya. Tombolnya menyebut itu, dan angkanya terbaca di
  * footer sebelum ditekan.
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import KontakPenerima from '@/components/KontakPenerima.vue'
 import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
+import KartuLokasiPeta from '@/components/KartuLokasiPeta.vue'
 import { useLocationStore } from '@/stores/location'
 import { usePerbaikiACStore } from '@/stores/perbaikiAC'
 import { pesanPerbaikanAC } from '@/api/perbaikanAC'
 import { pesanError } from '@/api/belanja'
-import { TILE_OPTIONS, TILE_URL } from '@/lib/mapTiles'
 import { rupiah } from '@/lib/rupiah'
 import { KELUHAN_PERBAIKAN, biayaPemeriksaanPerbaikan } from '@/lib/servis-ac/perbaikanAC'
 import { MEREK_AC } from '@/lib/servis-ac/hargaFreon'
@@ -71,71 +69,17 @@ const lat = computed(() => locationStore.draft?.lat ?? -6.2088)
 const lng = computed(() => locationStore.draft?.lng ?? 106.8456)
 const lembarLokasi = ref(false)
 
-/** Baris pertama alamat — dipakai sebagai judul kartu, seperti di BisaAngkut. */
-const alamatJudul = computed(() => alamat.value.split(',')[0] ?? alamat.value)
-
 function terimaLokasi(l: { alamat: string; lat: number; lng: number }) {
   locationStore.setDraft(l)
   lembarLokasi.value = false
-
-  const titik: L.LatLngTuple = [l.lat, l.lng]
-  peta?.setView(titik, peta.getZoom())
-  penanda?.setLatLng(titik)
 }
-
-/*
- * Peta pratinjau: hanya untuk dilihat. Interaksinya dimatikan supaya gerakan
- * jari saat menggulung halaman tidak berubah jadi menggeser peta — pinnya
- * dipindahkan lewat lembar pilih lokasi, tempat pencariannya ada.
- */
-const petaEl = ref<HTMLDivElement | null>(null)
-let peta: L.Map | null = null
-let penanda: L.Marker | null = null
-let pengamat: ResizeObserver | null = null
-
-const pinIcon = L.divIcon({
-  className: '',
-  html: `<svg viewBox="0 0 24 24" width="40" height="40" stroke="#1e9bf0" stroke-width="2" fill="rgba(255,255,255,0.95)" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2))"><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5" fill="#1e9bf0" stroke="none"/></svg>`,
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
-})
-
-function initPeta() {
-  if (!petaEl.value || peta) return
-
-  const titik: L.LatLngTuple = [lat.value, lng.value]
-  peta = L.map(petaEl.value, {
-    center: titik,
-    zoom: 16,
-    zoomControl: false,
-    attributionControl: false,
-    dragging: false,
-    scrollWheelZoom: false,
-    doubleClickZoom: false,
-    boxZoom: false,
-    keyboard: false,
-    touchZoom: false,
-  })
-  L.tileLayer(TILE_URL, TILE_OPTIONS).addTo(peta)
-  penanda = L.marker(titik, { icon: pinIcon }).addTo(peta)
-
-  pengamat = new ResizeObserver(() => peta?.invalidateSize())
-  pengamat.observe(petaEl.value)
-  requestAnimationFrame(() => peta?.invalidateSize())
-}
-
-onBeforeUnmount(() => {
-  pengamat?.disconnect()
-  peta?.remove()
-  peta = null
-})
 
 /* ────────── Kontak ────────── */
 const namaPenerima = ref('')
 const telepon = ref('')
 const ditandai = ref(false)
 
-onMounted(async () => {
+onMounted(() => {
   /*
    * Tanpa draf tidak ada yang bisa dipesan — dan menampilkan halaman kosong
    * hanya membuat orang menekan tombol yang pasti gagal. Terjadi kalau URL ini
@@ -146,8 +90,6 @@ onMounted(async () => {
     return
   }
 
-  await nextTick()
-  initPeta()
 })
 
 /* ────────── Kirim ────────── */
@@ -239,51 +181,14 @@ async function kirim() {
     </header>
 
     <main v-if="draft" class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
-      <!--
-        Lokasi di paling atas, dengan peta pratinjau seperti BisaAngkut: alamat
-        yang salah membuat seluruh isian di bawahnya sia-sia, dan sebaris teks
-        tidak cukup untuk memastikan titiknya benar.
-
-        isolate wajib. Panel Leaflet punya z-index sendiri (ubin 400, penanda
-        600) dan tanpa stacking context sendiri ia naik menembus elemen lain di
-        halaman — termasuk footer yang melayang.
-      -->
-      <section
-        class="isolate bg-(--color-surface-0) rounded-2xl border border-(--color-outline)/25 overflow-hidden"
-      >
-        <button
-          type="button"
-          aria-label="Ubah lokasi servis"
-          class="block w-full text-left"
-          @click="lembarLokasi = true"
-        >
-          <div
-            ref="petaEl"
-            class="w-full h-40 bg-(--color-surface-container) pointer-events-none"
-            :style="{ visibility: lembarLokasi ? 'hidden' : 'visible' }"
-          ></div>
-        </button>
-
-        <div class="p-4 flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p class="text-[11px] text-(--color-on-surface-variant)">Lokasi servis</p>
-            <h3 class="text-[14px] font-display font-extrabold truncate">
-              {{ alamatJudul || 'Lokasi belum dipilih' }}
-            </h3>
-            <p class="text-[11.5px] text-(--color-on-surface-variant) leading-snug line-clamp-2">
-              {{ alamat || 'Ketuk peta untuk menandai lokasi servis' }}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            class="shrink-0 px-4 py-2 rounded-full border-[1.5px] border-(--color-azure) text-(--color-azure) text-[12.5px] font-extrabold active:scale-95 transition-transform"
-            @click="lembarLokasi = true"
-          >
-            Ganti lokasi
-          </button>
-        </div>
-      </section>
+      <KartuLokasiPeta
+        :alamat="alamat"
+        :lat="lat"
+        :lng="lng"
+        :tersembunyi="lembarLokasi"
+        label="Lokasi servis"
+        @ubah="lembarLokasi = true"
+      />
 
       <!-- Ringkasan dari langkah sebelumnya -->
       <section class="bg-(--color-surface-0) rounded-2xl p-5">
@@ -329,10 +234,7 @@ async function kirim() {
         :ditandai="ditandai"
       />
 
-      <p class="px-1 text-[11.5px] leading-relaxed text-(--color-on-surface-variant)">
-        Nomor ini yang dihubungi teknisi saat tiba. Boleh berbeda dari pemilik akun — misalnya
-        penghuni atau pengurus rumah yang ada di lokasi.
-      </p>
+
 
       <SheetPilihLokasi
         :tampil="lembarLokasi"

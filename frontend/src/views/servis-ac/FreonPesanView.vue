@@ -16,6 +16,7 @@ import DatePickerField from '@/components/DatePickerField.vue'
 import { useFreonStore } from '@/stores/freon'
 import { useLocationStore } from '@/stores/location'
 import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
+import KartuLokasiPeta from '@/components/KartuLokasiPeta.vue'
 import PilihanField from '@/components/PilihanField.vue'
 import { rupiah } from '@/lib/rupiah'
 import { KAPASITAS_AC, TIPE_AC } from '@/lib/servis-ac/hargaAC'
@@ -192,24 +193,14 @@ function lanjut() {
         yang bisa datang, dan alamat yang salah membuat seluruh isian di
         bawahnya sia-sia.
       -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0">
-            <p class="text-[12px] text-(--color-on-surface-variant)">Lokasi servis</p>
-            <p class="mt-0.5 text-[15px] font-display font-extrabold leading-snug">
-              {{ alamat || 'Belum diisi' }}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            class="shrink-0 px-4 py-2 rounded-full border-[1.5px] border-(--color-azure) text-(--color-azure) text-[12.5px] font-extrabold active:scale-95 transition-transform"
-            @click="lembarLokasi = true"
-          >
-            Ganti lokasi
-          </button>
-        </div>
-      </section>
+      <KartuLokasiPeta
+        :alamat="alamat"
+        :lat="lat"
+        :lng="lng"
+        :tersembunyi="lembarLokasi"
+        label="Lokasi servis"
+        @ubah="lembarLokasi = true"
+      />
 
       <!-- 1. Keluhan -->
       <section class="bg-(--color-surface-0) rounded-2xl p-5">
