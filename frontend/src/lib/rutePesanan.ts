@@ -57,6 +57,15 @@ export function ruteTugas(task: Task): RouteLocationRaw {
    * dari kategori: BisaTukang menampung banyak pekerjaan lain yang memang
    * cocok dibuka di halaman tugas generik.
    */
+  /*
+   * Disinfektan belum punya halaman status sendiri; layar tugas generik sudah
+   * menampilkan rincian, harga, dan jadwalnya dengan benar. Dituliskan di sini
+   * supaya jelas ini keputusan, bukan kelalaian.
+   */
+  if (task.detail_layanan?.layanan === 'disinfektan') {
+    return { name: 'task-detail', params: { id: task.id } }
+  }
+
   if (task.detail_layanan?.layanan === 'servis-ac') {
     return { name: 'servis-ac-selesai', params: { nomor: invoice } }
   }

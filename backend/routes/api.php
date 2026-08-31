@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\ACCheckoutController;
 use App\Http\Controllers\Api\ACPerbaikanController;
 use App\Http\Controllers\Api\PenawaranACController;
 use App\Http\Controllers\Api\DeepCheckoutController;
+use App\Http\Controllers\Api\DisinfektanController;
 use App\Http\Controllers\Api\FreonController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\KantorCheckoutController;
@@ -134,6 +135,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // BisaBersih Deep Cleaning: dijual per paket; luas & ruangan standar sudah
     // termasuk, kelebihannya dan layanan tambahan dihitung ulang server.
     Route::post('/bersih/deep/checkout', [DeepCheckoutController::class, 'store']);
+
+    // Disinfektan: ditolak kalau ada cairan tubuh berisiko, atau kalau areanya
+    // di atas 300 m² — keduanya diarahkan ke jalur yang benar, bukan ditagih.
+    Route::post('/bersih/disinfektan/checkout', [DisinfektanController::class, 'store']);
+    Route::post('/bersih/disinfektan/permintaan', [DisinfektanController::class, 'permintaan']);
 
     // BisaBersih Kantor: pesan langsung (kantor kecil/menengah).
     Route::post('/bersih/kantor/checkout', [KantorCheckoutController::class, 'store']);

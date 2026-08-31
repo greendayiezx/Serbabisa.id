@@ -642,7 +642,7 @@ watch(skelTampil, async (masihSkeleton) => {
 <template>
   <LokasiSkeleton v-if="skelTampil" />
   <template v-else>
-    <div class="relative min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-6 overflow-x-hidden">
+    <div class="relative min-h-dvh w-full bg-(--color-surface) text-(--color-on-surface) pb-0 overflow-x-hidden flex flex-col justify-between">
       <!--
         Menempel pada HALAMAN, bukan pada layar: dengan posisi tetap (fixed) ia
         ikut turun saat digulung dan menutupi isi di bawahnya.
@@ -913,7 +913,7 @@ watch(skelTampil, async (masihSkeleton) => {
         dicari orang; dibatasi lebar kartu, ia terbaca sebagai satu blok lagi
         yang harus diperhatikan.
       -->
-      <PolaBisaBersih v-if="isBisaBersih" class="mt-4" :bulat="false" />
+      <PolaBisaBersih v-if="isBisaBersih" class="-mt-6 flex-1 w-full" :bulat="false" />
 
       <!-- Clear All confirmation dialog: sibling of the content sheet, not nested
            inside it — otherwise its fixed z-50 overlay inherits the sheet's own

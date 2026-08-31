@@ -43,7 +43,7 @@ const services: Service[] = [
   { id: 'office', label: 'Bersih Kantor', desc: 'Ruang kerja rapi & bersih' },
   { id: 'deep', label: 'Deep Cleaning', desc: 'Pembersihan menyeluruh' },
   { id: 'ac', label: 'Servis AC', desc: 'Cuci & perawatan AC' },
-  { id: 'disinfect', label: 'Disinfektan', desc: 'Sterilisasi & disinfeksi' },
+  { id: 'disinfect', label: 'Disinfektan', desc: 'Area sering disentuh' },
   { id: 'ironing', label: 'Setrika', desc: 'Setrika pakaian rapi' },
 ]
 
@@ -126,6 +126,10 @@ function handleLanjut() {
   }
   if (selectedService.value === 'ac') {
     router.push({ name: 'servis-ac' })
+    return
+  }
+  if (selectedService.value === 'disinfect') {
+    router.push({ name: 'task-bersih-disinfektan' })
     return
   }
 

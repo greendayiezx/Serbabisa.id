@@ -276,6 +276,32 @@ const router = createRouter({
       meta: { induk: 'servis-ac-penawaran', roles: ['customer'] as Role[] },
     },
     {
+      // Disinfektan: halaman penjelasan layanan, sebelum pemesanan.
+      path: '/tasks/new/bersih/disinfektan',
+      name: 'task-bersih-disinfektan',
+      component: () => import('@/views/bersih/DisinfektanView.vue'),
+      meta: { induk: 'task-bersih-detail', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/disinfektan/pesan',
+      name: 'task-bersih-disinfektan-pesan',
+      component: () => import('@/views/bersih/DisinfektanPesanView.vue'),
+      meta: { induk: 'task-bersih-disinfektan', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/bersih/disinfektan/konfirmasi',
+      name: 'task-bersih-disinfektan-konfirmasi',
+      component: () => import('@/views/bersih/DisinfektanKonfirmasiView.vue'),
+      meta: { induk: 'task-bersih-disinfektan-pesan', roles: ['customer'] as Role[] },
+    },
+    {
+      // Area di atas 300 m² dan kantor besar: penawaran, bukan harga pasang.
+      path: '/tasks/new/bersih/disinfektan/penawaran',
+      name: 'task-bersih-disinfektan-penawaran',
+      component: () => import('@/views/bersih/DisinfektanPenawaranView.vue'),
+      meta: { induk: 'task-bersih-disinfektan', roles: ['customer'] as Role[] },
+    },
+    {
       // Perbaikan & Pasang AC: halaman masuk yang bercabang tiga.
       path: '/tasks/new/servis-ac/perbaikan',
       name: 'servis-ac-perbaikan',
