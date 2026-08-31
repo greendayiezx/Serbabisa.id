@@ -17,6 +17,7 @@ import Icon from '@/components/icons/Icon.vue'
 import KontakPenerima from '@/components/KontakPenerima.vue'
 import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
 import KartuLokasiPeta from '@/components/KartuLokasiPeta.vue'
+import PanahKonfirmasi from '@/components/servis-ac/PanahKonfirmasi.vue'
 import { useLocationStore } from '@/stores/location'
 import { usePasangACStore } from '@/stores/pasangAC'
 import { ajukanPasangAC, type PermintaanPasang } from '@/api/perbaikanAC'
@@ -329,14 +330,21 @@ const LANGKAH_SETELAH = [
           </span>
         </div>
 
+        <!--
+          Panah animasi yang sama dengan tombol konfirmasi lain, tapi TANPA
+          angka di sebelahnya: yang dikirim di sini permintaan penawaran, dan
+          menaruh nominal di dalam tombol akan terbaca sebagai harga yang
+          disetujui. Rentangnya sudah disebut di atas, sebagai rentang.
+        -->
         <button
           type="button"
-          class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40"
+          class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-between gap-2 pl-5 pr-1.5 active:scale-[0.98] transition-transform disabled:opacity-40"
           :disabled="memproses"
           @click="ajukan"
         >
-          {{ memproses ? 'Mengirim…' : 'Ajukan Permintaan Penawaran' }}
-          <Icon v-if="!memproses" name="arrow-right" class="w-4 h-4" />
+          <span>{{ memproses ? 'Mengirim…' : 'Ajukan Permintaan Penawaran' }}</span>
+          <PanahKonfirmasi v-if="!memproses" />
+          <span v-else class="w-9"></span>
         </button>
 
         <p v-if="galat" role="alert" class="mt-2 text-[12px] font-semibold text-(--color-error)">

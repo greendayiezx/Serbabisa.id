@@ -11,8 +11,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
-import LottieIcon from '@/components/LottieIcon.vue'
-import panahLottie from '@/assets/lottie/panah-konfirmasi.json'
+import PanahKonfirmasi from '@/components/servis-ac/PanahKonfirmasi.vue'
 import MetodeBayarIcon from '@/components/MetodeBayarIcon.vue'
 import { useFreonStore } from '@/stores/freon'
 import { useLocationStore } from '@/stores/location'
@@ -391,7 +390,7 @@ async function konfirmasi() {
           <span>{{ memproses ? 'Memproses…' : 'Konfirmasi Pesanan' }}</span>
           <span class="flex items-center gap-2 shrink-0">
             <span class="text-[14.5px] font-extrabold">{{ rupiah(total) }}</span>
-            <LottieIcon v-if="!memproses" :data="panahLottie" :size="36" />
+            <PanahKonfirmasi v-if="!memproses" />
             <span v-else class="w-9"></span>
           </span>
         </button>

@@ -15,6 +15,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import MetodeBayarIcon from '@/components/MetodeBayarIcon.vue'
+import PanahKonfirmasi from '@/components/servis-ac/PanahKonfirmasi.vue'
 import DatePickerField from '@/components/DatePickerField.vue'
 import TimePickerField from '@/components/TimePickerField.vue'
 import { useServisACStore } from '@/stores/servisAC'
@@ -545,14 +546,20 @@ async function konfirmasi() {
             <Icon name="chevron-down" class="w-3.5 h-3.5" />
           </button>
 
+          <!--
+            Panahnya animasi Lottie, sama dengan tombol konfirmasi di alur
+            Servis AC lainnya: tombol yang mengakhiri pemesanan harus terasa
+            sebagai tombol yang sama di seluruh alur.
+          -->
           <button
             type="button"
-            class="flex-1 h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40"
+            class="flex-1 h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-between gap-2 pl-5 pr-1.5 active:scale-[0.98] transition-transform disabled:opacity-40"
             :disabled="memproses"
             @click="konfirmasi"
           >
-            {{ memproses ? 'Memproses…' : 'Konfirmasi Pesanan' }}
-            <Icon v-if="!memproses" name="arrow-right" class="w-4 h-4" />
+            <span>{{ memproses ? 'Memproses…' : 'Konfirmasi Pesanan' }}</span>
+            <PanahKonfirmasi v-if="!memproses" />
+            <span v-else class="w-9"></span>
           </button>
         </div>
 
