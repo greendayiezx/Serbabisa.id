@@ -30,7 +30,7 @@ function keLangganan() {
   router.push({ name: 'task-bersih-langganan' })
 }
 
-type ServiceId = 'house' | 'office' | 'deep' | 'ac' | 'disinfect' | 'ironing'
+type ServiceId = 'house' | 'office' | 'deep' | 'ac' | 'disinfect'
 
 interface Service {
   id: ServiceId
@@ -44,7 +44,6 @@ const services: Service[] = [
   { id: 'deep', label: 'Deep Cleaning', desc: 'Pembersihan menyeluruh' },
   { id: 'ac', label: 'Servis AC', desc: 'Cuci & perawatan AC' },
   { id: 'disinfect', label: 'Disinfektan', desc: 'Area sering disentuh' },
-  { id: 'ironing', label: 'Setrika', desc: 'Setrika pakaian rapi' },
 ]
 
 const selectedService = ref<string | null>(null)
@@ -133,10 +132,12 @@ function handleLanjut() {
     return
   }
 
-  router.push({
-    name: 'task-create',
-    query: { category: 'bisabersih', service: selectedService.value },
-  })
+  /*
+   * Tidak ada lagi jalur cadangan ke tugas custom: kelima layanan di daftar
+   * punya halamannya sendiri. Jalur itu dulu hanya menampung Setrika, dan
+   * membiarkannya berarti layanan yang lupa disambungkan akan diam-diam
+   * berakhir sebagai formulir tugas kosong, bukan sebagai galat yang terlihat.
+   */
 }
 
 /**
@@ -777,17 +778,24 @@ onBeforeUnmount(() => {
               >Lihat semua</a
             >
           </div>
-          <div class="grid grid-cols-3 gap-3">
+          <!--
+            Enam kolom, tiap kartu selebar dua: dengan lima layanan, barisnya
+            jadi 3 di atas dan 2 di bawah. Kartu keempat digeser mulai kolom
+            kedua supaya dua kartu terakhir duduk di tengah, bukan menggantung
+            di kiri dengan satu lubang di kanan.
+          -->
+          <div class="grid grid-cols-6 gap-3">
             <button
-              v-for="s in services"
+              v-for="(s, i) in services"
               :key="s.id"
               type="button"
-              class="relative flex flex-col items-center justify-center p-4 rounded-2xl transition-all active:scale-95 border-2 group"
-              :class="
+              class="col-span-2 relative flex flex-col items-center justify-center p-4 rounded-2xl transition-all active:scale-95 border-2 group"
+              :class="[
+                i === 3 ? 'col-start-2' : '',
                 selectedService === s.id
                   ? 'border-(--color-azure) bg-(--color-primary-container) shadow-[0_10px_28px_rgba(30,155,240,0.30)] -translate-y-0.5'
-                  : 'border-(--color-outline)/15 bg-(--color-surface-0) shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:border-(--color-azure)/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)]'
-              "
+                  : 'border-(--color-outline)/15 bg-(--color-surface-0) shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:border-(--color-azure)/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)]',
+              ]"
               :aria-pressed="selectedService === s.id"
               @click="handleServiceSelect(s.id)"
             >
@@ -1664,93 +1672,6 @@ onBeforeUnmount(() => {
                     stroke="#8BC53F"
                     stroke-width="4"
                     stroke-linecap="round"/>
-                </svg>
-              </template>
-              <template v-else-if="s.id === 'ironing'">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 96 96"
-                  class="w-12 h-12 mb-2 shrink-0 object-contain"
-                >
-                  <defs>
-                    <linearGradient id="ironBlue" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stop-color="#2196F3"/>
-                      <stop offset="100%" stop-color="#1478E8"/>
-                    </linearGradient>
-
-                    <linearGradient id="ironLime" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stop-color="#B8EF63"/>
-                      <stop offset="100%" stop-color="#8BC53F"/>
-                    </linearGradient>
-                  </defs>
-
-                  <!-- Ironing board -->
-                  <path
-                    d="M16 82
-                       C32 77 62 77 80 82"
-                    fill="none"
-                    stroke="#8BC53F"
-                    stroke-width="4"
-                    stroke-linecap="round"/>
-
-                  <!-- Sole plate: pointed nose to the left -->
-                  <path
-                    d="M10 74
-                       L32 64
-                       H72
-                       C78 64 81 67 81 69
-                       C81 72 78 74 72 74Z"
-                    fill="#FFFFFF"
-                    stroke="#0A326B"
-                    stroke-width="5"
-                    stroke-linejoin="round"/>
-
-                  <!-- Steam holes -->
-                  <circle cx="43" cy="69" r="1.7" fill="#0A326B"/>
-                  <circle cx="53" cy="69" r="1.7" fill="#0A326B"/>
-                  <circle cx="63" cy="69" r="1.7" fill="#0A326B"/>
-
-                  <!-- Body shell -->
-                  <path
-                    d="M38 63
-                       C38 55 44 50 54 50
-                       H64
-                       C71 50 76 55 76 61
-                       V63Z"
-                    fill="url(#ironBlue)"
-                    stroke="#0A326B"
-                    stroke-width="5"
-                    stroke-linejoin="round"/>
-
-                  <!-- Handle -->
-                  <path
-                    d="M44 50
-                       C44 32 62 27 70 34
-                       C73 37 74 43 74 50"
-                    fill="none"
-                    stroke="#0A326B"
-                    stroke-width="5"
-                    stroke-linecap="round"/>
-
-                  <!-- Temperature dial -->
-                  <circle cx="67" cy="57" r="3.5" fill="url(#ironLime)"/>
-
-                  <!-- Steam -->
-                  <circle cx="24" cy="50" r="4" fill="#8BC53F"/>
-                  <circle cx="14" cy="40" r="2.5" fill="#2196F3"/>
-                  <circle cx="28" cy="34" r="2" fill="#8BC53F"/>
-
-                  <!-- Sparkle -->
-                  <path
-                    d="M84 20
-                       L86.5 26
-                       L92 28.5
-                       L86.5 31
-                       L84 37
-                       L81.5 31
-                       L76 28.5
-                       L81.5 26Z"
-                    fill="url(#ironLime)"/>
                 </svg>
               </template>
               <span
