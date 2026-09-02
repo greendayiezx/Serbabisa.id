@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Task;
 use App\Services\JemputTarif;
 use App\Services\NomorInvoice;
+use App\Services\PermintaanJemput;
 use App\Services\PromoJemput;
 use App\Services\RuteJalan;
 use Illuminate\Http\JsonResponse;
@@ -34,6 +35,7 @@ class JemputController extends Controller
     public function __construct(
         private readonly JemputTarif $tarif,
         private readonly PromoJemput $promo,
+        private readonly PermintaanJemput $permintaan,
         private readonly RuteJalan $rute,
         private readonly NomorInvoice $nomorInvoice,
     ) {}
@@ -102,7 +104,13 @@ class JemputController extends Controller
         }
 
         $saat = now();
-        $pilihan = $this->tarif->semuaPilihan($km, $saat);
+
+        /*
+         * Pengali tarif datang dari permintaan SUNGGUHAN di sekitar titik
+         * jemput, bukan dari jendela jam yang menebak kapan ramai.
+         */
+        $ramai = $this->permintaan->ukur((float) $data['jemput_lat'], (float) $data['jemput_lng']);
+        $pilihan = $this->tarif->semuaPilihan($km, $ramai);
         $pertama = $this->perjalananPertama($user->id);
 
         // Promo dilekatkan ke tiap pilihan, bukan dihitung sekali di ujung:
@@ -196,7 +204,8 @@ class JemputController extends Controller
         }
 
         $saat = now();
-        $rincian = $this->tarif->hitung($data['tipe'], $data['varian'], $km, $saat);
+        $ramai = $this->permintaan->ukur((float) $data['jemput_lat'], (float) $data['jemput_lng']);
+        $rincian = $this->tarif->hitung($data['tipe'], $data['varian'], $km, $ramai);
 
         /* ---------- Promo: diperiksa ulang di sini, bukan dipercaya dari klien ---------- */
         $potongan = 0;

@@ -3,7 +3,7 @@
  * BisaJemput — konfirmasi pemesanan.
  *
  * Rincian tarifnya dibuka apa adanya: tarif dasar, jarak, waktu, penyesuaian
- * minimum, dan kenaikan jam sibuk kalau ada. Angka yang tidak bisa dijelaskan
+ * minimum, dan kenaikan permintaan kalau ada. Angka yang tidak bisa dijelaskan
  * asalnya akan selalu terbaca sebagai angka yang mengada-ada, dan penumpang
  * yang merasa begitu tidak memesan lagi.
  *
@@ -357,13 +357,13 @@ async function pesan() {
             />
             <!--
               Tarif perjalanan terjadwal dihitung ulang saat penjemputan, bukan
-              dikunci dari sekarang: jam sibuk nanti belum tentu sama dengan jam
-              sibuk sekarang. Dikatakan supaya angka yang berubah tidak terbaca
+              dikunci dari sekarang: ramai tidaknya nanti tidak bisa diketahui
+              hari ini. Dikatakan supaya angka yang berubah tidak terbaca
               sebagai tagihan yang keliru.
             -->
             <p class="mt-2 text-[11px] leading-snug text-(--color-on-surface-variant)">
-              Tarif perjalanan terjadwal dihitung ulang saat penjemputan, mengikuti kondisi jam
-              saat itu.
+              Tarif perjalanan terjadwal dihitung ulang saat penjemputan, mengikuti ramainya
+              permintaan saat itu.
             </p>
           </div>
         </div>

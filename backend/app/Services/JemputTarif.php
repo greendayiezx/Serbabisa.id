@@ -131,35 +131,6 @@ class JemputTarif
         ],
     ];
 
-    /**
-     * Pengali jam sibuk, ditampilkan APA ADANYA ke penumpang.
-     *
-     * Tarif yang naik diam-diam terbaca sebagai tagihan yang salah. Yang naik
-     * disebut kenaikannya, alasannya, dan berapa besarnya sebelum dipesan.
-     *
-     * @var array<string, array{jam:list<int>, hari:list<int>, pengali:float, alasan:string}>
-     */
-    public const SIBUK = [
-        'pagi' => [
-            'jam' => [6, 7, 8],
-            'hari' => [1, 2, 3, 4, 5],
-            'pengali' => 1.25,
-            'alasan' => 'Jam berangkat kerja, permintaan sedang tinggi',
-        ],
-        'sore' => [
-            'jam' => [17, 18, 19],
-            'hari' => [1, 2, 3, 4, 5],
-            'pengali' => 1.25,
-            'alasan' => 'Jam pulang kerja, permintaan sedang tinggi',
-        ],
-        'malam' => [
-            'jam' => [23, 0, 1, 2, 3, 4],
-            'hari' => [0, 1, 2, 3, 4, 5, 6],
-            'pengali' => 1.15,
-            'alasan' => 'Larut malam, pengemudi yang aktif lebih sedikit',
-        ],
-    ];
-
     /** @var list<string> */
     public const METODE_BAYAR = ['gopay', 'ovo', 'dana', 'tunai', 'va'];
 
@@ -207,55 +178,33 @@ class JemputTarif
     }
 
     /**
-     * Pengali jam sibuk yang berlaku pada satu waktu.
-     *
-     * Jamnya dibaca di WIB, BUKAN di zona waktu aplikasi. Aplikasi berjalan di
-     * UTC, dan "jam berangkat kerja" adalah soal jam dinding orang yang memesan
-     * — bukan jam server. Tanpa pengubahan ini, jendela pagi 06.00–09.00 baru
-     * aktif pukul 13.00 WIB, dan penumpang jam tujuh pagi malah dikenai
-     * pengali "larut malam".
-     *
-     * @return array{pengali:float, nama:string|null, alasan:string|null}
-     */
-    public function sibuk(\DateTimeInterface $saat): array
-    {
-        $lokal = \DateTimeImmutable::createFromInterface($saat)
-            ->setTimezone(new \DateTimeZone(self::ZONA));
-
-        $jam = (int) $lokal->format('G');
-        $hari = (int) $lokal->format('w');
-
-        foreach (self::SIBUK as $nama => $aturan) {
-            if (in_array($jam, $aturan['jam'], true) && in_array($hari, $aturan['hari'], true)) {
-                return ['pengali' => $aturan['pengali'], 'nama' => $nama, 'alasan' => $aturan['alasan']];
-            }
-        }
-
-        return ['pengali' => 1.0, 'nama' => null, 'alasan' => null];
-    }
-
-    /**
      * Hitung tarif satu pilihan.
      *
+     * Pengali permintaan DITERIMA dari luar, bukan ditebak dari jam. Yang tahu
+     * seberapa ramai adalah {@see PermintaanJemput}, yang menghitung pesanan
+     * sungguhan di sekitar titik jemput; kelas ini hanya menerapkan angkanya,
+     * jadi tarif tetap bisa dihitung tanpa menyentuh basis data.
+     *
+     * @param  array{pengali:float, tingkat:string|null, alasan:string|null}|null  $permintaan
      * @return array<string, mixed>
      */
-    public function hitung(string $tipe, string $varian, float $km, ?\DateTimeInterface $saat = null): array
+    public function hitung(string $tipe, string $varian, float $km, ?array $permintaan = null): array
     {
         $info = self::TIPE[$tipe];
         $v = $info['varian'][$varian];
 
         $menit = $this->menit($tipe, $km);
-        $sibuk = $this->sibuk($saat ?? new \DateTimeImmutable);
+        $ramai = $permintaan ?? ['pengali' => 1.0, 'tingkat' => null, 'alasan' => null];
 
         $jarak = (int) round($v['per_km'] * $km);
         $waktu = $v['per_menit'] * $menit;
         $sebelumMinimum = $v['dasar'] + $jarak + $waktu;
 
-        // Minimum diterapkan SEBELUM pengali jam sibuk: kalau tidak, perjalanan
-        // pendek di jam sibuk naik dua kali — sekali oleh minimum, sekali lagi
-        // oleh pengali.
+        // Minimum diterapkan SEBELUM pengali permintaan: kalau tidak,
+        // perjalanan pendek saat ramai naik dua kali — sekali oleh minimum,
+        // sekali lagi oleh pengali.
         $dasarTerpakai = max($sebelumMinimum, $v['minimum']);
-        $tarif = (int) (ceil($dasarTerpakai * $sibuk['pengali'] / 500) * 500);
+        $tarif = (int) (ceil($dasarTerpakai * $ramai['pengali'] / 500) * 500);
 
         $baris = [
             ['label' => 'Tarif dasar', 'nilai' => $v['dasar']],
@@ -266,8 +215,11 @@ class JemputTarif
         if ($dasarTerpakai > $sebelumMinimum) {
             $baris[] = ['label' => 'Penyesuaian tarif minimum', 'nilai' => $dasarTerpakai - $sebelumMinimum];
         }
-        if ($sibuk['pengali'] > 1.0) {
-            $baris[] = ['label' => 'Jam sibuk ×'.number_format($sibuk['pengali'], 2, ',', '.'), 'nilai' => $tarif - $dasarTerpakai];
+        if ($ramai['pengali'] > 1.0) {
+            $baris[] = [
+                'label' => 'Permintaan tinggi ×'.number_format($ramai['pengali'], 2, ',', '.'),
+                'nilai' => $tarif - $dasarTerpakai,
+            ];
         }
 
         return [
@@ -285,9 +237,9 @@ class JemputTarif
             'jemput_menit' => $v['jemput'],
             'baris' => $baris,
             'tarif' => $tarif,
-            'sibuk' => $sibuk['nama'],
-            'sibuk_alasan' => $sibuk['alasan'],
-            'sibuk_pengali' => $sibuk['pengali'],
+            'sibuk' => $ramai['tingkat'],
+            'sibuk_alasan' => $ramai['alasan'],
+            'sibuk_pengali' => $ramai['pengali'],
             'komisi' => $this->komisi($tarif),
             'biaya' => $this->biaya($tarif),
         ];
@@ -298,12 +250,12 @@ class JemputTarif
      *
      * @return list<array<string, mixed>>
      */
-    public function semuaPilihan(float $km, ?\DateTimeInterface $saat = null): array
+    public function semuaPilihan(float $km, ?array $permintaan = null): array
     {
         $hasil = [];
         foreach (self::TIPE as $tipe => $info) {
             foreach (array_keys($info['varian']) as $varian) {
-                $hasil[] = $this->hitung($tipe, $varian, $km, $saat);
+                $hasil[] = $this->hitung($tipe, $varian, $km, $permintaan);
             }
         }
 

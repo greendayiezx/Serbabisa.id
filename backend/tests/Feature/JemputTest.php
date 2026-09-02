@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\JemputTarif;
+use App\Services\PermintaanJemput;
 use App\Services\PromoJemput;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -141,7 +142,7 @@ class JemputTest extends TestCase
     public function test_perjalanan_pendek_kena_tarif_minimum(): void
     {
         $tarif = new JemputTarif;
-        $hasil = $tarif->hitung('motor', 'cepat', 0.4, new \DateTimeImmutable('2026-09-02 03:00:00'));
+        $hasil = $tarif->hitung('motor', 'cepat', 0.4, null);
 
         $this->assertSame(10_000, $hasil['tarif']);
         $this->assertNotEmpty(array_filter($hasil['baris'], fn ($b) => str_contains($b['label'], 'minimum')));
@@ -286,7 +287,7 @@ class JemputTest extends TestCase
     public function test_setiap_perjalanan_menyisakan_margin(): void
     {
         $tarif = new JemputTarif;
-        $saat = new \DateTimeImmutable('2026-09-02 03:00:00');
+        $saat = null;
 
         foreach (JemputTarif::idTipe() as $tipe) {
             foreach (array_keys(JemputTarif::TIPE[$tipe]['varian']) as $varian) {
@@ -322,7 +323,7 @@ class JemputTest extends TestCase
         foreach (JemputTarif::idTipe() as $tipe) {
             foreach (array_keys(JemputTarif::TIPE[$tipe]['varian']) as $varian) {
                 foreach ([1, 5, 12, 25, 45] as $km) {
-                    $h = $tarif->hitung($tipe, $varian, (float) $km, new \DateTimeImmutable('2026-09-02 03:00:00'));
+                    $h = $tarif->hitung($tipe, $varian, (float) $km, null);
 
                     foreach (PromoJemput::KATALOG as $p) {
                         if ($p['jenis'] !== 'berulang') {
@@ -384,60 +385,132 @@ class JemputTest extends TestCase
             ->assertJsonValidationErrors('kode_promo');
     }
 
-    public function test_jam_sibuk_disebutkan_bukan_disembunyikan(): void
-    {
-        Carbon::setTestNow(Carbon::parse('2026-09-02 00:30:00')); // 07.30 WIB, Rabu pagi
-        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
-
-        $res = $this->postJson('/api/jemput/estimasi', [
-            'jemput_lat' => -6.1754, 'jemput_lng' => 106.8272,
-            'tujuan_lat' => -6.2441, 'tujuan_lng' => 106.8003,
-        ]);
-
-        $res->assertOk();
-        $this->assertSame('pagi', $res->json('sibuk'));
-        $this->assertNotNull($res->json('sibuk_alasan'));
-        $this->assertGreaterThan(1.0, $res->json('sibuk_pengali'));
-    }
-
-    /**
-     * Jam sibuk mengikuti JAM DINDING PENUMPANG, bukan jam server.
-     *
-     * Aplikasi berjalan di UTC. Tanpa pengubahan zona, pukul 08.00 WIB dibaca
-     * sebagai pukul 01.00 dan penumpang jam delapan pagi dikenai pengali
-     * "larut malam" — persis kekeliruan yang sempat muncul di layar.
-     */
-    public function test_jam_sibuk_dibaca_di_wib_bukan_di_zona_server(): void
-    {
-        $tarif = new JemputTarif;
-
-        // 01.00 UTC = 08.00 WIB, Rabu: jendela pagi, bukan larut malam.
-        $pagi = $tarif->sibuk(new \DateTimeImmutable('2026-09-02 01:00:00', new \DateTimeZone('UTC')));
-        $this->assertSame('pagi', $pagi['nama']);
-
-        // 01.00 WIB memang larut malam, dan itu harus tetap terbaca begitu.
-        $malam = $tarif->sibuk(new \DateTimeImmutable('2026-09-01 18:00:00', new \DateTimeZone('UTC')));
-        $this->assertSame('malam', $malam['nama']);
-
-        // 03.00 UTC = 10.00 WIB: di luar semua jendela.
-        $netral = $tarif->sibuk(new \DateTimeImmutable('2026-09-02 03:00:00', new \DateTimeZone('UTC')));
-        $this->assertNull($netral['nama']);
-        $this->assertSame(1.0, $netral['pengali']);
-    }
-
-    /** Promo berbasis jam ikut aturan yang sama. */
+    /** Promo berbasis jam dibaca di WIB, bukan di zona server yang UTC. */
     public function test_promo_pagi_berlaku_pada_pagi_wib(): void
     {
         $promo = new PromoJemput;
         $pagi = $promo->cari('PAGI');
 
+        // 01.00 UTC = 08.00 WIB: masuk jendela pagi.
         $this->assertNull($promo->kenapaTidakBisa(
             $pagi, 50_000, false, new \DateTimeImmutable('2026-09-02 01:00:00', new \DateTimeZone('UTC')),
         ));
 
+        // 06.00 UTC = 13.00 WIB: di luar jendela, meski jam servernya "06".
         $this->assertNotNull($promo->kenapaTidakBisa(
             $pagi, 50_000, false, new \DateTimeImmutable('2026-09-02 06:00:00', new \DateTimeZone('UTC')),
         ));
+    }
+
+    /* ==================== Permintaan & pengali tarif ==================== */
+
+    /** @return array<string, mixed> */
+    private function estimasi(): array
+    {
+        return $this->postJson('/api/jemput/estimasi', [
+            'jemput_lat' => -6.1754, 'jemput_lng' => 106.8272,
+            'tujuan_lat' => -6.2441, 'tujuan_lng' => 106.8003,
+        ])->json();
+    }
+
+    /** Pesanan lain di sekitar titik jemput, dibuat berapa menit yang lalu. */
+    private function permintaanSekitar(int $jumlah, float $lat = -6.1760, float $lng = 106.8280, int $menitLalu = 2): void
+    {
+        for ($i = 0; $i < $jumlah; $i++) {
+            $task = Task::create([
+                'nomor_invoice' => 'UJI-'.$i.'-'.bin2hex(random_bytes(2)),
+                'customer_id' => User::factory()->create(['role' => 'customer'])->id,
+                'category_id' => Category::where('slug', 'bisajemput')->value('id'),
+                'tipe' => 'fixed',
+                'judul' => 'BisaJemput — uji permintaan',
+                'deskripsi' => 'uji',
+                'status' => 'pending',
+                'lokasi_alamat' => 'Sekitar Monas',
+                'lokasi_lat' => $lat,
+                'lokasi_lng' => $lng,
+                'harga' => 20_000,
+                'detail_layanan' => ['layanan' => 'jemput', 'tahap' => 'mencari'],
+            ]);
+
+            // created_at tidak fillable, jadi ditulis setelahnya — kalau tidak,
+            // "pesanan 20 menit lalu" tetap tercatat sebagai pesanan barusan
+            // dan uji jendela waktunya tidak menguji apa pun.
+            $task->forceFill(['created_at' => now()->subMinutes($menitLalu)])->saveQuietly();
+        }
+    }
+
+    /**
+     * Saat sepi, tarif TIDAK naik dan tidak ada banner apa pun.
+     *
+     * Ini keadaan bawaan, dan memang harus begitu: pengali yang muncul
+     * sepanjang hari berhenti bermakna dan cuma jadi harga yang lebih mahal.
+     */
+    public function test_tarif_tidak_naik_saat_sepi(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $hasil = $this->estimasi();
+
+        $this->assertNull($hasil['sibuk']);
+        $this->assertNull($hasil['sibuk_alasan']);
+        $this->assertEqualsWithDelta(1.0, $hasil['sibuk_pengali'], 0.001);
+
+        $baris = array_column($hasil['pilihan'][0]['baris'], 'label');
+        $this->assertEmpty(array_filter($baris, fn ($l) => str_contains($l, 'Permintaan tinggi')));
+    }
+
+    /**
+     * Yang menaikkan tarif adalah PERMINTAAN NYATA di sekitar titik jemput —
+     * banyak orang berebut pengemudi yang sama — bukan jam pada kalender dan
+     * bukan pula beban server.
+     */
+    public function test_tarif_naik_saat_banyak_permintaan_di_sekitar(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $sepi = $this->estimasi();
+        $this->permintaanSekitar(16);
+        $ramai = $this->estimasi();
+
+        $this->assertSame('tinggi', $ramai['sibuk']);
+        $this->assertSame(1.25, $ramai['sibuk_pengali']);
+        $this->assertStringContainsString('16 orang', $ramai['sibuk_alasan']);
+        $this->assertGreaterThan($sepi['pilihan'][0]['tarif'], $ramai['pilihan'][0]['tarif']);
+
+        // Kenaikannya tercantum sebagai barisnya sendiri, bukan diselipkan ke
+        // tarif dasar supaya tidak kelihatan.
+        $baris = array_column($ramai['pilihan'][0]['baris'], 'label');
+        $this->assertNotEmpty(array_filter($baris, fn ($l) => str_contains($l, 'Permintaan tinggi')));
+    }
+
+    public function test_pengali_permintaan_tidak_pernah_melewati_batas(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        // Jauh di atas ambang tertinggi: pengalinya tetap berhenti di 1,25.
+        $this->permintaanSekitar(120);
+
+        $this->assertSame(1.25, $this->estimasi()['sibuk_pengali']);
+    }
+
+    /** Permintaan di kota sebelah bukan alasan menaikkan tarif di sini. */
+    public function test_permintaan_jauh_tidak_menaikkan_tarif(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $this->permintaanSekitar(20, -6.9175, 107.6191); // Bandung
+
+        $this->assertNull($this->estimasi()['sibuk']);
+    }
+
+    /** Begitu pun permintaan yang sudah lewat: ramai tadi bukan ramai sekarang. */
+    public function test_permintaan_lama_tidak_dihitung(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $this->permintaanSekitar(20, -6.1760, 106.8280, PermintaanJemput::JENDELA_MENIT + 5);
+
+        $this->assertNull($this->estimasi()['sibuk']);
     }
 
     /* ==================== Perjalanan ==================== */
