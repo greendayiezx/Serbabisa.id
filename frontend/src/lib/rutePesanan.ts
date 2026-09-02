@@ -58,12 +58,15 @@ export function ruteTugas(task: Task): RouteLocationRaw {
    * cocok dibuka di halaman tugas generik.
    */
   /*
-   * Disinfektan belum punya halaman status sendiri; layar tugas generik sudah
-   * menampilkan rincian, harga, dan jadwalnya dengan benar. Dituliskan di sini
-   * supaya jelas ini keputusan, bukan kelalaian.
+   * Disinfektan: begitu laporannya ada, ITU yang dicari orang saat membuka
+   * pesanannya lagi — produk apa yang dipakai, berapa waktu kontaknya, dan foto
+   * sesudahnya. Selama belum ada, layar tugas generik sudah menampilkan
+   * rincian, harga, dan jadwalnya dengan benar.
    */
   if (task.detail_layanan?.layanan === 'disinfektan') {
-    return { name: 'task-detail', params: { id: task.id } }
+    return task.detail_layanan?.laporan && invoice
+      ? { name: 'task-bersih-disinfektan-laporan', params: { nomor: invoice } }
+      : { name: 'task-detail', params: { id: task.id } }
   }
 
   if (task.detail_layanan?.layanan === 'servis-ac') {

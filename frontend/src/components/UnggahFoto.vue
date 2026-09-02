@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
- * Petak unggah foto/video untuk permintaan servis.
+ * Petak unggah foto untuk permintaan layanan — dipakai Servis AC dan
+ * Disinfektan.
  *
  * Berkas dikirim sebagai data URL, pola yang sama dengan tanda tangan
  * permintaan kantor — tidak ada endpoint unggah terpisah, dan menambahkannya

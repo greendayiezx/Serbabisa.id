@@ -302,6 +302,14 @@ const router = createRouter({
       meta: { induk: 'task-bersih-disinfektan', roles: ['customer'] as Role[] },
     },
     {
+      // Laporan pekerjaan. Di luar /tasks/new karena pesanannya sudah jadi —
+      // ini yang dibuka setelah petugas selesai, bukan bagian dari pemesanan.
+      path: '/tasks/bersih/disinfektan/laporan/:nomor',
+      name: 'task-bersih-disinfektan-laporan',
+      component: () => import('@/views/bersih/DisinfektanLaporanView.vue'),
+      meta: { induk: 'task-list', roles: ['customer'] as Role[] },
+    },
+    {
       // Perbaikan & Pasang AC: halaman masuk yang bercabang tiga.
       path: '/tasks/new/servis-ac/perbaikan',
       name: 'servis-ac-perbaikan',

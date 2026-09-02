@@ -22,6 +22,14 @@ export interface DraftDisinfektan {
   catatan: string
   tanggal: string
   waktu: string
+  /**
+   * Foto area sebagai data URL, berkunci id slot.
+   *
+   * Ikut alasan store ini tidak disimpan ke localStorage, dan di sini alasannya
+   * lebih kuat lagi: beberapa foto ukuran penuh akan menabrak kuota
+   * penyimpanan peramban dan menggagalkan penyimpanan draf lain sekalian.
+   */
+  foto: Record<string, string>
 }
 
 export const useDisinfektanStore = defineStore('disinfektan', () => {

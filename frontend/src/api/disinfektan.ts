@@ -17,6 +17,8 @@ export interface PayloadDisinfektan {
   kondisi: string
   perhatian?: string[]
   catatan?: string
+  /** Foto area sebagai data URL; server memeriksa angka ajaibnya, bukan labelnya. */
+  foto?: { label: string; data: string }[]
 
   tanggal: string
   waktu: string
@@ -86,6 +88,64 @@ export async function ajukanPenawaranDisinfektan(
   const { data } = await apiClient.post<PermintaanDisinfektan>(
     '/bersih/disinfektan/permintaan',
     payload,
+  )
+  return data
+}
+
+/* ────────── Laporan pekerjaan ────────── */
+
+export interface FotoLaporan {
+  label: string
+  jalur: string
+  url: string
+}
+
+/**
+ * Produk yang benar-benar dipakai di lokasi, beserta waktu kontak DARI LABEL
+ * PRODUK ITU — bukan satu angka yang berlaku untuk semua produk.
+ */
+export interface ProdukLaporan {
+  nama: string
+  bahan_aktif: string
+  konsentrasi: string
+  waktu_kontak: string
+  catatan?: string
+  registrasi: string | null
+}
+
+export interface IsiLaporanDisinfektan {
+  nomor: string
+  selesai_pada: string
+  petugas: string
+  produk: ProdukLaporan
+  metode: string
+  area_dikerjakan: string[]
+  ventilasi_menit: number
+  aman_dimasuki_pada: string
+  catatan: string | null
+  sebelum: FotoLaporan[]
+  sesudah: FotoLaporan[]
+}
+
+export interface LaporanDisinfektan {
+  id: number
+  nomor: string
+  status: string | null
+  dijadwalkan_pada: string | null
+  alamat: string | null
+  properti: string | null
+  luas: string | null
+  ruangan: number | null
+  toilet: number | null
+  area: string[]
+  foto_pesanan: FotoLaporan[]
+  /** Null selama petugas belum menutup pekerjaannya. */
+  laporan: IsiLaporanDisinfektan | null
+}
+
+export async function ambilLaporanDisinfektan(nomor: string): Promise<LaporanDisinfektan> {
+  const { data } = await apiClient.get<LaporanDisinfektan>(
+    `/bersih/disinfektan/laporan/${encodeURIComponent(nomor)}`,
   )
   return data
 }

@@ -25,6 +25,7 @@ import {
   PROPERTI,
   golongan,
   hitungDisinfektan,
+  labelFoto,
 } from '@/lib/bersih/disinfektan'
 
 const router = useRouter()
@@ -46,6 +47,7 @@ const namaPerhatian = computed(() =>
     .join(', '),
 )
 const areaTampil = computed(() => AREA[golongan(draft.value?.properti ?? 'rumah')])
+const jumlahFoto = computed(() => Object.keys(draft.value?.foto ?? {}).length)
 
 const rincian = computed(() => {
   const d = draft.value
@@ -117,6 +119,7 @@ async function kirim() {
       kondisi: d.kondisi,
       perhatian: [...d.perhatian],
       catatan: d.catatan || undefined,
+      foto: Object.entries(d.foto).map(([id, data]) => ({ label: labelFoto(id), data })),
       tanggal: d.tanggal,
       waktu: d.waktu,
       nama_penerima: namaPenerima.value.trim(),
@@ -195,6 +198,10 @@ async function kirim() {
           <div v-if="namaPerhatian" class="flex justify-between gap-3">
             <span class="text-(--color-on-surface-variant) shrink-0">Perhatian</span>
             <span class="font-bold text-right leading-snug">{{ namaPerhatian }}</span>
+          </div>
+          <div v-if="jumlahFoto" class="flex justify-between gap-3">
+            <span class="text-(--color-on-surface-variant) shrink-0">Foto area</span>
+            <span class="font-bold text-right">{{ jumlahFoto }} foto terlampir</span>
           </div>
         </div>
 

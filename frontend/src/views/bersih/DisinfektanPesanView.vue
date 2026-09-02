@@ -15,6 +15,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
+import UnggahFoto from '@/components/UnggahFoto.vue'
 import PilihanField from '@/components/PilihanField.vue'
 import DatePickerField from '@/components/DatePickerField.vue'
 import TimePickerField from '@/components/TimePickerField.vue'
@@ -28,7 +29,9 @@ import {
   PERHATIAN_DITOLAK,
   PROPERTI,
   RUANGAN_TERMASUK,
+  SLOT_FOTO,
   TOILET_TERMASUK,
+  golongan,
   hitungDisinfektan,
 } from '@/lib/bersih/disinfektan'
 
@@ -47,8 +50,11 @@ const adaRisikoBiologis = ref(false)
 const catatan = ref('')
 const tanggal = ref('')
 const waktu = ref('')
+const foto = ref<Record<string, string>>({})
 
 const galat = ref<string | null>(null)
+
+const slotFoto = computed(() => SLOT_FOTO[golongan(properti.value)])
 
 function togglePerhatian(id: string) {
   const i = perhatian.value.indexOf(id)
@@ -73,6 +79,7 @@ onMounted(() => {
     catatan.value = d.catatan
     tanggal.value = d.tanggal
     waktu.value = d.waktu
+    foto.value = { ...d.foto }
     return
   }
 
@@ -107,6 +114,7 @@ function lanjut() {
     catatan: catatan.value,
     tanggal: tanggal.value,
     waktu: waktu.value,
+    foto: { ...foto.value },
   })
 
   router.push({ name: 'task-bersih-disinfektan-konfirmasi' })
@@ -327,6 +335,19 @@ function lanjut() {
           <DatePickerField v-model="tanggal" wajib />
           <TimePickerField v-model="waktu" wajib />
         </div>
+      </section>
+
+      <!-- 5. Foto area -->
+      <section class="bg-(--color-surface-0) rounded-2xl p-5">
+        <h2 class="text-[12px] font-extrabold uppercase tracking-wider text-(--color-azure) mb-1">
+          5. Foto Area
+        </h2>
+        <p class="text-[11.5px] text-(--color-on-surface-variant) mb-4 leading-snug">
+          Opsional, tapi membantu: dari foto ini petugas tahu permukaan apa saja yang ada sebelum
+          datang, dan foto yang sama jadi pembanding di laporan setelah pekerjaan selesai.
+        </p>
+
+        <UnggahFoto v-model="foto" :slot="slotFoto" />
       </section>
 
       <!-- Catatan -->

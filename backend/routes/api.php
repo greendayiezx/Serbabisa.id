@@ -140,6 +140,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // di atas 300 m² — keduanya diarahkan ke jalur yang benar, bukan ditagih.
     Route::post('/bersih/disinfektan/checkout', [DisinfektanController::class, 'store']);
     Route::post('/bersih/disinfektan/permintaan', [DisinfektanController::class, 'permintaan']);
+    // Laporan pekerjaan: produk dan waktu kontaknya baru ada setelah petugas
+    // mencatatnya di lokasi, jadi endpoint ini boleh menjawab "belum ada".
+    Route::get('/bersih/disinfektan/laporan/{nomor}', [DisinfektanController::class, 'laporan']);
 
     // BisaBersih Kantor: pesan langsung (kantor kecil/menengah).
     Route::post('/bersih/kantor/checkout', [KantorCheckoutController::class, 'store']);

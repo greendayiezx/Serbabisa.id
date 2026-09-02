@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\DisinfektanTarif;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -216,5 +217,169 @@ class DisinfektanTest extends TestCase
     public function test_butuh_login(): void
     {
         $this->postJson('/api/bersih/disinfektan/checkout', $this->payload())->assertUnauthorized();
+    }
+
+    /* ==================== Foto area ==================== */
+
+    public function test_foto_area_tersimpan_bersama_pesanan(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $res = $this->postJson('/api/bersih/disinfektan/checkout', $this->payload([
+            'foto' => [['label' => 'Ruang utama', 'data' => $this->pngSatuPiksel()]],
+        ]));
+
+        $res->assertCreated();
+        $foto = Task::latest('id')->first()->detail_layanan['foto'];
+
+        $this->assertCount(1, $foto);
+        $this->assertSame('Ruang utama', $foto[0]['label']);
+        Storage::disk('public')->assertExists($foto[0]['jalur']);
+    }
+
+    /**
+     * Berkas yang mengaku gambar tapi bukan gambar tidak boleh ikut tersimpan —
+     * dan tidak boleh membatalkan pesanannya juga. Pekerjaannya tetap bisa
+     * dikerjakan tanpa lampiran.
+     */
+    public function test_foto_palsu_dilewati_tanpa_membatalkan_pesanan(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $res = $this->postJson('/api/bersih/disinfektan/checkout', $this->payload([
+            'foto' => [
+                ['label' => 'Ruang utama', 'data' => $this->pngSatuPiksel()],
+                ['label' => 'Dapur', 'data' => 'data:image/png;base64,'.base64_encode('ini teks biasa')],
+            ],
+        ]));
+
+        $res->assertCreated();
+        $task = Task::latest('id')->first();
+
+        $this->assertCount(1, $task->detail_layanan['foto']);
+        $this->assertSame('Ruang utama', $task->detail_layanan['foto'][0]['label']);
+    }
+
+    /* ==================== Laporan pekerjaan ==================== */
+
+    public function test_laporan_belum_ada_sebelum_petugas_menutup_pekerjaan(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/bersih/disinfektan/checkout', $this->payload())->assertCreated();
+
+        $nomor = Task::latest('id')->first()->nomor_invoice;
+        $res = $this->getJson("/api/bersih/disinfektan/laporan/{$nomor}");
+
+        $res->assertOk();
+        $res->assertJsonPath('laporan', null);
+    }
+
+    public function test_laporan_pesanan_orang_lain_tidak_bisa_dibuka(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/bersih/disinfektan/checkout', $this->payload())->assertCreated();
+        $nomor = Task::latest('id')->first()->nomor_invoice;
+
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->getJson("/api/bersih/disinfektan/laporan/{$nomor}")->assertNotFound();
+    }
+
+    /**
+     * Inti seluruh layanan ini: waktu kontak MENGIKUTI PRODUK.
+     *
+     * Dua pesanan yang sama persis, dikerjakan dengan produk berbeda, harus
+     * melaporkan waktu kontak berbeda. Kalau uji ini bisa lolos dengan satu
+     * angka tetap, berarti aplikasinya sedang menjanjikan prosedur yang belum
+     * tentu benar untuk produk yang dipakai di lokasi.
+     */
+    public function test_waktu_kontak_di_laporan_mengikuti_produk_yang_dipakai(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $this->postJson('/api/bersih/disinfektan/checkout', $this->payload())->assertCreated();
+        $pertama = Task::latest('id')->first();
+        $this->artisan('bersih:laporan', ['nomor' => $pertama->nomor_invoice, '--produk' => 'alkohol'])
+            ->assertSuccessful();
+
+        $this->postJson('/api/bersih/disinfektan/checkout', $this->payload())->assertCreated();
+        $kedua = Task::latest('id')->first();
+        $this->artisan('bersih:laporan', ['nomor' => $kedua->nomor_invoice, '--produk' => 'benzalkonium'])
+            ->assertSuccessful();
+
+        $a = $this->getJson("/api/bersih/disinfektan/laporan/{$pertama->nomor_invoice}")->json('laporan');
+        $b = $this->getJson("/api/bersih/disinfektan/laporan/{$kedua->nomor_invoice}")->json('laporan');
+
+        $this->assertNotSame($a['produk']['waktu_kontak'], $b['produk']['waktu_kontak']);
+        $this->assertSame('30 detik', $a['produk']['waktu_kontak']);
+        $this->assertSame('10 menit', $b['produk']['waktu_kontak']);
+    }
+
+    public function test_laporan_mengisi_produk_dan_menutup_pekerjaan(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/bersih/disinfektan/checkout', $this->payload())->assertCreated();
+        $task = Task::latest('id')->first();
+
+        // Sebelum petugas datang, keduanya memang belum boleh terisi.
+        $this->assertNull($task->detail_layanan['produk']);
+        $this->assertNull($task->detail_layanan['waktu_kontak']);
+
+        $this->artisan('bersih:laporan', ['nomor' => $task->nomor_invoice])->assertSuccessful();
+
+        $task->refresh();
+        $this->assertNotNull($task->detail_layanan['produk']);
+        $this->assertSame('10 menit', $task->detail_layanan['waktu_kontak']);
+        $this->assertSame('selesai', $task->fulfillment_status);
+
+        $laporan = $this->getJson("/api/bersih/disinfektan/laporan/{$task->nomor_invoice}")->json('laporan');
+        $this->assertNotEmpty($laporan['area_dikerjakan']);
+        $this->assertStringStartsWith('LAP-', $laporan['nomor']);
+    }
+
+    /**
+     * Nomor izin edar dibiarkan kosong sampai betul-betul disalin dari kemasan.
+     * Angka karangan di kolom ini lebih buruk daripada kolom yang kosong.
+     */
+    public function test_nomor_izin_edar_kosong_kalau_tidak_dicatat(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/bersih/disinfektan/checkout', $this->payload())->assertCreated();
+        $nomor = Task::latest('id')->first()->nomor_invoice;
+
+        $this->artisan('bersih:laporan', ['nomor' => $nomor])->assertSuccessful();
+
+        $this->getJson("/api/bersih/disinfektan/laporan/{$nomor}")
+            ->assertJsonPath('laporan.produk.registrasi', null);
+    }
+
+    /**
+     * Foto pesanan adalah foto "sebelum" yang sesungguhnya, jadi laporannya
+     * memakai berkas yang sama dan menandainya begitu.
+     */
+    public function test_laporan_memakai_foto_pesanan_sebagai_foto_sebelum(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $this->postJson('/api/bersih/disinfektan/checkout', $this->payload([
+            'foto' => [['label' => 'Ruang utama', 'data' => $this->pngSatuPiksel()]],
+        ]))->assertCreated();
+        $nomor = Task::latest('id')->first()->nomor_invoice;
+
+        $this->artisan('bersih:laporan', ['nomor' => $nomor])->assertSuccessful();
+
+        $laporan = $this->getJson("/api/bersih/disinfektan/laporan/{$nomor}")->json('laporan');
+
+        $this->assertCount(1, $laporan['sebelum']);
+        $this->assertSame('Sebelum — Ruang utama', $laporan['sebelum'][0]['label']);
+        $this->assertSame([], $laporan['sesudah']);
+    }
+
+    private function pngSatuPiksel(): string
+    {
+        return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ'.
+            'AAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
     }
 }

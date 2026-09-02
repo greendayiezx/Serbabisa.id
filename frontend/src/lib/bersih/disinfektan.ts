@@ -139,6 +139,40 @@ export const APD_PETUGAS = [
   'Pakaian kerja',
 ]
 
+/**
+ * Slot foto area, mengikuti jenis propertinya.
+ *
+ * Meminta "foto dapur" pada pemesan kantor hanya menghasilkan petak kosong, dan
+ * petak kosong membuat seluruh bagian ini terbaca sebagai tidak perlu diisi.
+ */
+export const SLOT_FOTO: Record<string, { id: string; label: string }[]> = {
+  hunian: [
+    { id: 'ruang-utama', label: 'Ruang utama' },
+    { id: 'dapur', label: 'Dapur' },
+    { id: 'kamar-mandi', label: 'Kamar mandi' },
+    { id: 'kamar', label: 'Kamar' },
+    { id: 'titik-sentuh', label: 'Titik sering disentuh' },
+    { id: 'lainnya', label: 'Area lain' },
+  ],
+  usaha: [
+    { id: 'area-kerja', label: 'Area kerja' },
+    { id: 'resepsionis', label: 'Resepsionis' },
+    { id: 'pantry', label: 'Pantry' },
+    { id: 'toilet', label: 'Toilet' },
+    { id: 'titik-sentuh', label: 'Titik sering disentuh' },
+    { id: 'lainnya', label: 'Area lain' },
+  ],
+}
+
+/** Nama yang terbaca untuk sebuah slot foto; dipakai sebagai label kiriman. */
+export function labelFoto(id: string): string {
+  for (const daftar of Object.values(SLOT_FOTO)) {
+    const cocok = daftar.find((s) => s.id === id)
+    if (cocok) return cocok.label
+  }
+  return id
+}
+
 export function golongan(properti: string): 'hunian' | 'usaha' {
   return PROPERTI_USAHA.includes(properti) ? 'usaha' : 'hunian'
 }

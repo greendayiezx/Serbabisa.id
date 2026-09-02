@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\MenyimpanFotoTugas;
 use App\Http\Controllers\Controller;
 use App\Models\Address;
 use App\Models\Category;
@@ -12,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -31,6 +33,8 @@ use Illuminate\Validation\ValidationException;
  */
 class DisinfektanController extends Controller
 {
+    use MenyimpanFotoTugas;
+
     public function __construct(
         private readonly DisinfektanTarif $tarif,
         private readonly NomorInvoice $nomorInvoice,
@@ -64,6 +68,14 @@ class DisinfektanController extends Controller
             'lokasi_lat' => ['required_without:address_id', 'numeric'],
             'lokasi_lng' => ['required_without:address_id', 'numeric'],
             'metode' => ['nullable', 'string', 'max:30'],
+
+            /*
+             * Foto area dikirim bersama pesanan. Gunanya bukan hiasan: dari
+             * foto inilah petugas tahu permukaan apa saja yang ada sebelum
+             * datang — dan foto yang sama jadi pembanding "sebelum" di laporan
+             * setelah pekerjaan selesai.
+             */
+            ...$this->aturanFoto(6),
         ]);
 
         $perhatian = $data['perhatian'] ?? [];
@@ -162,10 +174,78 @@ class DisinfektanController extends Controller
             return $task;
         });
 
+        $this->simpanFoto($task, $data, 'bersih');
+
         return response()->json([
-            ...$task->load(['items', 'payment'])->toArray(),
+            ...$task->fresh()->load(['items', 'payment'])->toArray(),
             'rincian' => $rincian,
         ], 201);
+    }
+
+    /**
+     * Laporan pekerjaan — dibuka pelanggan setelah petugas selesai.
+     *
+     * Isinya catatan apa yang DIKERJAKAN, bukan janji hasil. Yang paling
+     * penting di sini justru waktu kontaknya: angkanya datang dari label produk
+     * yang benar-benar dipakai di lokasi, dicatat petugas, dan tidak pernah
+     * dipatok di katalog. Selama laporannya belum ada, jawabannya "belum ada" —
+     * bukan angka contoh.
+     */
+    public function laporan(Request $request, string $nomor): JsonResponse
+    {
+        $task = Task::where('nomor_invoice', strtoupper(trim($nomor)))
+            ->where('customer_id', $request->user()->id)
+            ->firstOrFail();
+
+        $detail = $task->detail_layanan ?? [];
+
+        if (($detail['layanan'] ?? null) !== 'disinfektan') {
+            abort(404);
+        }
+
+        return response()->json([
+            'id' => $task->id,
+            'nomor' => $task->nomor_invoice,
+            'status' => $task->fulfillment_status,
+            'dijadwalkan_pada' => $task->dijadwalkan_pada?->toIso8601String(),
+            'alamat' => $task->lokasi_alamat,
+            'properti' => $detail['properti'] ?? null,
+            'luas' => $detail['luas'] ?? null,
+            'ruangan' => $detail['ruangan'] ?? null,
+            'toilet' => $detail['toilet'] ?? null,
+            'area' => $detail['area'] ?? [],
+            'foto_pesanan' => $this->denganUrl($detail['foto'] ?? []),
+            'laporan' => $this->laporanDenganUrl($detail['laporan'] ?? null),
+        ]);
+    }
+
+    /**
+     * @param  list<array{label:string, jalur:string}>  $foto
+     * @return list<array{label:string, jalur:string, url:string}>
+     */
+    private function denganUrl(array $foto): array
+    {
+        return array_map(
+            fn ($f) => [...$f, 'url' => Storage::disk('public')->url($f['jalur'])],
+            $foto,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $laporan
+     * @return array<string, mixed>|null
+     */
+    private function laporanDenganUrl(?array $laporan): ?array
+    {
+        if (! $laporan) {
+            return null;
+        }
+
+        return [
+            ...$laporan,
+            'sebelum' => $this->denganUrl($laporan['sebelum'] ?? []),
+            'sesudah' => $this->denganUrl($laporan['sesudah'] ?? []),
+        ];
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Concerns\MenyimpanFotoTugas;
 use App\Http\Controllers\Controller;
 use App\Models\Address;
 use App\Models\Category;
@@ -14,7 +15,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /**
@@ -33,6 +33,8 @@ use Illuminate\Validation\Rule;
  */
 class ACPerbaikanController extends Controller
 {
+    use MenyimpanFotoTugas;
+
     public function __construct(
         private readonly PerbaikanTarif $tarif,
         private readonly NomorInvoice $nomorInvoice,
@@ -151,7 +153,7 @@ class ACPerbaikanController extends Controller
             return $task;
         });
 
-        $this->simpanFoto($task, $data);
+        $this->simpanFoto($task, $data, 'servis-ac');
 
         return response()->json([
             ...$task->fresh()->load(['items', 'payment'])->toArray(),
@@ -253,7 +255,7 @@ class ACPerbaikanController extends Controller
             'detail_layanan' => $spek,
         ]);
 
-        $this->simpanFoto($task, $data);
+        $this->simpanFoto($task, $data, 'servis-ac');
 
         return response()->json([
             'id' => $task->id,
@@ -266,74 +268,6 @@ class ACPerbaikanController extends Controller
     }
 
     /* ==================== Bersama ==================== */
-
-    /**
-     * Foto dikirim sebagai data URL, pola yang sama dengan tanda tangan
-     * permintaan kantor. Dibatasi jumlah dan ukurannya supaya satu permintaan
-     * tidak bisa mengirim puluhan megabita.
-     *
-     * @return array<string, mixed>
-     */
-    private function aturanFoto(): array
-    {
-        return [
-            'foto' => ['nullable', 'array', 'max:8'],
-            'foto.*.label' => ['required_with:foto', 'string', 'max:40'],
-            'foto.*.data' => ['required_with:foto', 'string', 'max:4000000'],
-        ];
-    }
-
-    /**
-     * Simpan foto yang lolos pemeriksaan; yang gagal dilewati diam-diam.
-     *
-     * Kegagalan satu foto tidak boleh membatalkan pesanan yang sudah dibuat —
-     * pekerjaannya tetap bisa dikerjakan tanpa lampiran, dan membatalkan
-     * seluruhnya karena satu berkas rusak merugikan pelanggan.
-     */
-    private function simpanFoto(Task $task, array $data): void
-    {
-        $daftar = $data['foto'] ?? [];
-        if (! $daftar) {
-            return;
-        }
-
-        $tersimpan = [];
-        foreach (array_values($daftar) as $i => $f) {
-            $jalur = $this->simpanSatuFoto($task->id, $i, (string) $f['data']);
-            if ($jalur) {
-                $tersimpan[] = ['label' => $f['label'], 'jalur' => $jalur];
-            }
-        }
-
-        if ($tersimpan) {
-            $task->update(['detail_layanan' => [...$task->detail_layanan, 'foto' => $tersimpan]]);
-        }
-    }
-
-    private function simpanSatuFoto(int $taskId, int $urutan, string $dataUrl): ?string
-    {
-        if (! preg_match('#^data:image/(png|jpeg);base64,([A-Za-z0-9+/=\s]+)$#', $dataUrl, $m)) {
-            return null;
-        }
-
-        $biner = base64_decode(preg_replace('/\s+/', '', $m[2]), true);
-        if ($biner === false || $biner === '') {
-            return null;
-        }
-
-        // Diperiksa dari angka ajaibnya, bukan dari yang ditulis klien: header
-        // data URL bisa mengaku apa saja.
-        $png = substr($biner, 0, 8) === "\x89PNG\r\n\x1a\n";
-        $jpeg = substr($biner, 0, 3) === "\xFF\xD8\xFF";
-        if (! $png && ! $jpeg) {
-            return null;
-        }
-
-        $jalur = "servis-ac/{$taskId}-{$urutan}.".($png ? 'png' : 'jpg');
-        Storage::disk('public')->put($jalur, $biner);
-
-        return $jalur;
-    }
 
     /** Nomor permintaan penawaran; berbeda dari invoice supaya terbaca beda. */
     private function nomorPermintaan(): string
