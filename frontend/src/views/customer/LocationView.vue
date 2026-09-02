@@ -8,6 +8,7 @@ import Icon from '@/components/icons/Icon.vue'
 import PolaBisaBersih from '@/components/bersih/PolaBisaBersih.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import { useLocationStore, kunciAlamat, type PlaceItem, type SavedPlaceKey, type TaskLocation } from '@/stores/location'
+import { useJemputStore } from '@/stores/jemput'
 import { useAuthStore } from '@/stores/auth'
 import { useDriverStore } from '@/stores/driver'
 import { driverPinIcon } from '@/lib/driverIcon'
@@ -20,6 +21,7 @@ import cardBorderBisaAngkutMalam from '@/assets/card-border-BisaAngkut-malam.png
 import AngkutHeroArt from '@/components/angkut/AngkutHeroArt.vue'
 import BisaBelanjaHeroArt from '@/components/belanja/BisaBelanjaHeroArt.vue'
 import BisaBersihHeroArt from '@/components/bersih/BisaBersihHeroArt.vue'
+import BisaJemputHeroArt from '@/components/jemput/BisaJemputHeroArt.vue'
 import { heroTimeOfDayFromHour } from '@/lib/heroSky'
 import { useSkeleton } from '@/composables/useSkeleton'
 import LokasiSkeleton from '@/components/skeleton/LokasiSkeleton.vue'
@@ -27,6 +29,7 @@ import LokasiSkeleton from '@/components/skeleton/LokasiSkeleton.vue'
 const router = useRouter()
 const route = useRoute()
 const locationStore = useLocationStore()
+const jemputStore = useJemputStore()
 const authStore = useAuthStore()
 const driverStore = useDriverStore()
 
@@ -225,6 +228,7 @@ const bisaAngkutHeaderImages: Record<TimeOfDay, string> = {
 const isBisaAngkut = computed(() => route.query.category === 'bisaangkut' || route.name === 'task-angkut-location')
 const isBisaBelanja = computed(() => route.query.category === 'bisabelanja')
 const isBisaBersih = computed(() => route.query.category === 'bisabersih')
+const isBisaJemput = computed(() => route.query.category === 'bisajemput')
 
 const cardBorderLocationImg = computed(() =>
   isBisaAngkut.value
@@ -591,6 +595,19 @@ function finishLocationSelection() {
     return
   }
 
+  /*
+   * BisaJemput tidak langsung ke pemesanan: alamat yang dipilih di sini baru
+   * jadi TITIK JEMPUT setelah dikonfirmasi di peta. Hasil pencarian alamat
+   * menunjuk ke tengah jalan atau ke gedung, bukan ke tempat orang berdiri —
+   * dan pengemudi yang menunggu di titik yang salah adalah cara paling umum
+   * sebuah perjalanan batal.
+   */
+  if (route.query.category === 'bisajemput') {
+    jemputStore.setJemput({ alamat: place.alamat, lat: place.lat, lng: place.lng })
+    router.push({ name: 'task-jemput-titik' })
+    return
+  }
+
   goBackOrHome()
 }
 
@@ -709,6 +726,28 @@ watch(skelTampil, async (masihSkeleton) => {
         <BisaBersihHeroArt :greeting="greeting" :nama="firstName" :subtitle="subtitleText" :time-of-day="heroTimeOfDay" />
       </div>
   
+      <!-- Full-Width Header: BisaJemput, sekeluarga dengan hero lain — langit,
+           siluet kota, dan lampu jalan ikut waktu nyata lewat heroTimeOfDay. -->
+      <div
+        v-else-if="isBisaJemput"
+        class="relative w-full overflow-hidden bg-[#0D1536] rounded-b-[2rem]"
+      >
+        <BisaJemputHeroArt :time-of-day="heroTimeOfDay" />
+
+        <div
+          class="absolute inset-x-5 bottom-16 z-10 flex flex-col items-center justify-center text-center"
+        >
+          <h1
+            class="font-display font-extrabold text-[16px] sm:text-[18px] leading-tight text-white text-center drop-shadow-sm"
+          >
+            {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
+          </h1>
+          <p class="text-white/95 text-[12px] sm:text-[13.5px] font-bold text-center mt-0.5">
+            Mau dijemput di mana?
+          </p>
+        </div>
+      </div>
+
       <!-- Full-Width Header: ilustrasi PNG lokasi lainnya (pagi/sore/malam) -->
       <div v-else class="relative w-full overflow-hidden bg-[#155b0e]">
         <div class="relative w-full">

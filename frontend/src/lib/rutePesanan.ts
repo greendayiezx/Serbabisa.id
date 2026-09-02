@@ -63,6 +63,15 @@ export function ruteTugas(task: Task): RouteLocationRaw {
    * sesudahnya. Selama belum ada, layar tugas generik sudah menampilkan
    * rincian, harga, dan jadwalnya dengan benar.
    */
+  /*
+   * BisaJemput selalu punya halaman perjalanannya sendiri: yang dicari orang
+   * saat membuka pesanan ini bukan rincian tagihan, melainkan pengemudi mana
+   * yang datang dan sudah sampai mana.
+   */
+  if (task.detail_layanan?.layanan === 'jemput' && invoice) {
+    return { name: 'task-jemput-perjalanan', params: { nomor: invoice } }
+  }
+
   if (task.detail_layanan?.layanan === 'disinfektan') {
     return task.detail_layanan?.laporan && invoice
       ? { name: 'task-bersih-disinfektan-laporan', params: { nomor: invoice } }

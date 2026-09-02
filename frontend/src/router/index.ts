@@ -302,6 +302,37 @@ const router = createRouter({
       meta: { induk: 'task-bersih-disinfektan', roles: ['customer'] as Role[] },
     },
     {
+      /*
+       * BisaJemput. Titik jemput berdiri sebagai halamannya sendiri, bukan
+       * satu langkah di dalam halaman pemesanan: ia harus dilewati sekali per
+       * perjalanan, dan halaman berikutnya memulangkan ke sini kalau
+       * konfirmasinya belum ada.
+       */
+      path: '/tasks/new/jemput/titik',
+      name: 'task-jemput-titik',
+      component: () => import('@/views/jemput/JemputTitikView.vue'),
+      meta: { induk: 'task-location', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/jemput/pesan',
+      name: 'task-jemput-pesan',
+      component: () => import('@/views/jemput/JemputPesanView.vue'),
+      meta: { induk: 'task-jemput-titik', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/jemput/ringkasan',
+      name: 'task-jemput-ringkasan',
+      component: () => import('@/views/jemput/JemputRingkasanView.vue'),
+      meta: { induk: 'task-jemput-pesan', roles: ['customer'] as Role[] },
+    },
+    {
+      // Perjalanan yang sudah jadi: di luar /tasks/new.
+      path: '/tasks/jemput/:nomor',
+      name: 'task-jemput-perjalanan',
+      component: () => import('@/views/jemput/JemputPerjalananView.vue'),
+      meta: { induk: 'task-list', roles: ['customer'] as Role[] },
+    },
+    {
       // Laporan pekerjaan. Di luar /tasks/new karena pesanannya sudah jadi —
       // ini yang dibuka setelah petugas selesai, bukan bagian dari pemesanan.
       path: '/tasks/bersih/disinfektan/laporan/:nomor',

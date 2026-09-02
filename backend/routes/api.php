@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\DeepCheckoutController;
 use App\Http\Controllers\Api\DisinfektanController;
 use App\Http\Controllers\Api\FreonController;
 use App\Http\Controllers\Api\InvoiceController;
+use App\Http\Controllers\Api\JemputController;
 use App\Http\Controllers\Api\KantorCheckoutController;
 use App\Http\Controllers\Api\KantorPermintaanController;
 use App\Http\Controllers\Api\LanggananController;
@@ -143,6 +144,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // Laporan pekerjaan: produk dan waktu kontaknya baru ada setelah petugas
     // mencatatnya di lokasi, jadi endpoint ini boleh menjawab "belum ada".
     Route::get('/bersih/disinfektan/laporan/{nomor}', [DisinfektanController::class, 'laporan']);
+
+    /*
+     * BisaJemput. Estimasi memakai POST karena isinya empat koordinat, dan
+     * koordinat titik jemput seseorang tidak pantas nyangkut di log akses
+     * sebagai query string.
+     */
+    Route::post('/jemput/estimasi', [JemputController::class, 'estimasi']);
+    Route::post('/jemput/checkout', [JemputController::class, 'checkout']);
+    Route::get('/jemput/{nomor}', [JemputController::class, 'show']);
+    Route::post('/jemput/{nomor}/batal', [JemputController::class, 'batal']);
+    Route::post('/jemput/{nomor}/nilai', [JemputController::class, 'nilai']);
 
     // BisaBersih Kantor: pesan langsung (kantor kecil/menengah).
     Route::post('/bersih/kantor/checkout', [KantorCheckoutController::class, 'store']);
