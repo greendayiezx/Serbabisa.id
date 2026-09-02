@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Services\JemputTarif;
 use App\Services\NomorInvoice;
 use App\Services\PromoJemput;
+use App\Services\RuteJalan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -33,8 +34,40 @@ class JemputController extends Controller
     public function __construct(
         private readonly JemputTarif $tarif,
         private readonly PromoJemput $promo,
+        private readonly RuteJalan $rute,
         private readonly NomorInvoice $nomorInvoice,
     ) {}
+
+    /**
+     * Jarak yang dipakai MENAGIH, sekaligus garis yang digambar di peta.
+     *
+     * Satu sumber untuk keduanya. Kalau peta digambar dari rute jalan
+     * sementara tagihan dihitung dari garis lurus, peta akan berkata 9 km
+     * sambil nota berkata 7 km — dan yang dianggap salah selalu notanya.
+     *
+     * @return array{km:float, geometri:list<array{0:float,1:float}>|null, lewat_jalan:bool}
+     */
+    private function jarak(array $data, string $awalan = 'jemput'): array
+    {
+        $lat1 = (float) $data["{$awalan}_lat"];
+        $lng1 = (float) $data["{$awalan}_lng"];
+        $lat2 = (float) $data['tujuan_lat'];
+        $lng2 = (float) $data['tujuan_lng'];
+
+        $rute = $this->rute->cari($lat1, $lng1, $lat2, $lng2);
+
+        if ($rute) {
+            return ['km' => $rute['km'], 'geometri' => $rute['geometri'], 'lewat_jalan' => true];
+        }
+
+        // Layanan rute tidak terjangkau: perjalanan tetap bisa dipesan dengan
+        // perkiraan garis lurus, dan layar menyebutkan bahwa itu perkiraan.
+        return [
+            'km' => $this->tarif->jarakKm($lat1, $lng1, $lat2, $lng2),
+            'geometri' => null,
+            'lewat_jalan' => false,
+        ];
+    }
 
     /**
      * Perkiraan tarif semua pilihan untuk satu rute.
@@ -53,10 +86,7 @@ class JemputController extends Controller
             'tujuan_lng' => ['required', 'numeric', 'between:-180,180'],
         ]);
 
-        $km = $this->tarif->jarakKm(
-            (float) $data['jemput_lat'], (float) $data['jemput_lng'],
-            (float) $data['tujuan_lat'], (float) $data['tujuan_lng'],
-        );
+        ['km' => $km, 'geometri' => $geometri, 'lewat_jalan' => $lewatJalan] = $this->jarak($data);
 
         if ($km <= 0.0) {
             throw ValidationException::withMessages([
@@ -91,6 +121,8 @@ class JemputController extends Controller
 
         return response()->json([
             'km' => $km,
+            'geometri' => $geometri,
+            'lewat_jalan' => $lewatJalan,
             'sibuk' => $pilihan[0]['sibuk'] ?? null,
             'sibuk_alasan' => $pilihan[0]['sibuk_alasan'] ?? null,
             'sibuk_pengali' => $pilihan[0]['sibuk_pengali'] ?? 1.0,
@@ -152,10 +184,10 @@ class JemputController extends Controller
             ]);
         }
 
-        $km = $this->tarif->jarakKm(
-            (float) $data['jemput_lat'], (float) $data['jemput_lng'],
-            (float) $data['tujuan_lat'], (float) $data['tujuan_lng'],
-        );
+        // Dihitung ulang di sini, tidak memakai angka dari langkah estimasi:
+        // hasilnya sudah tersimpan sebentar di cache, jadi murah, dan yang
+        // menagih tetap perhitungan server sendiri.
+        ['km' => $km, 'geometri' => $geometri, 'lewat_jalan' => $lewatJalan] = $this->jarak($data);
 
         if ($km <= 0.0 || $km > JemputTarif::JARAK_MAKS_KM) {
             throw ValidationException::withMessages([
@@ -193,7 +225,7 @@ class JemputController extends Controller
             ? Carbon::parse($data['jadwal_pada'])
             : null;
 
-        $task = DB::transaction(function () use ($user, $data, $rincian, $km, $total, $potongan, $promoDipakai, $jadwal) {
+        $task = DB::transaction(function () use ($user, $data, $rincian, $km, $geometri, $lewatJalan, $total, $potongan, $promoDipakai, $jadwal) {
             $task = Task::create([
                 'nomor_invoice' => $this->nomorInvoice->terbitkan()['invoice'],
                 'customer_id' => $user->id,
@@ -224,6 +256,11 @@ class JemputController extends Controller
                     'label' => $rincian['label'],
                     'km' => $km,
                     'menit' => $rincian['menit'],
+                    // Rute yang dipakai menghitung jaraknya, disimpan supaya
+                    // layar perjalanan menggambar garis yang sama dengan yang
+                    // ditagih — bukan menggambar ulang dengan cara lain.
+                    'geometri' => $geometri,
+                    'lewat_jalan' => $lewatJalan,
                     'penumpang' => (int) $data['penumpang'],
                     'untuk_orang_lain' => (bool) ($data['untuk_orang_lain'] ?? false),
 
@@ -300,6 +337,8 @@ class JemputController extends Controller
             'kelas' => $d['kelas'] ?? null,
             'km' => $d['km'] ?? null,
             'menit' => $d['menit'] ?? null,
+            'geometri' => $d['geometri'] ?? null,
+            'lewat_jalan' => $d['lewat_jalan'] ?? false,
             'penumpang' => $d['penumpang'] ?? 1,
             'untuk_orang_lain' => $d['untuk_orang_lain'] ?? false,
             'nama_penumpang' => $task->nama_penerima,

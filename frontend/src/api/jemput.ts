@@ -11,6 +11,13 @@ import type { PilihanJemput } from '@/lib/jemput'
 
 export interface HasilEstimasi {
   km: number
+  /**
+   * Titik-titik rute jalan sebagai [lat, lng] — dari perhitungan yang SAMA
+   * dengan yang dipakai menagih. Null kalau layanan rute tidak terjangkau;
+   * saat itu km-nya perkiraan garis lurus dan layar mengatakannya.
+   */
+  geometri: [number, number][] | null
+  lewat_jalan: boolean
   sibuk: string | null
   sibuk_alasan: string | null
   sibuk_pengali: number
@@ -82,6 +89,8 @@ export interface Perjalanan {
   kelas: string | null
   km: number | null
   menit: number | null
+  geometri: [number, number][] | null
+  lewat_jalan: boolean
   penumpang: number
   untuk_orang_lain: boolean
   nama_penumpang: string | null

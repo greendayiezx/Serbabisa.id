@@ -9,6 +9,8 @@ use App\Services\JemputTarif;
 use App\Services\PromoJemput;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -32,6 +34,49 @@ class JemputTest extends TestCase
         // sibuk dan promo waktu. Ditulis dalam UTC karena itu zona aplikasi;
         // yang dibaca aturan jam sibuk adalah padanannya di WIB.
         Carbon::setTestNow(Carbon::parse('2026-09-02 03:00:00'));
+
+        Cache::flush();
+
+        /*
+         * Uji tidak boleh menyentuh jaringan. Bawaannya layanan rute dianggap
+         * tidak terjangkau, jadi yang teruji di sebagian besar berkas ini
+         * adalah jalur cadangan garis lurus — dan itu memang jalur yang harus
+         * tetap benar saat penyedia rute mati.
+         */
+        Http::preventStrayRequests();
+
+        /*
+         * Satu stub yang membaca $ruteJawaban, bukan dua stub yang saling
+         * menimpa: Http::fake() menggabungkan pendaftaran dan yang PERTAMA
+         * cocok yang dipakai, jadi memanggilnya lagi di dalam uji tidak akan
+         * menggantikan stub dari setUp ini.
+         */
+        Http::fake([
+            'api.mapbox.com/*' => fn () => $this->ruteJawaban
+                ? Http::response($this->ruteJawaban)
+                : Http::response([], 500),
+        ]);
+    }
+
+    /** @var array<string, mixed>|null */
+    private ?array $ruteJawaban = null;
+
+    /** Jawaban rute palsu: satu rute tiga titik dengan jarak tertentu. */
+    private function fakeRute(float $meter): void
+    {
+        $this->ruteJawaban = [
+            'routes' => [[
+                'distance' => $meter,
+                'duration' => 1500,
+                'geometry' => [
+                    'coordinates' => [
+                        [106.8272, -6.1754],
+                        [106.8150, -6.2100],
+                        [106.8003, -6.2441],
+                    ],
+                ],
+            ]],
+        ];
     }
 
     protected function tearDown(): void
@@ -120,6 +165,59 @@ class JemputTest extends TestCase
             'jemput_lat' => -6.1754, 'jemput_lng' => 106.8272,
             'tujuan_lat' => -6.1754, 'tujuan_lng' => 106.8272,
         ])->assertStatus(422);
+    }
+
+    /**
+     * Garis di peta dan angka di nota berasal dari SATU perhitungan.
+     *
+     * Rute jalan selalu lebih panjang daripada garis lurus; kalau petanya
+     * digambar dari rute sementara tagihannya dari garis lurus, peta berkata
+     * 9 km sambil nota berkata 7 km — dan yang dianggap salah selalu notanya.
+     */
+    public function test_jarak_yang_ditagih_sama_dengan_rute_yang_digambar(): void
+    {
+        $this->fakeRute(9_100);
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $estimasi = $this->postJson('/api/jemput/estimasi', [
+            'jemput_lat' => -6.1754, 'jemput_lng' => 106.8272,
+            'tujuan_lat' => -6.2441, 'tujuan_lng' => 106.8003,
+        ]);
+
+        $estimasi->assertOk();
+        $this->assertSame(9.1, $estimasi->json('km'));
+        $this->assertTrue($estimasi->json('lewat_jalan'));
+        $this->assertCount(3, $estimasi->json('geometri'));
+        // GeoJSON menulis [lng, lat]; yang keluar harus sudah [lat, lng].
+        $this->assertSame([-6.1754, 106.8272], $estimasi->json('geometri.0'));
+
+        $this->postJson('/api/jemput/checkout', $this->payload())->assertCreated();
+        $d = Task::latest('id')->first()->detail_layanan;
+
+        $this->assertSame(9.1, $d['km']);
+        $this->assertTrue($d['lewat_jalan']);
+        $this->assertCount(3, $d['geometri']);
+    }
+
+    /**
+     * Penyedia rute mati bukan alasan menolak pesanan: jaraknya kembali ke
+     * perkiraan garis lurus, dan layar menyebutkannya sebagai perkiraan.
+     */
+    public function test_rute_gagal_diambil_jatuh_ke_perkiraan_garis_lurus(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $res = $this->postJson('/api/jemput/estimasi', [
+            'jemput_lat' => -6.1754, 'jemput_lng' => 106.8272,
+            'tujuan_lat' => -6.2441, 'tujuan_lng' => 106.8003,
+        ]);
+
+        $res->assertOk();
+        $this->assertFalse($res->json('lewat_jalan'));
+        $this->assertNull($res->json('geometri'));
+        $this->assertGreaterThan(7, $res->json('km'));
+
+        $this->postJson('/api/jemput/checkout', $this->payload())->assertCreated();
     }
 
     /* ==================== Titik jemput ==================== */

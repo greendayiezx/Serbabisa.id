@@ -24,6 +24,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+     * Dipakai untuk mengambil rute jalan BisaJemput. Token publik yang sama
+     * dengan yang dipakai peta di sisi klien; kalau kosong, jaraknya kembali
+     * ke perkiraan garis lurus dan aplikasi tetap jalan.
+     */
+    'mapbox' => [
+        'token' => env('MAPBOX_TOKEN'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_KEY'),
     ],
