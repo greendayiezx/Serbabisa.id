@@ -332,9 +332,14 @@ const router = createRouter({
       meta: { induk: 'task-jemput-pesan', roles: ['customer'] as Role[] },
     },
     {
-      path: '/tasks/new/jemput/ringkasan',
-      name: 'task-jemput-ringkasan',
-      component: () => import('@/views/jemput/JemputRingkasanView.vue'),
+      /*
+       * Voucher: halaman penuh, dibuka dari chip promo di layar pemesanan.
+       * Potongan tiap voucher dihitung dari pilihan kendaraan yang sedang
+       * dipilih, jadi halaman ini hanya berarti kalau pilihannya sudah ada.
+       */
+      path: '/tasks/new/jemput/voucher',
+      name: 'task-jemput-voucher',
+      component: () => import('@/views/jemput/JemputVoucherView.vue'),
       meta: { induk: 'task-jemput-pesan', roles: ['customer'] as Role[] },
     },
     {

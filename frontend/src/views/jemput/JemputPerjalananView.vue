@@ -18,6 +18,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
+import LottieIcon from '@/components/LottieIcon.vue'
+import animasiMencari from '@/assets/lottie/jemput-mencari-pengemudi.json'
 import {
   ambilPerjalanan,
   batalkanPerjalanan,
@@ -179,8 +181,29 @@ async function kirimNilai() {
     </p>
 
     <main v-else-if="data" class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
+      <!--
+        Mencari pengemudi: satu-satunya tahap yang berdiri sendiri sebagai
+        layar, karena di sinilah orang menunggu tanpa tahu berapa lama. Radar
+        yang berdenyut memberi tanda bahwa sistemnya masih bekerja — dan
+        kalimat di bawahnya menyebut apa adanya bahwa belum ada yang ditugaskan
+        dan belum ada yang ditagih.
+      -->
+      <section v-if="tahap === 'mencari'" class="bg-(--color-surface-0) rounded-2xl p-6 text-center">
+        <LottieIcon :data="animasiMencari" :size="150" class="mx-auto" />
+        <h2 class="mt-2 text-[17px] font-display font-extrabold leading-tight">
+          Mencari pengemudi terdekat untuk kamu…
+        </h2>
+        <p class="mt-1.5 text-[12.5px] leading-relaxed text-(--color-on-surface-variant)">
+          Belum ada pengemudi yang ditugaskan, dan kamu belum ditagih apa pun. Kalau tidak ada yang
+          menerima, pesanan ini bisa dibatalkan tanpa biaya.
+        </p>
+        <p class="mt-3 text-[11.5px] text-(--color-on-surface-variant)">
+          Nomor pesanan {{ data.nomor }}
+        </p>
+      </section>
+
       <!-- Tahap -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
+      <section v-else class="bg-(--color-surface-0) rounded-2xl p-5">
         <div class="flex items-start gap-3">
           <span
             class="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
@@ -220,9 +243,6 @@ async function kirimNilai() {
           ></span>
         </div>
 
-        <p v-if="tahap === 'mencari'" class="mt-3 text-[11.5px] text-(--color-on-surface-variant)">
-          Nomor pesanan {{ data.nomor }}
-        </p>
       </section>
 
       <!-- Pengemudi -->
