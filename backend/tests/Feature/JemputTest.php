@@ -28,9 +28,10 @@ class JemputTest extends TestCase
         parent::setUp();
         Category::create(['nama' => 'BisaJemput', 'slug' => 'bisajemput', 'basis_harga' => 'jarak_waktu']);
 
-        // Jam netral: di luar semua jendela jam sibuk dan promo waktu, supaya
-        // uji tarif tidak berubah-ubah menurut jam berapa ia dijalankan.
-        Carbon::setTestNow(Carbon::parse('2026-09-02 10:00:00'));
+        // Jam netral DI WIB: 03.00 UTC = 10.00 WIB, di luar semua jendela jam
+        // sibuk dan promo waktu. Ditulis dalam UTC karena itu zona aplikasi;
+        // yang dibaca aturan jam sibuk adalah padanannya di WIB.
+        Carbon::setTestNow(Carbon::parse('2026-09-02 03:00:00'));
     }
 
     protected function tearDown(): void
@@ -95,7 +96,7 @@ class JemputTest extends TestCase
     public function test_perjalanan_pendek_kena_tarif_minimum(): void
     {
         $tarif = new JemputTarif;
-        $hasil = $tarif->hitung('motor', 'cepat', 0.4, new \DateTimeImmutable('2026-09-02 10:00:00'));
+        $hasil = $tarif->hitung('motor', 'cepat', 0.4, new \DateTimeImmutable('2026-09-02 03:00:00'));
 
         $this->assertSame(10_000, $hasil['tarif']);
         $this->assertNotEmpty(array_filter($hasil['baris'], fn ($b) => str_contains($b['label'], 'minimum')));
@@ -187,7 +188,7 @@ class JemputTest extends TestCase
     public function test_setiap_perjalanan_menyisakan_margin(): void
     {
         $tarif = new JemputTarif;
-        $saat = new \DateTimeImmutable('2026-09-02 10:00:00');
+        $saat = new \DateTimeImmutable('2026-09-02 03:00:00');
 
         foreach (JemputTarif::idTipe() as $tipe) {
             foreach (array_keys(JemputTarif::TIPE[$tipe]['varian']) as $varian) {
@@ -223,7 +224,7 @@ class JemputTest extends TestCase
         foreach (JemputTarif::idTipe() as $tipe) {
             foreach (array_keys(JemputTarif::TIPE[$tipe]['varian']) as $varian) {
                 foreach ([1, 5, 12, 25, 45] as $km) {
-                    $h = $tarif->hitung($tipe, $varian, (float) $km, new \DateTimeImmutable('2026-09-02 10:00:00'));
+                    $h = $tarif->hitung($tipe, $varian, (float) $km, new \DateTimeImmutable('2026-09-02 03:00:00'));
 
                     foreach (PromoJemput::KATALOG as $p) {
                         if ($p['jenis'] !== 'berulang') {
@@ -287,7 +288,7 @@ class JemputTest extends TestCase
 
     public function test_jam_sibuk_disebutkan_bukan_disembunyikan(): void
     {
-        Carbon::setTestNow(Carbon::parse('2026-09-02 07:30:00')); // Rabu pagi
+        Carbon::setTestNow(Carbon::parse('2026-09-02 00:30:00')); // 07.30 WIB, Rabu pagi
         Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
 
         $res = $this->postJson('/api/jemput/estimasi', [
@@ -299,6 +300,46 @@ class JemputTest extends TestCase
         $this->assertSame('pagi', $res->json('sibuk'));
         $this->assertNotNull($res->json('sibuk_alasan'));
         $this->assertGreaterThan(1.0, $res->json('sibuk_pengali'));
+    }
+
+    /**
+     * Jam sibuk mengikuti JAM DINDING PENUMPANG, bukan jam server.
+     *
+     * Aplikasi berjalan di UTC. Tanpa pengubahan zona, pukul 08.00 WIB dibaca
+     * sebagai pukul 01.00 dan penumpang jam delapan pagi dikenai pengali
+     * "larut malam" — persis kekeliruan yang sempat muncul di layar.
+     */
+    public function test_jam_sibuk_dibaca_di_wib_bukan_di_zona_server(): void
+    {
+        $tarif = new JemputTarif;
+
+        // 01.00 UTC = 08.00 WIB, Rabu: jendela pagi, bukan larut malam.
+        $pagi = $tarif->sibuk(new \DateTimeImmutable('2026-09-02 01:00:00', new \DateTimeZone('UTC')));
+        $this->assertSame('pagi', $pagi['nama']);
+
+        // 01.00 WIB memang larut malam, dan itu harus tetap terbaca begitu.
+        $malam = $tarif->sibuk(new \DateTimeImmutable('2026-09-01 18:00:00', new \DateTimeZone('UTC')));
+        $this->assertSame('malam', $malam['nama']);
+
+        // 03.00 UTC = 10.00 WIB: di luar semua jendela.
+        $netral = $tarif->sibuk(new \DateTimeImmutable('2026-09-02 03:00:00', new \DateTimeZone('UTC')));
+        $this->assertNull($netral['nama']);
+        $this->assertSame(1.0, $netral['pengali']);
+    }
+
+    /** Promo berbasis jam ikut aturan yang sama. */
+    public function test_promo_pagi_berlaku_pada_pagi_wib(): void
+    {
+        $promo = new PromoJemput;
+        $pagi = $promo->cari('PAGI');
+
+        $this->assertNull($promo->kenapaTidakBisa(
+            $pagi, 50_000, false, new \DateTimeImmutable('2026-09-02 01:00:00', new \DateTimeZone('UTC')),
+        ));
+
+        $this->assertNotNull($promo->kenapaTidakBisa(
+            $pagi, 50_000, false, new \DateTimeImmutable('2026-09-02 06:00:00', new \DateTimeZone('UTC')),
+        ));
     }
 
     /* ==================== Perjalanan ==================== */

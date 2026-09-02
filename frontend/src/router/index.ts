@@ -320,6 +320,18 @@ const router = createRouter({
       meta: { induk: 'task-jemput-titik', roles: ['customer'] as Role[] },
     },
     {
+      /*
+       * Mencari tujuan berdiri sebagai halaman penuh, bukan lembar di dalam
+       * halaman pemesanan: papan ketik, daftar hasil, dan riwayat butuh layar
+       * utuh, dan lembar bawah kehilangan dua pertiganya begitu papan ketik
+       * muncul.
+       */
+      path: '/tasks/new/jemput/tujuan',
+      name: 'task-jemput-tujuan',
+      component: () => import('@/views/jemput/JemputTujuanView.vue'),
+      meta: { induk: 'task-jemput-pesan', roles: ['customer'] as Role[] },
+    },
+    {
       path: '/tasks/new/jemput/ringkasan',
       name: 'task-jemput-ringkasan',
       component: () => import('@/views/jemput/JemputRingkasanView.vue'),

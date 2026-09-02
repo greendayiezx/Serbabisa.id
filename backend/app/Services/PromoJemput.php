@@ -148,8 +148,17 @@ class PromoJemput
             return 'Hanya untuk perjalanan pertama.';
         }
 
-        $jam = (int) $saat->format('G');
-        $hari = (int) $saat->format('w');
+        /*
+         * Jam dan hari dibaca di WIB, sama seperti jam sibuk. Promo "berangkat
+         * kerja" yang aktif pukul 13.00 karena servernya berjalan di UTC bukan
+         * cuma salah — ia menjanjikan potongan pada orang yang tidak bisa
+         * memakainya, lalu menolaknya di layar bayar.
+         */
+        $lokal = \DateTimeImmutable::createFromInterface($saat)
+            ->setTimezone(new \DateTimeZone(JemputTarif::ZONA));
+
+        $jam = (int) $lokal->format('G');
+        $hari = (int) $lokal->format('w');
 
         if (isset($promo['jam']) && ! in_array($jam, $promo['jam'], true)) {
             return 'Berlaku pada jam tertentu saja.';

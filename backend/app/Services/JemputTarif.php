@@ -20,6 +20,15 @@ namespace App\Services;
  */
 class JemputTarif
 {
+    /**
+     * Zona waktu yang dipakai untuk semua aturan berbasis jam dinding.
+     *
+     * Aplikasi menyimpan waktu dalam UTC — itu benar untuk penyimpanan. Tapi
+     * "jam sibuk pagi" dan "promo sore" adalah janji tentang jam dinding
+     * penumpang, jadi keduanya harus dibaca di sini, bukan di zona server.
+     */
+    public const ZONA = 'Asia/Jakarta';
+
     /** Bagian pengemudi dari tarif. Sisanya komisi platform. */
     public const BAGI_MITRA = 0.80;
 
@@ -200,12 +209,21 @@ class JemputTarif
     /**
      * Pengali jam sibuk yang berlaku pada satu waktu.
      *
+     * Jamnya dibaca di WIB, BUKAN di zona waktu aplikasi. Aplikasi berjalan di
+     * UTC, dan "jam berangkat kerja" adalah soal jam dinding orang yang memesan
+     * — bukan jam server. Tanpa pengubahan ini, jendela pagi 06.00–09.00 baru
+     * aktif pukul 13.00 WIB, dan penumpang jam tujuh pagi malah dikenai
+     * pengali "larut malam".
+     *
      * @return array{pengali:float, nama:string|null, alasan:string|null}
      */
     public function sibuk(\DateTimeInterface $saat): array
     {
-        $jam = (int) $saat->format('G');
-        $hari = (int) $saat->format('w');
+        $lokal = \DateTimeImmutable::createFromInterface($saat)
+            ->setTimezone(new \DateTimeZone(self::ZONA));
+
+        $jam = (int) $lokal->format('G');
+        $hari = (int) $lokal->format('w');
 
         foreach (self::SIBUK as $nama => $aturan) {
             if (in_array($jam, $aturan['jam'], true) && in_array($hari, $aturan['hari'], true)) {

@@ -18,7 +18,6 @@ import 'leaflet/dist/leaflet.css'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
-import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
 import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
 import { useJemputStore } from '@/stores/jemput'
 import { estimasiJemput, type HasilEstimasi } from '@/api/jemput'
@@ -30,7 +29,6 @@ const kembali = useKembali()
 const jemputStore = useJemputStore()
 
 const kelas = ref<'motor' | 'mobil'>('motor')
-const lembarTujuan = ref(false)
 const memuat = ref(false)
 const galat = ref<string | null>(null)
 const hasil = ref<HasilEstimasi | null>(null)
@@ -125,22 +123,13 @@ onBeforeUnmount(() => {
   peta = null
 })
 
-watch(lembarTujuan, async (buka) => {
-  if (buka) {
-    peta?.remove()
-    peta = null
-    return
-  }
-  await nextTick()
-  gambarPeta()
-})
-
-async function terimaTujuan(l: { alamat: string; lat: number; lng: number }) {
-  jemputStore.setTujuan(l)
-  lembarTujuan.value = false
-  await nextTick()
-  gambarPeta()
-  await muatEstimasi()
+/*
+ * Mengetik tujuan pindah ke halamannya sendiri, bukan lembar bawah: pekerjaan
+ * itu butuh papan ketik, daftar hasil, dan riwayat sekaligus — dan lembar bawah
+ * menyisakan sepertiga layar untuk ketiganya, lalu tertutup papan ketiknya.
+ */
+function bukaTujuan() {
+  router.push({ name: 'task-jemput-tujuan' })
 }
 
 watch(kelas, () => {
@@ -170,10 +159,14 @@ function sama(a: PilihanJemput | null, b: PilihanJemput) {
   <div class="relative min-h-dvh w-full bg-(--color-surface-container) isolate pb-4">
     <div ref="petaEl" class="absolute inset-x-0 top-0 h-[52vh] z-0" aria-label="Peta rute"></div>
 
+    <!--
+      Panah balik duduk di bagian bawah peta, bukan di pojok atas: di atas ia
+      tepat berada di belakang kartu alamat dan praktis tidak bisa ditekan.
+    -->
     <button
       type="button"
       aria-label="Kembali"
-      class="absolute top-4 left-4 z-20 w-11 h-11 rounded-full bg-(--color-surface-0) shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+      class="absolute top-[41vh] left-4 z-30 w-11 h-11 rounded-full bg-(--color-surface-0) shadow-lg flex items-center justify-center active:scale-95 transition-transform"
       @click="kembali"
     >
       <Icon name="arrow-left" class="w-5 h-5" />
@@ -203,7 +196,7 @@ function sama(a: PilihanJemput | null, b: PilihanJemput) {
           <button
             type="button"
             class="w-full flex items-center gap-2.5 text-left"
-            @click="lembarTujuan = true"
+            @click="bukaTujuan"
           >
             <span class="w-5 h-5 rounded-full bg-(--color-tertiary-container) flex items-center justify-center shrink-0">
               <span class="w-2 h-2 rounded-full bg-(--color-on-tertiary-container)"></span>
@@ -256,7 +249,7 @@ function sama(a: PilihanJemput | null, b: PilihanJemput) {
           <button
             type="button"
             class="mt-4 px-5 h-11 rounded-full bg-(--color-azure) text-white text-[13.5px] font-extrabold active:scale-95 transition-transform"
-            @click="lembarTujuan = true"
+            @click="bukaTujuan"
           >
             Pilih tujuan
           </button>
@@ -374,10 +367,7 @@ function sama(a: PilihanJemput | null, b: PilihanJemput) {
             </div>
           </div>
 
-          <p class="mt-4 text-[11px] leading-snug text-(--color-on-surface-variant)">
-            Tarif ini perkiraan berdasarkan jarak dan waktu tempuh, belum termasuk tol dan parkir
-            kalau ada.
-          </p>
+
         </template>
       </div>
     </section>
@@ -415,14 +405,5 @@ function sama(a: PilihanJemput | null, b: PilihanJemput) {
       </div>
     </footer>
 
-    <SheetPilihLokasi
-      :tampil="lembarTujuan"
-      :alamat="tujuan?.alamat ?? ''"
-      :lat="tujuan?.lat ?? jemput?.lat ?? -6.2088"
-      :lng="tujuan?.lng ?? jemput?.lng ?? 106.8456"
-      judul-peta="Set tujuan"
-      @tutup="lembarTujuan = false"
-      @pilih="terimaTujuan"
-    />
   </div>
 </template>
