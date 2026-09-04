@@ -104,34 +104,38 @@ function dariPeta(l: { alamat: string; lat: number; lng: number }) {
     </header>
 
     <div class="max-w-[430px] mx-auto px-4">
-      <!-- Titik jemput & tujuan, satu kartu seperti di layar pemesanan -->
-      <div class="rounded-2xl bg-(--color-surface-container) p-3.5">
+      <!--
+        Tanpa kotak abu-abu dan tanpa garis pembatas: yang membedakan kedua
+        baris cukup PIN-nya sendiri — biru untuk titik jemput, oranye untuk
+        tujuan, bentuk yang sama persis dengan penanda di peta. Satu lambang
+        untuk satu hal, di layar mana pun.
+      -->
+      <div class="px-0.5">
         <button
           type="button"
           class="w-full flex items-center gap-3 text-left"
           @click="router.replace({ name: 'task-jemput-titik' })"
         >
-          <span
-            class="w-6 h-6 rounded-full bg-(--color-secondary-container) flex items-center justify-center shrink-0"
-          >
-            <Icon
-              name="arrow-right"
-              class="w-3.5 h-3.5 -rotate-90 text-(--color-on-secondary-container)"
-            />
-          </span>
+          <Icon name="pin" class="w-[22px] h-[22px] text-(--color-azure) shrink-0" />
           <span class="flex-1 truncate text-[13px] text-(--color-on-surface-variant)">
             {{ jemputStore.jemput?.alamat }}
           </span>
         </button>
 
-        <div class="my-2 ml-3 border-l-2 border-dotted border-(--color-outline)/40 h-3"></div>
+        <!-- Penghubung ikut warna kedua pin, bukan abu-abu. -->
+        <!--
+          Lebarnya dikunci selebar pin. Tanpa itu wadahnya selebar baris dan
+          `items-center` menaruh titik-titiknya di tengah layar, bukan di bawah
+          pin yang dihubungkannya.
+        -->
+        <div class="w-[22px] my-1 flex flex-col items-center gap-[3px]" aria-hidden="true">
+          <span class="w-[3px] h-[3px] rounded-full bg-(--color-azure)/70"></span>
+          <span class="w-[3px] h-[3px] rounded-full bg-orange-400/70"></span>
+          <span class="w-[3px] h-[3px] rounded-full bg-orange-500"></span>
+        </div>
 
         <div class="flex items-center gap-3">
-          <span
-            class="w-6 h-6 rounded-full bg-(--color-tertiary-container) flex items-center justify-center shrink-0"
-          >
-            <span class="w-2.5 h-2.5 rounded-full bg-(--color-on-tertiary-container)"></span>
-          </span>
+          <Icon name="pin" class="w-[22px] h-[22px] text-orange-500 shrink-0" />
           <input
             ref="kolom"
             v-model="kueri"
@@ -155,10 +159,10 @@ function dariPeta(l: { alamat: string; lat: number; lng: number }) {
       <div class="mt-3">
         <button
           type="button"
-          class="px-4 h-10 rounded-full border-[1.5px] border-(--color-outline)/50 text-[12.5px] font-extrabold flex items-center gap-2 active:scale-95 transition-transform"
+          class="px-4 h-10 rounded-full border-[1.5px] border-(--color-azure)/50 text-(--color-azure) text-[12.5px] font-extrabold flex items-center gap-2 active:scale-95 transition-transform"
           @click="peta = true"
         >
-          <Icon name="crosshair" class="w-4 h-4 text-(--color-azure)" />
+          <Icon name="crosshair" class="w-4 h-4" />
           Pilih lewat peta
         </button>
       </div>

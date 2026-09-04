@@ -199,13 +199,6 @@ watch(kelas, (k) => {
 })
 
 /**
- * Pilihan termurah di kelas yang sedang dibuka.
- *
- * Lewat pilih() juga, bukan menulis dipilih langsung: halaman voucher membaca
- * pilihannya dari store, dan pilihan awal yang tidak ikut tersimpan membuat
- * halaman itu berkata "pilih kendaraan dulu" padahal sudah ada yang terpilih.
- */
-/**
  * Kembali ke halaman ini setelah membuka voucher tidak boleh mengubah pilihan.
  *
  * Halaman ini dipasang ulang tiap kali dibuka, dan tanpa pemulihan ini
@@ -231,6 +224,13 @@ function pulihkanPilihan() {
   pilihTermurah()
 }
 
+/**
+ * Pilihan termurah di kelas yang sedang dibuka.
+ *
+ * Lewat pilih() juga, bukan menulis `dipilih` langsung: halaman voucher membaca
+ * pilihannya dari store, dan pilihan awal yang tidak ikut tersimpan membuat
+ * halaman itu berkata "pilih kendaraan dulu" padahal sudah ada yang terpilih.
+ */
 function pilihTermurah() {
   if (!hasil.value) return
   const termurah =
