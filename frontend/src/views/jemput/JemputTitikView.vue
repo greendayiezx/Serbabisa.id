@@ -111,7 +111,7 @@ function lepasPeta() {
 onMounted(async () => {
   pernahKeSini.value = locationStore
     .loadSearchHistory()
-    .some((h) => h.alamat === alamat.value)
+    .some((h) => h.address === alamat.value)
 
   tandaiSiap()
 

@@ -18,6 +18,7 @@ import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
 import KirimDetailSkeleton from '@/components/skeleton/KirimDetailSkeleton.vue'
+import SpandukHemat from '@/components/kirim/SpandukHemat.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
 import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
 import { useKirimStore } from '@/stores/kirim'
@@ -390,16 +391,12 @@ function lanjut() {
             </button>
           </div>
 
-          <div
+          <SpandukHemat
             v-if="dipilih?.promo_terbaik"
-            class="mb-3 flex items-center gap-2 rounded-xl bg-(--color-secondary-container)/40 px-3.5 py-2.5"
-          >
-            <Icon name="sparkle" class="w-4 h-4 shrink-0 text-(--color-on-secondary-container)" />
-            <p class="text-[11.5px] font-bold">
-              Kamu hemat {{ rupiah(dipilih.promo_terbaik.potongan) }} ·
-              {{ dipilih.promo_terbaik.nama }}
-            </p>
-          </div>
+            class="mb-3"
+            :jumlah="rupiah(dipilih.promo_terbaik.potongan)"
+            :nama="dipilih.promo_terbaik.nama"
+          />
         </template>
 
         <button

@@ -14,7 +14,6 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import Icon from '@/components/icons/Icon.vue'
 import { TILE_OPTIONS, TILE_URL } from '@/lib/mapTiles'
 
 const props = withDefaults(

@@ -34,9 +34,20 @@ export const useJemputStore = defineStore('jemput', () => {
     jemputDikonfirmasi.value = false
   }
 
-  function konfirmasiJemput(catatan?: string) {
+  /**
+   * `null` berarti catatannya dikosongkan, bukan "tidak diisi".
+   *
+   * Bedanya penting: layar titik jemput selalu mengirim isi kotak catatannya,
+   * dan orang yang menghapus catatan lamanya harus benar-benar terhapus. Kalau
+   * null diperlakukan sama dengan tidak dikirim, catatan lama diam-diam
+   * dipakai lagi — pengemudi membaca patokan yang sudah dicabut sendiri.
+   */
+  function konfirmasiJemput(catatan?: string | null) {
     if (!jemput.value) return
-    jemput.value = { ...jemput.value, catatan: catatan ?? jemput.value.catatan ?? null }
+    jemput.value = {
+      ...jemput.value,
+      catatan: catatan === undefined ? (jemput.value.catatan ?? null) : catatan,
+    }
     jemputDikonfirmasi.value = true
   }
 

@@ -26,7 +26,14 @@ const uid = useId()
  * Staggered offset antar baris (baris 2 & 4 digeser pertengahan 45px),
  * variasi skala (s) dan rotasi (r) acak teratur untuk tekstur alami.
  */
-const IKON = [
+/**
+ * Sebagian ikon punya warna, sebagian ikut warna teks induknya.
+ *
+ * Tipenya ditulis di sini supaya `warna` tetap ada di setiap baris meski nilai
+ * defaultnya kosong: tanpa itu `as const` membuat baris tanpa warna bertipe
+ * lain, dan `i.warna` di template ditolak pemeriksa tipe.
+ */
+const IKON: readonly { id: string; x: number; y: number; r: number; s: number; warna?: string }[] = [
   { id: 'spray', x: 30, y: 35, r: -12, s: 1.05, warna: 'biru' },
   { id: 'ember', x: 120, y: 40, r: 8, s: 1.15 },
   { id: 'pel', x: 210, y: 35, r: -15, s: 1.0 },
@@ -209,11 +216,11 @@ function gaya(w?: string) {
     <!-- Brand Logo Title with User's House SVG Icon & Slogan -->
     <div class="relative z-10 flex flex-col items-center justify-center my-auto py-6 pointer-events-none select-none">
       <!-- Title Row: Custom SVG Icon + bisabersih -->
-      <div class="flex items-center gap-3 mb-2">
+      <div class="flex items-center gap-2 mb-2">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 120 120"
-          class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 drop-shadow-sm"
+          class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 drop-shadow-sm translate-x-1.5"
           fill="none"
         >
           <defs>
@@ -257,8 +264,7 @@ function gaya(w?: string) {
             </filter>
           </defs>
 
-          <!-- Soft background -->
-          <circle cx="60" cy="60" r="48" fill="#F1FBFC" />
+
 
           <!-- House -->
           <g :filter="`url(#${uid}-shadow-house)`">
