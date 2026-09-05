@@ -226,34 +226,127 @@ class KirimTest extends TestCase
         }
     }
 
-    /** Voucher berulang tidak boleh memakan lebih dari separuh komisi. */
-    public function test_voucher_berulang_tidak_melebihi_setengah_komisi(): void
+    /**
+     * Voucher pemasaran BOLEH membuat satu kiriman rugi — itu memang dibayar
+     * dari anggaran pemasaran, bukan dari margin. Yang dijaga: ruginya
+     * berbatas, dan batasnya berlaku untuk setiap kendaraan pada setiap jarak.
+     *
+     * Tanpa batas ini, satu angka yang diketik terlalu besar di katalog bisa
+     * menghabiskan anggaran sebulan dalam sehari tanpa ada yang menyadarinya.
+     */
+    public function test_rugi_per_kiriman_tidak_pernah_melewati_batas(): void
     {
         $tarif = new KirimTarif;
         $promo = new PromoKirim;
+        // Sabtu pagi WIB, supaya voucher berjam dan berhari ikut terhitung.
+        $saat = new \DateTimeImmutable('2026-09-05 01:00:00', new \DateTimeZone('UTC'));
 
         foreach (KirimTarif::idKendaraan() as $kendaraan) {
             foreach ([1, 5, 12, 25, 38] as $km) {
                 $h = $tarif->hitung($kendaraan, (float) $km, 'dokumen');
 
                 foreach (PromoKirim::KATALOG as $p) {
-                    if ($p['jenis'] !== 'berulang') {
-                        continue;
-                    }
+                    $potongan = $promo->potongan($p, $h['ongkir'], $h['komisi'], $h['biaya']);
+                    $rugi = $h['biaya'] - ($h['ongkir'] - $potongan);
 
-                    $potongan = $promo->potongan($p, $h['ongkir'], $h['komisi']);
+                    $batas = $p['sumber'] === 'akuisisi'
+                        ? PromoJemput::BATAS_AKUISISI
+                        : PromoKirim::BATAS_RUGI_PER_KIRIMAN;
+
                     $this->assertLessThanOrEqual(
-                        (int) floor($h['komisi'] * PromoJemput::BATAS_KOMISI),
-                        $potongan,
-                        "{$p['kode']} pada {$kendaraan} {$km}km memakan lebih dari separuh komisi",
-                    );
-                    $this->assertGreaterThan(
-                        0,
-                        $h['ongkir'] - $potongan - $h['biaya'],
-                        "{$p['kode']} pada {$kendaraan} {$km}km membuat kiriman rugi",
+                        $batas,
+                        $rugi,
+                        "{$p['kode']} pada {$kendaraan} {$km}km rugi Rp".number_format($rugi, 0, ',', '.'),
                     );
                 }
             }
+        }
+    }
+
+    /**
+     * Bagian kurir tidak pernah ikut dipotong voucher.
+     *
+     * Dialah yang mengeluarkan bensin dan waktunya; potongan yang mengurangi
+     * bagiannya berarti mendiskon pekerjaan orang lain.
+     */
+    public function test_bagian_kurir_tidak_ikut_dipotong(): void
+    {
+        $tarif = new KirimTarif;
+        $promo = new PromoKirim;
+        $saat = new \DateTimeImmutable('2026-09-05 01:00:00', new \DateTimeZone('UTC'));
+
+        $h = $tarif->hitung('mobil', 20.0, 'dokumen');
+        $bagianKurir = (int) round($h['ongkir'] * KirimTarif::BAGI_MITRA);
+
+        foreach ($promo->tersedia($h['ongkir'], $h['komisi'], $h['biaya'], true, $saat) as $v) {
+            // Yang dibayar pelanggan boleh turun sampai di bawah bagian kurir;
+            // yang tidak boleh adalah bagian kurirnya sendiri ikut mengecil.
+            $this->assertSame(
+                $bagianKurir,
+                (int) round($h['ongkir'] * KirimTarif::BAGI_MITRA),
+                "{$v['kode']} mengubah bagian kurir",
+            );
+        }
+    }
+
+    /** Beban pemasaran dicatat di pesanan, bukan hilang begitu saja. */
+    public function test_beban_pemasaran_tercatat_di_pesanan(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        // Mobil jarak jauh: ongkirnya di atas Rp50.000, jadi KIRIM10 berlaku.
+        $res = $this->postJson('/api/kirim/checkout', $this->payload([
+            'kendaraan' => 'mobil',
+            'ukuran' => 'besar',
+            'antar_lat' => -6.3600,
+            'antar_lng' => 106.8300,
+            'kode_promo' => 'KIRIM10',
+        ]));
+
+        $res->assertCreated();
+        $promo = Task::latest('id')->first()->detail_layanan['promo'];
+
+        $this->assertSame('KIRIM10', $promo['kode']);
+        $this->assertSame('pemasaran', $promo['sumber']);
+        $this->assertArrayHasKey('beban_pemasaran', $promo);
+        $this->assertGreaterThanOrEqual(0, $promo['beban_pemasaran']);
+    }
+
+    /**
+     * Voucher berjam dibaca di WIB, bukan di zona aplikasi yang UTC.
+     *
+     * "Kirim pagi" yang aktif pukul 13.00 bukan sekadar salah — ia ditawarkan
+     * ke orang yang tidak bisa memakainya, lalu ditolak di layar bayar.
+     */
+    public function test_voucher_berjam_dibaca_di_wib(): void
+    {
+        $promo = new PromoKirim;
+        $pagi = $promo->cari('PAGIKIRIM');
+
+        // 01.00 UTC = 08.00 WIB, Rabu: masuk jendela pagi.
+        $this->assertNull($promo->kenapaTidakBisa(
+            $pagi, 60_000, false, new \DateTimeImmutable('2026-09-02 01:00:00', new \DateTimeZone('UTC')),
+        ));
+
+        // 06.00 UTC = 13.00 WIB: di luar jendela, meski jam servernya "06".
+        $this->assertNotNull($promo->kenapaTidakBisa(
+            $pagi, 60_000, false, new \DateTimeImmutable('2026-09-02 06:00:00', new \DateTimeZone('UTC')),
+        ));
+    }
+
+    /**
+     * Katalog tidak memuat voucher untuk layanan yang belum ada.
+     *
+     * BisaKirim baru punya Instant motor dan mobil; voucher Same-Day,
+     * Next-Day, atau Cargo akan muncul di daftar, dicoba orang, lalu ditolak
+     * tanpa alasan yang masuk akal.
+     */
+    public function test_tidak_ada_voucher_untuk_layanan_yang_belum_ada(): void
+    {
+        $kode = array_column(PromoKirim::KATALOG, 'kode');
+
+        foreach (['SAMEDAY20', 'SAMEDAYHEMAT', 'NEXTDAY10', 'CARGO25', 'INSTANTGRATIS'] as $tidakAda) {
+            $this->assertNotContains($tidakAda, $kode);
         }
     }
 
@@ -261,11 +354,11 @@ class KirimTest extends TestCase
     {
         Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
 
-        $pertama = $this->postJson('/api/kirim/checkout', $this->payload(['kode_promo' => 'KIRIMBARU']));
+        $pertama = $this->postJson('/api/kirim/checkout', $this->payload(['kode_promo' => 'KIRIMBARU20']));
         $pertama->assertCreated();
         $this->assertGreaterThan(0, $pertama->json('rincian.potongan'));
 
-        $this->postJson('/api/kirim/checkout', $this->payload(['kode_promo' => 'KIRIMBARU']))
+        $this->postJson('/api/kirim/checkout', $this->payload(['kode_promo' => 'KIRIMBARU20']))
             ->assertStatus(422)
             ->assertJsonValidationErrors('kode_promo');
     }
@@ -342,9 +435,13 @@ class KirimTest extends TestCase
         $res->assertJsonPath('kiriman_pertama', false);
         $this->assertCount(count(PromoKirim::KATALOG), $res->json('voucher'));
         $this->assertTrue(
-            collect($res->json('voucher'))->firstWhere('kode', 'KIRIMBARU')['terpakai'],
+            collect($res->json('voucher'))->firstWhere('kode', 'KIRIMBARU20')['terpakai'],
         );
-        $this->assertSame(count(PromoKirim::KATALOG) - 1, $res->json('jumlah'));
+        $sekaliPakai = count(array_filter(
+            PromoKirim::KATALOG,
+            fn ($p) => $p['sekali_seumur_hidup'] ?? false,
+        ));
+        $this->assertSame(count(PromoKirim::KATALOG) - $sekaliPakai, $res->json('jumlah'));
     }
 
     public function test_butuh_login(): void

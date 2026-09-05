@@ -95,8 +95,9 @@ class KirimController extends Controller
         $nilai = (int) ($data['nilai_barang'] ?? 0);
         $pertama = $this->kirimanPertama($user->id);
 
-        $pilihan = array_map(function (array $p) use ($pertama) {
-            $promo = $this->promo->tersedia($p['ongkir'], $p['komisi'], $pertama);
+        $saat = now();
+        $pilihan = array_map(function (array $p) use ($pertama, $saat) {
+            $promo = $this->promo->tersedia($p['ongkir'], $p['komisi'], $p['biaya'], $pertama, $saat);
             $terbaik = collect($promo)->where('bisa_dipakai', true)->sortByDesc('potongan')->first();
 
             return [
@@ -235,14 +236,31 @@ class KirimController extends Controller
             }
 
             $alasanPromo = $this->promo->kenapaTidakBisa(
-                $promo, $rincian['ongkir'], $this->kirimanPertama($user->id),
+                $promo, $rincian['ongkir'], $this->kirimanPertama($user->id), now(),
             );
             if ($alasanPromo) {
                 throw ValidationException::withMessages(['kode_promo' => $alasanPromo]);
             }
 
-            $potongan = $this->promo->potongan($promo, $rincian['ongkir'], $rincian['komisi']);
-            $promoDipakai = ['kode' => $promo['kode'], 'nama' => $promo['nama'], 'potongan' => $potongan];
+            $potongan = $this->promo->potongan(
+                $promo, $rincian['ongkir'], $rincian['komisi'], $rincian['biaya'],
+            );
+
+            /*
+             * Berapa yang keluar dari kantong dicatat di pesanan, bukan
+             * dibiarkan hilang dari komisi. Voucher pemasaran memang boleh
+             * membuat satu kiriman rugi — yang tidak boleh adalah ruginya tidak
+             * terlihat sebagai angka di mana pun.
+             */
+            $promoDipakai = [
+                'kode' => $promo['kode'],
+                'nama' => $promo['nama'],
+                'sumber' => $promo['sumber'],
+                'potongan' => $potongan,
+                'beban_pemasaran' => $this->promo->bebanPemasaran(
+                    $rincian['ongkir'], $rincian['biaya'], $potongan,
+                ),
+            ];
         }
 
         $total = max(0, $rincian['total'] - $potongan);

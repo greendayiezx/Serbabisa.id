@@ -15,6 +15,7 @@ import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
 import KirimBerandaSkeleton from '@/components/skeleton/KirimBerandaSkeleton.vue'
+import IkonVoucher from '@/components/kirim/IkonVoucher.vue'
 import promoInstant15 from '@/assets/Instant15_BisaKirim.png'
 import promoSameday20 from '@/assets/Sameday20_BisaKirim.png'
 import { useSkeleton } from '@/composables/useSkeleton'
@@ -315,11 +316,7 @@ function lanjut() {
         class="bg-(--color-surface-0) rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
         @click="lembarVoucher = true"
       >
-        <span
-          class="w-10 h-10 rounded-xl bg-(--color-secondary-container) flex items-center justify-center shrink-0"
-        >
-          <Icon name="sparkle" class="w-5 h-5 text-(--color-on-secondary-container)" />
-        </span>
+        <IkonVoucher :ukuran="40" />
         <div class="flex-1 min-w-0">
           <p class="text-[13.5px] font-extrabold">
             {{ jumlahVoucher }} voucher buat kamu
