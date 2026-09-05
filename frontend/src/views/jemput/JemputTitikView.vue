@@ -23,6 +23,8 @@ import 'leaflet/dist/leaflet.css'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
+import JemputTitikSkeleton from '@/components/skeleton/JemputTitikSkeleton.vue'
+import { useSkeleton } from '@/composables/useSkeleton'
 import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
 import { labelKoordinat, reverseGeocode } from '@/lib/geocode'
 import { useJemputStore } from '@/stores/jemput'
@@ -44,6 +46,8 @@ const lembar = ref(false)
 
 /** Alamat ini pernah dipakai sebelumnya — ditandai, bukan diklaim akurat. */
 const pernahKeSini = ref(false)
+
+const { tampil: skelTampil, tandaiSiap } = useSkeleton()
 
 const petaEl = ref<HTMLDivElement | null>(null)
 let peta: L.Map | null = null
@@ -109,8 +113,7 @@ onMounted(async () => {
     .loadSearchHistory()
     .some((h) => h.alamat === alamat.value)
 
-  await nextTick()
-  pasangPeta()
+  tandaiSiap()
 
   /*
    * Datang ke sini tanpa alamat sama sekali — misalnya dari tautan langsung —
@@ -124,6 +127,19 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (jedaBaca) clearTimeout(jedaBaca)
   lepasPeta()
+})
+
+/*
+ * Peta dipasang SETELAH skeleton pergi, bukan di onMounted.
+ *
+ * Skeleton menempati seluruh template lewat v-if, jadi saat onMounted berjalan
+ * div petanya belum ada di DOM dan ref-nya masih null — pasangPeta() berhenti
+ * di penjagaannya, lalu tidak ada lagi yang memanggilnya.
+ */
+watch(skelTampil, async (masihSkeleton) => {
+  if (masihSkeleton) return
+  await nextTick()
+  pasangPeta()
 })
 
 /* Lembar pilih lokasi menutupi peta; petanya dilepas supaya panenya tidak
@@ -160,7 +176,9 @@ function konfirmasi() {
 </script>
 
 <template>
-  <div class="relative min-h-dvh w-full bg-(--color-surface-container) isolate">
+  <JemputTitikSkeleton v-if="skelTampil" />
+
+  <div v-else class="relative min-h-dvh w-full bg-(--color-surface-container) isolate">
     <!-- Peta memenuhi layar; lembar konfirmasi duduk di atasnya. -->
     <div ref="petaEl" class="absolute inset-0 z-0" aria-label="Peta titik jemput"></div>
 

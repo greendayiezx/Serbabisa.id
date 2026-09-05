@@ -243,7 +243,16 @@ const subtitleText = computed(() => {
   return 'Mau anter tugas ke mana hari ini?'
 })
 
+/*
+ * Seberapa jauh kartu putih menaiki hero.
+ *
+ * Menu yang punya hero SVG sendiri dinaikkan sampai kartunya menumpang di atas
+ * gelombang hijau — tanpa itu ada pita kosong di antara hero dan kartu, dan
+ * petanya terdorong turun sampai nyaris tidak kelihatan tanpa menggulir.
+ * BisaJemput dinaikkan lebih jauh karena gelombang di hero-nya paling tinggi.
+ */
 const contentSheetMarginClass = computed(() => {
+  if (isBisaJemput.value) return '-mt-24'
   if (isBisaAngkut.value || isBisaBelanja.value || isBisaBersih.value) return '-mt-14'
   return '-mt-1'
 })
@@ -734,8 +743,12 @@ watch(skelTampil, async (masihSkeleton) => {
       >
         <BisaJemputHeroArt :time-of-day="heroTimeOfDay" />
 
+        <!--
+          Sapaan dinaikkan seiring kartu putihnya: kartu yang naik sampai
+          -mt-24 akan menutupi sapaan kalau sapaannya tetap di bottom-16.
+        -->
         <div
-          class="absolute inset-x-5 bottom-16 z-10 flex flex-col items-center justify-center text-center"
+          class="absolute inset-x-5 bottom-28 z-10 flex flex-col items-center justify-center text-center"
         >
           <h1
             class="font-display font-extrabold text-[16px] sm:text-[18px] leading-tight text-white text-center drop-shadow-sm"

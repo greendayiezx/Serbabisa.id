@@ -11,9 +11,11 @@
  * menampilkannya tanpa alasan membuat orang menekannya berkali-kali. Yang
  * berguna adalah kalimat yang menyebut apa yang kurang.
  */
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Icon from '@/components/icons/Icon.vue'
+import JemputVoucherSkeleton from '@/components/skeleton/JemputVoucherSkeleton.vue'
+import { useSkeleton } from '@/composables/useSkeleton'
 import { useJemputStore } from '@/stores/jemput'
 import { rupiah, type PromoJemput } from '@/lib/jemput'
 
@@ -21,6 +23,9 @@ const router = useRouter()
 const jemputStore = useJemputStore()
 
 const pilihan = computed(() => jemputStore.jemput && jemputStore.pilihan)
+const { tampil: skelTampil, tandaiSiap } = useSkeleton()
+onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => tandaiSiap())))
+
 const kode = ref('')
 const galat = ref<string | null>(null)
 
@@ -75,7 +80,9 @@ function tukar() {
 </script>
 
 <template>
-  <div class="min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-10">
+  <JemputVoucherSkeleton v-if="skelTampil" />
+
+  <div v-else class="min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-10">
     <header class="sticky top-0 z-30 bg-(--color-surface-0)">
       <div class="max-w-[430px] mx-auto h-14 px-4 flex items-center gap-3">
         <button

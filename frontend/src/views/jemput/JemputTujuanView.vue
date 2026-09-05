@@ -16,6 +16,8 @@ import { nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Icon from '@/components/icons/Icon.vue'
 import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
+import JemputTujuanSkeleton from '@/components/skeleton/JemputTujuanSkeleton.vue'
+import { useSkeleton } from '@/composables/useSkeleton'
 import PemilihLokasi from '@/components/PemilihLokasi.vue'
 import { cariLokasi, type HasilLokasi } from '@/lib/geocode'
 import { useJemputStore } from '@/stores/jemput'
@@ -31,6 +33,13 @@ const mencari = ref(false)
 const galat = ref<string | null>(null)
 const peta = ref(false)
 
+/*
+ * Skeleton halaman: digambar di frame pertama, lalu konten asli menyusul.
+ * Fokus kolom baru dipasang setelah kontennya ada — memanggil focus() saat
+ * yang tergambar masih skeleton tidak mengenai apa pun.
+ */
+const { tampil: skelTampil, tandaiSiap } = useSkeleton()
+
 const kolom = ref<HTMLInputElement | null>(null)
 const riwayat = ref(locationStore.loadSearchHistory())
 
@@ -42,6 +51,16 @@ onMounted(async () => {
     return
   }
 
+  tandaiSiap()
+})
+
+/*
+ * Fokus dipasang SETELAH skeleton pergi. Selama skeleton yang tergambar,
+ * kolomnya belum ada di DOM — focus() saat itu tidak mengenai apa pun dan
+ * papan ketik tidak pernah terbuka sendiri.
+ */
+watch(skelTampil, async (masihSkeleton) => {
+  if (masihSkeleton) return
   await nextTick()
   kolom.value?.focus()
   // Teks lama disorot, bukan dihapus: kalau tujuannya cuma perlu diubah
@@ -88,7 +107,9 @@ function dariPeta(l: { alamat: string; lat: number; lng: number }) {
 </script>
 
 <template>
-  <div class="min-h-dvh w-full bg-(--color-surface-0) text-(--color-on-surface)">
+  <JemputTujuanSkeleton v-if="skelTampil" />
+
+  <div v-else class="min-h-dvh w-full bg-(--color-surface-0) text-(--color-on-surface)">
     <header class="sticky top-0 z-30 bg-(--color-surface-0)">
       <div class="max-w-[430px] mx-auto h-14 px-4 flex items-center gap-3">
         <button

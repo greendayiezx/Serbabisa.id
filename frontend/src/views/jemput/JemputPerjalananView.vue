@@ -17,7 +17,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
-import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
+import JemputPerjalananSkeleton from '@/components/skeleton/JemputPerjalananSkeleton.vue'
 import LottieIcon from '@/components/LottieIcon.vue'
 import animasiMencari from '@/assets/lottie/jemput-mencari-pengemudi.json'
 import {
@@ -146,7 +146,9 @@ async function kirimNilai() {
 </script>
 
 <template>
-  <div class="min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-28">
+  <JemputPerjalananSkeleton v-if="memuat" />
+
+  <div v-else class="min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-28">
     <header class="sticky top-0 z-30 bg-(--color-surface-0) border-b border-(--color-outline)/10">
       <div class="max-w-[430px] mx-auto h-14 px-4 flex items-center gap-2">
         <button
@@ -170,10 +172,14 @@ async function kirimNilai() {
       </div>
     </header>
 
-    <div v-if="memuat" class="pt-24 flex justify-center"><PemuatBerputar /></div>
-
+    <!--
+      Rantai v-if dimulai di sini. Sebelumnya rantainya diawali blok "memuat"
+      yang kini digantikan skeleton di luar div ini — dan `v-else-if` yang
+      kehilangan `v-if` pasangannya membuat SELURUH isi halaman tidak
+      tergambar, tanpa satu pun galat muncul.
+    -->
     <p
-      v-else-if="galat && !data"
+      v-if="galat && !data"
       role="alert"
       class="max-w-[430px] mx-auto px-4 pt-8 text-[13px] font-semibold text-(--color-error)"
     >

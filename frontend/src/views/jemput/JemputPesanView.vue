@@ -18,6 +18,8 @@ import 'leaflet/dist/leaflet.css'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
+import JemputPesanSkeleton from '@/components/skeleton/JemputPesanSkeleton.vue'
+import { useSkeleton } from '@/composables/useSkeleton'
 import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
 import { useJemputStore } from '@/stores/jemput'
 import { estimasiJemput, pesanJemput, type HasilEstimasi } from '@/api/jemput'
@@ -62,6 +64,8 @@ const kartu = computed(() => {
 })
 
 /* ────────── Peta rute ────────── */
+const { tampil: skelTampil, tandaiSiap } = useSkeleton()
+
 const petaEl = ref<HTMLDivElement | null>(null)
 let peta: L.Map | null = null
 let garis: L.Polyline | null = null
@@ -168,9 +172,18 @@ onMounted(async () => {
     return
   }
 
+  tandaiSiap()
+  if (tujuan.value) await muatEstimasi()
+})
+
+/*
+ * Peta digambar SETELAH skeleton pergi: selama skeleton yang tampil, div
+ * petanya belum ada di DOM dan gambarPeta() berhenti di penjagaan null-nya.
+ */
+watch(skelTampil, async (masihSkeleton) => {
+  if (masihSkeleton) return
   await nextTick()
   gambarPeta()
-  if (tujuan.value) await muatEstimasi()
 })
 
 onBeforeUnmount(() => {
@@ -423,7 +436,9 @@ function sama(a: PilihanJemput | null, b: PilihanJemput) {
 </script>
 
 <template>
-  <div class="relative min-h-dvh w-full bg-(--color-surface-container) isolate pb-4">
+  <JemputPesanSkeleton v-if="skelTampil" />
+
+  <div v-else class="relative min-h-dvh w-full bg-(--color-surface-container) isolate pb-4">
     <div ref="petaEl" class="absolute inset-x-0 top-0 h-[52vh] z-0" aria-label="Peta rute"></div>
 
     <!--
