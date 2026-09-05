@@ -43,6 +43,23 @@ export const useKirimStore = defineStore('kirim', () => {
     promo.value = null
   }
 
+  /**
+   * Ganti kontak SAJA — nama, telepon, patokan — tanpa menyentuh koordinatnya.
+   *
+   * Dipisah dari setAmbil/setAntar dengan sengaja: keduanya membuang pilihan
+   * kendaraan dan voucher karena rutenya berubah. Mengetik nama penerima bukan
+   * perubahan rute, dan memaksa hitung ulang di situ akan menghapus voucher
+   * yang sudah dipilih orang tanpa alasan yang bisa ia lihat.
+   */
+  function setKontak(
+    sisi: 'ambil' | 'antar',
+    kontak: { nama?: string; telepon?: string; catatan?: string | null },
+  ) {
+    const titik = sisi === 'ambil' ? ambil : antar
+    if (!titik.value) return
+    titik.value = { ...titik.value, ...kontak }
+  }
+
   function setUkuran(u: string) {
     ukuran.value = u
     // Ukuran menentukan kendaraan yang sanggup; pilihan lama belum tentu masih
@@ -88,6 +105,7 @@ export const useKirimStore = defineStore('kirim', () => {
     metode,
     setAmbil,
     setAntar,
+    setKontak,
     tukar,
     setUkuran,
     setPilihan,

@@ -47,6 +47,12 @@ const namaMetode = computed(
   () => METODE_BAYAR.find((m) => m.id === kirimStore.metode)?.nama ?? kirimStore.metode,
 )
 
+const namaPengirimTampil = computed(() =>
+  namaPengirim.value.trim()
+    ? `${namaPengirim.value} · ${teleponPengirim.value}`
+    : 'Isi nama dan nomor pengirim',
+)
+
 const total = computed(() =>
   Math.max(0, (pilihan.value?.total ?? 0) - (promo.value?.potongan ?? 0)),
 )
@@ -58,15 +64,17 @@ onMounted(() => {
   }
 
   /*
-   * Hanya dari draf kiriman, bukan dari akun. Mengisi otomatis dari akun
-   * membuat orang mengirim atas nama dirinya tanpa sadar — padahal yang
-   * menyerahkan paket belum tentu pemilik akun. Tombol "Pakai detail saya" di
-   * kartunya ada persis untuk itu, dan itu keputusan yang diambil sengaja.
+   * Pengirim diambil dari halaman pengambilan kalau sudah diisi; kalau belum,
+   * jatuh ke pemilik akun. Dialah yang memesan, jadi itu tebakan paling masuk
+   * akal — dan layar menyebutkannya, bukan mengisinya diam-diam.
    */
-  namaPengirim.value = kirimStore.ambil.nama ?? ''
-  teleponPengirim.value = kirimStore.ambil.telepon ?? ''
+  namaPengirim.value = kirimStore.ambil.nama ?? authStore.user?.name ?? ''
+  teleponPengirim.value = kirimStore.ambil.telepon ?? authStore.user?.phone ?? ''
+  catatanAmbil.value = kirimStore.ambil.catatan ?? ''
+
   namaPenerima.value = kirimStore.antar.nama ?? ''
   teleponPenerima.value = kirimStore.antar.telepon ?? ''
+  catatanAntar.value = kirimStore.antar.catatan ?? ''
 
   tandaiSiap()
 })
@@ -149,37 +157,17 @@ async function kirim() {
 
     <main v-if="pilihan" class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
       <!--
-        Isian kontak memakai komponen yang sama dengan Detail Penerima di
-        BisaAngkut: nama, pemilih kode negara berbendera, dan "Pakai detail
-        saya". Satu pola yang dipelajari sekali, berlaku di seluruh aplikasi —
-        dan nomornya tersimpan lengkap berkode negara, karena yang menekan dial
-        nanti adalah kurir.
-      -->
-      <KontakPenerima
-        v-model:nama="namaPengirim"
-        v-model:telepon="teleponPengirim"
-        judul="Detail Pengirim"
-        :subjudul="kirimStore.ambil?.alamat"
-        placeholder-nama="Nama yang menyerahkan paket…"
-        pesan-kosong="Nama dan nomor pengirim dibutuhkan supaya kurir bisa menghubungi saat menjemput."
-        :ditandai="ditandai"
-      >
-        <div class="mt-4">
-          <label
-            class="block text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide mb-1.5"
-          >
-            Patokan untuk kurir
-          </label>
-          <input
-            v-model="catatanAmbil"
-            type="text"
-            maxlength="255"
-            placeholder="Mis. pagar hitam, titip satpam"
-            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none placeholder:text-(--color-on-surface-variant)"
-          />
-        </div>
-      </KontakPenerima>
+        HANYA PENERIMA di sini.
+        
+        Detail pengambilan punya halamannya sendiri, dibuka dari baris "Titik
+        ambil" di layar sebelumnya. Menumpuk keduanya di satu formulir membuat
+        orang mengisi kolom milik sisi yang salah — dan dua kartu yang mirip
+        berjajar adalah cara paling mudah tertukar.
 
+        Kalau halaman pengambilan tidak dibuka, pengirimnya jatuh ke pemilik
+        akun. Itu tebakan yang paling masuk akal — dialah yang memesan — dan
+        disebutkan apa adanya di bawah, bukan diisi diam-diam.
+      -->
       <KontakPenerima
         v-model:nama="namaPenerima"
         v-model:telepon="teleponPenerima"
@@ -204,6 +192,25 @@ async function kirim() {
           />
         </div>
       </KontakPenerima>
+
+      <!-- Siapa yang menyerahkan paket, dan cara menggantinya -->
+      <button
+        type="button"
+        class="bg-(--color-surface-0) rounded-2xl p-4 flex items-start gap-3 text-left active:scale-[0.99] transition-transform"
+        @click="router.push({ name: 'task-kirim-ambil' })"
+      >
+        <Icon name="pin" class="w-[22px] h-[22px] mt-0.5 text-(--color-azure) shrink-0" />
+        <span class="flex-1 min-w-0">
+          <span class="block text-[11px] text-(--color-on-surface-variant)">Diambil dari</span>
+          <span class="block text-[13px] font-bold leading-snug truncate">
+            {{ kirimStore.ambil?.alamat }}
+          </span>
+          <span class="block text-[11.5px] text-(--color-on-surface-variant) mt-0.5">
+            {{ namaPengirimTampil }}
+          </span>
+        </span>
+        <Icon name="chevron-right" class="w-4 h-4 mt-1 shrink-0 text-(--color-on-surface-variant)" />
+      </button>
 
       <!-- Rincian -->
       <section class="bg-(--color-surface-0) rounded-2xl p-5">

@@ -318,6 +318,22 @@ const router = createRouter({
       meta: { induk: 'task-kirim', roles: ['customer'] as Role[] },
     },
     {
+      /*
+       * Dua sisi kiriman, dua halaman, satu komponen. Yang membedakan hanya
+       * meta.sisi — isinya memang pekerjaan yang sama di ujung yang berbeda.
+       */
+      path: '/tasks/new/kirim/pengambilan',
+      name: 'task-kirim-ambil',
+      component: () => import('@/views/kirim/KirimTitikView.vue'),
+      meta: { induk: 'task-kirim-detail', sisi: 'ambil', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/kirim/pengiriman',
+      name: 'task-kirim-antar',
+      component: () => import('@/views/kirim/KirimTitikView.vue'),
+      meta: { induk: 'task-kirim-detail', sisi: 'antar', roles: ['customer'] as Role[] },
+    },
+    {
       path: '/tasks/new/kirim/konfirmasi',
       name: 'task-kirim-konfirmasi',
       component: () => import('@/views/kirim/KirimKonfirmasiView.vue'),

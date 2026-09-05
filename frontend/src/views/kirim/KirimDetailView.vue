@@ -23,7 +23,7 @@ import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
 import { useKirimStore } from '@/stores/kirim'
 import { estimasiKirim, type HasilEstimasiKirim } from '@/api/kirim'
 import { pesanError } from '@/api/belanja'
-import { DILARANG, UKURAN, rupiah, type PilihanKirim } from '@/lib/kirim'
+import { UKURAN, rupiah, type PilihanKirim } from '@/lib/kirim'
 
 const router = useRouter()
 const kembali = useKembali()
@@ -38,18 +38,7 @@ const memuat = ref(false)
 const galat = ref<string | null>(null)
 const hasil = ref<HasilEstimasiKirim | null>(null)
 const dipilih = ref<PilihanKirim | null>(null)
-
-/** Pernyataan isi terlarang; satu pun yang tercentang mengunci pemesanan. */
-const dilarangDicentang = ref<string[]>([])
 const lembarPaket = ref(false)
-
-function toggleLarangan(id: string) {
-  const i = dilarangDicentang.value.indexOf(id)
-  if (i >= 0) dilarangDicentang.value.splice(i, 1)
-  else dilarangDicentang.value.push(id)
-}
-
-const adaLarangan = computed(() => dilarangDicentang.value.length > 0)
 
 /* ────────── Peta rute ────────── */
 const petaEl = ref<HTMLDivElement | null>(null)
@@ -165,7 +154,7 @@ async function gantiUkuran(id: string) {
 const ukuranTerpilih = computed(() => UKURAN.find((u) => u.id === kirimStore.ukuran))
 
 const bisaLanjut = computed(
-  () => !!dipilih.value && dipilih.value.sanggup && !adaLarangan.value && !memuat.value,
+  () => !!dipilih.value && dipilih.value.sanggup && !memuat.value,
 )
 
 function lanjut() {
@@ -196,30 +185,46 @@ function lanjut() {
       <!-- Titik ambil & antar -->
       <section class="bg-(--color-surface-0) rounded-2xl p-4">
         <div class="flex items-start gap-3">
+          <!--
+            Tiap baris membuka halamannya sendiri. Kontak pengambilan dan
+            kontak pengantaran adalah dua pekerjaan yang berbeda orang dan
+            berbeda waktu; menumpuknya di satu formulir panjang membuat orang
+            mengisi kolom milik sisi yang salah.
+          -->
           <div class="flex-1 min-w-0 flex flex-col gap-3">
-            <div class="flex items-start gap-3">
+            <button
+              type="button"
+              class="w-full flex items-start gap-3 text-left"
+              @click="router.push({ name: 'task-kirim-ambil' })"
+            >
               <Icon name="pin" class="w-[22px] h-[22px] mt-0.5 text-(--color-azure) shrink-0" />
-              <div class="flex-1 min-w-0">
-                <p class="text-[13px] font-bold truncate">
+              <span class="flex-1 min-w-0">
+                <span class="block text-[13px] font-bold truncate">
                   {{ ambil?.nama || 'Titik ambil' }}
-                </p>
-                <p class="text-[11.5px] text-(--color-on-surface-variant) truncate">
+                </span>
+                <span class="block text-[11.5px] text-(--color-on-surface-variant) truncate">
                   {{ ambil?.alamat }}
-                </p>
-              </div>
-            </div>
+                </span>
+              </span>
+              <Icon name="chevron-right" class="w-4 h-4 mt-1 shrink-0 text-(--color-on-surface-variant)" />
+            </button>
 
-            <div class="flex items-start gap-3">
+            <button
+              type="button"
+              class="w-full flex items-start gap-3 text-left"
+              @click="router.push({ name: 'task-kirim-antar' })"
+            >
               <Icon name="pin" class="w-[22px] h-[22px] mt-0.5 text-orange-500 shrink-0" />
-              <div class="flex-1 min-w-0">
-                <p class="text-[13px] font-bold truncate">
+              <span class="flex-1 min-w-0">
+                <span class="block text-[13px] font-bold truncate">
                   {{ antar?.nama || 'Tujuan' }}
-                </p>
-                <p class="text-[11.5px] text-(--color-on-surface-variant) truncate">
+                </span>
+                <span class="block text-[11.5px] text-(--color-on-surface-variant) truncate">
                   {{ antar?.alamat }}
-                </p>
-              </div>
-            </div>
+                </span>
+              </span>
+              <Icon name="chevron-right" class="w-4 h-4 mt-1 shrink-0 text-(--color-on-surface-variant)" />
+            </button>
           </div>
 
           <button
@@ -261,23 +266,6 @@ function lanjut() {
           />
         </div>
 
-        <div class="pt-4 border-t border-(--color-outline)/15">
-          <p class="text-[12.5px] font-bold">Nilai barang (opsional)</p>
-          <p class="text-[11.5px] leading-snug text-(--color-on-surface-variant) mt-0.5 mb-2">
-            Diisi kalau mau diproteksi. Ganti ruginya sampai nilai yang kamu daftarkan, maksimal
-            {{ rupiah(hasil?.proteksi_plafon ?? 2000000) }}.
-          </p>
-          <input
-            v-model.number="kirimStore.nilaiBarang"
-            type="number"
-            min="0"
-            :max="hasil?.proteksi_plafon ?? 2000000"
-            placeholder="0"
-            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
-            @change="muatEstimasi"
-          />
-        </div>
-
         <!-- Kode terima paket -->
         <div class="pt-4 border-t border-(--color-outline)/15">
           <button
@@ -302,55 +290,6 @@ function lanjut() {
               ></span>
             </span>
           </button>
-        </div>
-      </section>
-
-      <!--
-        Pernyataan isi terlarang. Ditanyakan sebelum harga, bukan disembunyikan
-        di syarat dan ketentuan: yang tidak dibaca lebih dulu akan ditemukan
-        kurir di lokasi, dan saat itu semua orang sudah kehilangan waktu.
-      -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <h2 class="text-[13.5px] font-display font-extrabold mb-1">Isi kiriman</h2>
-        <p class="text-[11.5px] leading-snug text-(--color-on-surface-variant) mb-3">
-          Centang kalau paketmu mengandung salah satunya. Kami tidak bisa mengantarnya — bukan soal
-          biaya tambahan.
-        </p>
-
-        <div class="flex flex-col gap-2">
-          <button
-            v-for="d in DILARANG"
-            :key="d.id"
-            type="button"
-            class="w-full flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition-colors"
-            :class="
-              dilarangDicentang.includes(d.id)
-                ? 'border-(--color-error) bg-(--color-error)/8'
-                : 'border-(--color-outline)/25'
-            "
-            :aria-pressed="dilarangDicentang.includes(d.id)"
-            @click="toggleLarangan(d.id)"
-          >
-            <span class="flex-1 text-[12.5px] font-semibold">{{ d.label }}</span>
-            <span
-              v-if="dilarangDicentang.includes(d.id)"
-              class="w-5 h-5 rounded-full bg-(--color-error) flex items-center justify-center shrink-0"
-            >
-              <Icon name="check" class="w-3 h-3 text-white" />
-            </span>
-            <span v-else class="w-5 h-5 rounded border-2 border-(--color-outline) shrink-0"></span>
-          </button>
-        </div>
-
-        <div
-          v-if="adaLarangan"
-          class="mt-3 rounded-xl bg-(--color-error)/8 border border-(--color-error)/30 p-3.5 flex gap-2"
-        >
-          <Icon name="alert" class="w-4 h-4 shrink-0 text-(--color-error) mt-0.5" />
-          <p class="text-[11.5px] leading-relaxed text-(--color-on-surface-variant)">
-            Kiriman dengan isi itu <strong class="text-(--color-on-surface)">belum bisa kami antar</strong>.
-            Kurir tidak punya cara membawanya dengan aman, dan proteksi paket tidak menanggungnya.
-          </p>
         </div>
       </section>
 
