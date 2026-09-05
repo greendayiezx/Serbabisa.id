@@ -101,7 +101,9 @@ function simpan() {
     catatan: catatan.value.trim() || null,
   })
 
-  router.back()
+  // Naik satu tingkat, bukan mundur di riwayat: halaman ini bisa dibuka lewat
+  // tautan langsung, dan di situ mundur berarti keluar dari aplikasi.
+  kembali()
 }
 </script>
 

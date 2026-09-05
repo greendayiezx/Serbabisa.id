@@ -309,7 +309,14 @@ const router = createRouter({
       path: '/tasks/new/kirim',
       name: 'task-kirim',
       component: () => import('@/views/kirim/KirimBerandaView.vue'),
-      meta: { induk: 'task-location', roles: ['customer'] as Role[] },
+      meta: {
+        induk: 'task-location',
+        // Halaman ini tidak menyimpan kategorinya di URL, tapi induknya
+        // membutuhkannya: tanpa ?category, halaman lokasi jatuh ke tampilan
+        // umum yang tidak melanjutkan ke mana-mana.
+        indukQuery: { category: 'bisakirim' },
+        roles: ['customer'] as Role[],
+      },
     },
     {
       path: '/tasks/new/kirim/detail',
@@ -356,7 +363,11 @@ const router = createRouter({
       path: '/tasks/new/jemput/titik',
       name: 'task-jemput-titik',
       component: () => import('@/views/jemput/JemputTitikView.vue'),
-      meta: { induk: 'task-location', roles: ['customer'] as Role[] },
+      meta: {
+        induk: 'task-location',
+        indukQuery: { category: 'bisajemput' },
+        roles: ['customer'] as Role[],
+      },
     },
     {
       path: '/tasks/new/jemput/pesan',

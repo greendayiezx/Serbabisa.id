@@ -38,12 +38,27 @@ export function useKembali() {
       return
     }
 
-    // Halaman layanan tertentu butuh ?category untuk memilih tampilan yang
-    // benar; dibawa turun kalau rute sekarang memilikinya.
+    /*
+     * Halaman lokasi butuh ?category untuk memilih tampilan yang benar. Tanpa
+     * itu ia jatuh ke tampilan umum: judulnya berubah jadi "Mau anter tugas ke
+     * mana hari ini?", ilustrasi layanannya hilang, dan alamat yang dipilih di
+     * sana tidak melanjutkan ke mana-mana. Halamannya terlihat benar, hanya
+     * saja jalannya buntu — itu sebabnya ini tidak pernah terbaca sebagai galat.
+     *
+     * Dua sumbernya, karena tidak semua halaman menyimpan kategori di URL-nya
+     * sendiri: `meta.indukQuery` untuk yang tidak (BisaKirim, BisaJemput), dan
+     * ?category milik rute sekarang untuk yang iya (BisaBersih).
+     */
+    const indukQuery = route.meta.indukQuery as Record<string, string> | undefined
     const category = route.query.category
+    const query = {
+      ...(indukQuery ?? {}),
+      ...(typeof category === 'string' && category ? { category } : {}),
+    }
+
     router.replace({
       name: induk,
-      ...(typeof category === 'string' && category ? { query: { category } } : {}),
+      ...(Object.keys(query).length ? { query } : {}),
     })
   }
 }
