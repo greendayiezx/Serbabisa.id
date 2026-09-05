@@ -9,13 +9,14 @@
  * Titik ambil sudah terisi dari halaman lokasi. Titik antarnya kosong dan
  * itulah satu-satunya kolom yang menunggu diisi.
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
 import KirimBerandaSkeleton from '@/components/skeleton/KirimBerandaSkeleton.vue'
-import KirimHeroArt from '@/components/kirim/KirimHeroArt.vue'
+import promoInstant15 from '@/assets/Instant15_BisaKirim.png'
+import promoSameday20 from '@/assets/Sameday20_BisaKirim.png'
 import { useSkeleton } from '@/composables/useSkeleton'
 import { useKirimStore } from '@/stores/kirim'
 import { useLocationStore } from '@/stores/location'
@@ -46,6 +47,58 @@ const riwayat = ref(locationStore.loadSearchHistory())
  * ongkir, dan ongkirnya belum ada sebelum tujuannya diisi — menyebut angka di
  * sini berarti menjanjikan potongan yang belum tentu berlaku.
  */
+/**
+ * Banner promo disimpan sebagai daftar, bukan ditulis satu per satu di
+ * template. Titik penanda dan perputaran otomatis membaca panjang daftar ini —
+ * menambah promo cukup menambah satu baris, tanpa menyentuh tempat lain yang
+ * bisa lupa diperbarui.
+ *
+ * Alt-nya mengikuti yang TERGAMBAR di banner, bukan nama berkasnya.
+ */
+const bannerHero = [
+  { src: promoInstant15, alt: 'INSTANT15, diskon 15% sampai Rp20.000 untuk layanan Instant' },
+  { src: promoSameday20, alt: 'SAMEDAY20, diskon 20% sampai Rp25.000 untuk layanan Same-Day' },
+]
+
+const trackHero = ref<HTMLElement | null>(null)
+const heroAktif = ref(0)
+
+function perbaruiHero() {
+  const el = trackHero.value
+  if (!el || el.clientWidth === 0) return
+  heroAktif.value = Math.round(el.scrollLeft / el.clientWidth)
+}
+
+function keHero(i: number) {
+  const el = trackHero.value
+  if (!el) return
+  el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' })
+}
+
+/**
+ * Perputaran otomatis berhenti PERMANEN begitu pengguna menggeser sendiri.
+ *
+ * Carousel yang terus berjalan setelah disentuh akan menarik banner pergi tepat
+ * ketika orang sedang membacanya — itu terasa seperti aplikasi merebut kendali.
+ */
+let jamHero: ReturnType<typeof setInterval> | null = null
+
+function hentikanHero() {
+  if (jamHero) clearInterval(jamHero)
+  jamHero = null
+}
+
+function mulaiHero() {
+  hentikanHero()
+
+  // Gerakan yang tidak diminta adalah hal pertama yang dimatikan setelan ini;
+  // menjalankannya tetap berarti mengabaikan permintaan yang jelas.
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  if (bannerHero.length < 2) return
+
+  jamHero = setInterval(() => keHero((heroAktif.value + 1) % bannerHero.length), 4500)
+}
+
 const voucher = ref<VoucherKirim[]>([])
 const jumlahVoucher = ref(0)
 const lembarVoucher = ref(false)
@@ -58,6 +111,7 @@ onMounted(async () => {
     kirimStore.setAmbil({ ...locationStore.draft })
   }
   tandaiSiap()
+  window.addEventListener('resize', perbaruiHero, { passive: true })
 
   try {
     const v = await voucherKirim()
@@ -69,6 +123,28 @@ onMounted(async () => {
     voucher.value = []
     jumlahVoucher.value = 0
   }
+})
+
+/*
+ * Carousel baru dipasang setelah skeleton pergi: selama skeleton yang
+ * tergambar, track-nya belum ada di DOM dan clientWidth-nya nol — perputaran
+ * yang dimulai saat itu menggulir ke posisi 0 terus.
+ */
+watch(skelTampil, (tampil) => {
+  if (tampil) return
+  nextTick(() => {
+    perbaruiHero()
+    trackHero.value?.addEventListener('scroll', perbaruiHero, { passive: true })
+    trackHero.value?.addEventListener('pointerdown', hentikanHero, { passive: true })
+    mulaiHero()
+  })
+})
+
+onBeforeUnmount(() => {
+  hentikanHero()
+  trackHero.value?.removeEventListener('scroll', perbaruiHero)
+  trackHero.value?.removeEventListener('pointerdown', hentikanHero)
+  window.removeEventListener('resize', perbaruiHero)
 })
 
 function terimaLokasi(l: { alamat: string; lat: number; lng: number }) {
@@ -98,9 +174,21 @@ function lanjut() {
   <KirimBerandaSkeleton v-if="skelTampil" />
 
   <div v-else class="min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-28">
-    <!-- Hero: banner layanan, dengan tombol kembali melayang di atasnya -->
-    <div class="relative w-full overflow-hidden">
-      <KirimHeroArt />
+    <!--
+      Banner promo bergeser sendiri, pola yang sama dengan BisaBersih. Pita di
+      bawah gambar memakai warna baris terakhir bannernya (#01226A, diambil dari
+      pikselnya) supaya tidak ada garis sambungan — di situlah titik penanda
+      duduk; ditaruh di atas gambar, ia menimpa tulisan promonya.
+    -->
+    <section class="relative w-full pb-12" style="background: #01226a">
+      <div
+        ref="trackHero"
+        class="flex overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth"
+      >
+        <div v-for="b in bannerHero" :key="b.src" class="shrink-0 w-full snap-center">
+          <img :src="b.src" :alt="b.alt" class="block w-full h-auto" />
+        </div>
+      </div>
 
       <button
         type="button"
@@ -110,9 +198,35 @@ function lanjut() {
       >
         <Icon name="arrow-left" class="w-5 h-5" />
       </button>
-    </div>
 
-    <main class="max-w-[430px] mx-auto px-4 -mt-8 relative z-10 flex flex-col gap-3.5">
+      <!--
+        Hanya titik, tanpa panah: bannernya sudah bisa digeser dengan jari, dan
+        panah melingkar di atas ilustrasi menutupi bagian yang ingin dilihat.
+        Yang aktif dibuat memanjang, bukan sekadar lebih terang — bedanya tetap
+        terbaca oleh mata yang sulit membedakan warna.
+      -->
+      <div
+        v-if="bannerHero.length > 1"
+        class="absolute inset-x-0 bottom-5 h-6 flex items-center justify-center gap-1.5"
+      >
+        <button
+          v-for="(b, i) in bannerHero"
+          :key="b.src"
+          type="button"
+          class="h-5 flex items-center px-0.5"
+          :aria-label="`Ke promo ke-${i + 1}`"
+          :aria-current="i === heroAktif"
+          @click="hentikanHero(); keHero(i)"
+        >
+          <span
+            class="block h-1.5 rounded-full transition-all duration-300"
+            :class="i === heroAktif ? 'w-5 bg-white' : 'w-1.5 bg-white/45'"
+          ></span>
+        </button>
+      </div>
+    </section>
+
+    <main class="max-w-[430px] mx-auto px-4 -mt-5 relative z-10 flex flex-col gap-3.5">
       <!-- Titik ambil & antar -->
       <section class="bg-(--color-surface-0) rounded-2xl shadow-lg p-4">
         <div class="flex items-start gap-3">
