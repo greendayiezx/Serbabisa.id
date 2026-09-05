@@ -313,6 +313,40 @@ class KirimTest extends TestCase
         $this->getJson("/api/kirim/{$nomor}")->assertNotFound();
     }
 
+    /**
+     * Katalog voucher untuk layar beranda: syaratnya saja, tanpa angka
+     * potongan — di layar itu rutenya belum ada, jadi potongannya memang belum
+     * bisa dihitung.
+     */
+    public function test_katalog_voucher_tanpa_angka_potongan(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $res = $this->getJson('/api/kirim/voucher');
+
+        $res->assertOk();
+        $res->assertJsonPath('kiriman_pertama', true);
+        $this->assertCount(count(PromoKirim::KATALOG), $res->json('voucher'));
+        $this->assertArrayNotHasKey('potongan', $res->json('voucher.0'));
+        $this->assertSame(count(PromoKirim::KATALOG), $res->json('jumlah'));
+    }
+
+    /** Voucher sekali pakai yang sudah terpakai tetap tampil, tapi ditandai. */
+    public function test_voucher_terpakai_ditandai_bukan_dihilangkan(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/kirim/checkout', $this->payload())->assertCreated();
+
+        $res = $this->getJson('/api/kirim/voucher');
+
+        $res->assertJsonPath('kiriman_pertama', false);
+        $this->assertCount(count(PromoKirim::KATALOG), $res->json('voucher'));
+        $this->assertTrue(
+            collect($res->json('voucher'))->firstWhere('kode', 'KIRIMBARU')['terpakai'],
+        );
+        $this->assertSame(count(PromoKirim::KATALOG) - 1, $res->json('jumlah'));
+    }
+
     public function test_butuh_login(): void
     {
         $this->postJson('/api/kirim/checkout', $this->payload())->assertUnauthorized();

@@ -19,7 +19,8 @@ import KirimHeroArt from '@/components/kirim/KirimHeroArt.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
 import { useKirimStore } from '@/stores/kirim'
 import { useLocationStore } from '@/stores/location'
-import { KEUNGGULAN } from '@/lib/kirim'
+import { voucherKirim, type VoucherKirim } from '@/api/kirim'
+import { KEUNGGULAN, rupiah } from '@/lib/kirim'
 
 const router = useRouter()
 const kembali = useKembali()
@@ -36,7 +37,20 @@ const lembar = ref<Lembar>(null)
 
 const riwayat = ref(locationStore.loadSearchHistory())
 
-onMounted(() => {
+/*
+ * Voucher diambil dari server, bukan disalin ke klien: katalognya satu, dan
+ * salinan di sini akan mulai berbeda pada perubahan pertama tanpa memberi
+ * tanda apa pun.
+ *
+ * Yang ditampilkan di layar ini SYARATNYA saja. Potongan rupiahnya bergantung
+ * ongkir, dan ongkirnya belum ada sebelum tujuannya diisi — menyebut angka di
+ * sini berarti menjanjikan potongan yang belum tentu berlaku.
+ */
+const voucher = ref<VoucherKirim[]>([])
+const jumlahVoucher = ref(0)
+const lembarVoucher = ref(false)
+
+onMounted(async () => {
   // Titik ambil datang dari halaman lokasi. Kalau seseorang masuk lewat tautan
   // langsung, draf lokasi terakhir dipakai — dan kalau itu pun tidak ada,
   // kolomnya kosong dan menunggu diisi, bukan diisi tebakan.
@@ -44,6 +58,17 @@ onMounted(() => {
     kirimStore.setAmbil({ ...locationStore.draft })
   }
   tandaiSiap()
+
+  try {
+    const v = await voucherKirim()
+    voucher.value = v.voucher
+    jumlahVoucher.value = v.jumlah
+  } catch {
+    // Voucher gagal diambil bukan alasan menahan halaman: bagian ini
+    // disembunyikan, dan pemesanannya tetap bisa jalan.
+    voucher.value = []
+    jumlahVoucher.value = 0
+  }
 })
 
 function terimaLokasi(l: { alamat: string; lat: number; lng: number }) {
@@ -144,29 +169,53 @@ function lanjut() {
             <Icon name="arrow-right" class="w-4 h-4 -rotate-90" />
           </button>
         </div>
+
+        <!--
+          Alamat terakhir menyatu dengan kolom tujuan, bukan berdiri sebagai
+          kartu sendiri: daftar ini ADALAH cara mengisi kolom di atasnya, dan
+          memisahkannya membuat orang mengira keduanya dua hal berbeda.
+        -->
+        <div v-if="riwayat.length" class="mt-3 pt-3 border-t border-(--color-outline)/12">
+          <button
+            v-for="r in riwayat.slice(0, 4)"
+            :key="r.id"
+            type="button"
+            class="w-full py-2.5 flex items-start gap-3 text-left active:opacity-70 transition-opacity"
+            @click="pakaiRiwayat(r)"
+          >
+            <Icon name="clock" class="w-4 h-4 mt-0.5 shrink-0 text-(--color-on-surface-variant)" />
+            <span class="flex-1 min-w-0">
+              <span class="block text-[13px] font-bold leading-snug truncate">{{ r.label }}</span>
+              <span class="block truncate text-[11.5px] text-(--color-on-surface-variant) mt-0.5">
+                {{ r.address }}
+              </span>
+            </span>
+          </button>
+        </div>
       </section>
 
-      <!-- Alamat yang pernah dipakai -->
-      <section v-if="riwayat.length" class="bg-(--color-surface-0) rounded-2xl overflow-hidden">
-        <p class="px-4 pt-4 pb-2 text-[11.5px] font-bold uppercase tracking-wider text-(--color-on-surface-variant)">
-          Alamat terakhir
-        </p>
-        <button
-          v-for="r in riwayat.slice(0, 4)"
-          :key="r.id"
-          type="button"
-          class="w-full px-4 py-3 flex items-start gap-3 text-left border-t border-(--color-outline)/10 active:bg-(--color-surface-container) transition-colors"
-          @click="pakaiRiwayat(r)"
+      <!-- Voucher: syaratnya saja, angkanya menyusul di layar detail -->
+      <button
+        v-if="jumlahVoucher > 0"
+        type="button"
+        class="bg-(--color-surface-0) rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+        @click="lembarVoucher = true"
+      >
+        <span
+          class="w-10 h-10 rounded-xl bg-(--color-secondary-container) flex items-center justify-center shrink-0"
         >
-          <Icon name="clock" class="w-4 h-4 mt-0.5 shrink-0 text-(--color-on-surface-variant)" />
-          <span class="flex-1 min-w-0">
-            <span class="block text-[13px] font-bold leading-snug">{{ r.label }}</span>
-            <span class="block truncate text-[11.5px] text-(--color-on-surface-variant) mt-0.5">
-              {{ r.address }}
-            </span>
-          </span>
-        </button>
-      </section>
+          <Icon name="sparkle" class="w-5 h-5 text-(--color-on-secondary-container)" />
+        </span>
+        <div class="flex-1 min-w-0">
+          <p class="text-[13.5px] font-extrabold">
+            {{ jumlahVoucher }} voucher buat kamu
+          </p>
+          <p class="text-[11.5px] text-(--color-on-surface-variant) truncate">
+            Potongannya muncul setelah tujuannya diisi
+          </p>
+        </div>
+        <Icon name="chevron-right" class="w-4 h-4 text-(--color-on-surface-variant)" />
+      </button>
 
       <!-- Yang benar-benar bisa dilakukan layanan ini -->
       <section class="bg-(--color-surface-0) rounded-2xl p-5">
@@ -195,6 +244,53 @@ function lanjut() {
           </div>
         </div>
       </section>
+
+      <!-- Daftar voucher -->
+      <div
+        v-if="lembarVoucher"
+        class="fixed inset-0 z-50 flex items-end"
+        @click.self="lembarVoucher = false"
+      >
+        <div class="absolute inset-0 bg-black/40"></div>
+        <div
+          class="relative w-full max-w-[430px] mx-auto bg-(--color-surface-0) rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto"
+        >
+          <div class="w-10 h-1 rounded-full bg-(--color-outline)/30 mx-auto mb-4"></div>
+          <h2 class="text-[16px] font-display font-extrabold mb-1">Voucher BisaKirim</h2>
+          <p class="text-[11.5px] leading-snug text-(--color-on-surface-variant) mb-4">
+            Berapa potongannya bergantung ongkir, jadi angkanya baru muncul setelah tujuan kiriman
+            diisi.
+          </p>
+
+          <div class="flex flex-col gap-2.5">
+            <div
+              v-for="v in voucher"
+              :key="v.kode"
+              class="rounded-2xl border-2 border-(--color-outline)/20 p-4"
+              :class="v.terpakai ? 'opacity-55' : ''"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-[13.5px] font-extrabold">{{ v.nama }}</p>
+                <span
+                  class="px-2.5 py-0.5 rounded-md bg-(--color-surface-container) text-[10.5px] font-extrabold"
+                >
+                  {{ v.kode }}
+                </span>
+              </div>
+              <p class="mt-1 text-[11.5px] leading-snug text-(--color-on-surface-variant)">
+                {{ v.deskripsi }}
+              </p>
+              <p class="mt-1.5 text-[11px] text-(--color-on-surface-variant)">
+                Mulai ongkir {{ rupiah(v.minimum) }}
+              </p>
+              <!-- Yang sudah terpakai tetap ditampilkan, tapi ditandai. -->
+              <p v-if="v.terpakai" class="mt-1.5 text-[11px] font-semibold text-(--color-error)">
+                Sudah dipakai — voucher ini hanya untuk kiriman pertama.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <SheetPilihLokasi
         :tampil="lembar !== null"

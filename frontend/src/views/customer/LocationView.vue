@@ -23,6 +23,7 @@ import AngkutHeroArt from '@/components/angkut/AngkutHeroArt.vue'
 import BisaBelanjaHeroArt from '@/components/belanja/BisaBelanjaHeroArt.vue'
 import BisaBersihHeroArt from '@/components/bersih/BisaBersihHeroArt.vue'
 import BisaJemputHeroArt from '@/components/jemput/BisaJemputHeroArt.vue'
+import BisaKirimHeroArt from '@/components/kirim/BisaKirimHeroArt.vue'
 import { heroTimeOfDayFromHour } from '@/lib/heroSky'
 import { useSkeleton } from '@/composables/useSkeleton'
 import LokasiSkeleton from '@/components/skeleton/LokasiSkeleton.vue'
@@ -231,6 +232,7 @@ const isBisaAngkut = computed(() => route.query.category === 'bisaangkut' || rou
 const isBisaBelanja = computed(() => route.query.category === 'bisabelanja')
 const isBisaBersih = computed(() => route.query.category === 'bisabersih')
 const isBisaJemput = computed(() => route.query.category === 'bisajemput')
+const isBisaKirim = computed(() => route.query.category === 'bisakirim')
 
 const cardBorderLocationImg = computed(() =>
   isBisaAngkut.value
@@ -254,7 +256,14 @@ const subtitleText = computed(() => {
  * petanya terdorong turun sampai nyaris tidak kelihatan tanpa menggulir.
  */
 const contentSheetMarginClass = computed(() => {
-  if (isBisaJemput.value || isBisaAngkut.value || isBisaBelanja.value || isBisaBersih.value) return '-mt-14'
+  if (
+    isBisaJemput.value ||
+    isBisaKirim.value ||
+    isBisaAngkut.value ||
+    isBisaBelanja.value ||
+    isBisaBersih.value
+  )
+    return '-mt-14'
   return '-mt-1'
 })
 
@@ -765,6 +774,28 @@ watch(skelTampil, async (masihSkeleton) => {
           </h1>
           <p class="text-white/95 text-[12px] sm:text-[13.5px] font-bold text-center mt-0.5">
             {{ subtitleText }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Full-Width Header: BisaKirim, sekeluarga dengan hero lain — langit,
+           siluet kota, dan lampu jalan ikut waktu nyata lewat heroTimeOfDay. -->
+      <div
+        v-else-if="isBisaKirim"
+        class="relative w-full overflow-hidden bg-[#0D1536] rounded-b-[2rem]"
+      >
+        <BisaKirimHeroArt :time-of-day="heroTimeOfDay" />
+
+        <div
+          class="absolute inset-x-5 bottom-16 z-10 flex flex-col items-center justify-center text-center"
+        >
+          <h1
+            class="font-display font-extrabold text-[16px] sm:text-[18px] leading-tight text-white text-center drop-shadow-sm"
+          >
+            {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
+          </h1>
+          <p class="text-white/95 text-[12px] sm:text-[13.5px] font-bold text-center mt-0.5">
+            Paketnya diambil di mana?
           </p>
         </div>
       </div>

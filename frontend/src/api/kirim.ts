@@ -30,6 +30,31 @@ export async function estimasiKirim(payload: {
   return data
 }
 
+export interface VoucherKirim {
+  kode: string
+  nama: string
+  deskripsi: string
+  minimum: number
+  jenis: 'akuisisi' | 'berulang'
+  terpakai: boolean
+}
+
+/**
+ * Katalog voucher tanpa angka potongan.
+ *
+ * Dipakai layar beranda, tempat rutenya belum ada — dan tanpa ongkir,
+ * potongannya memang belum bisa dihitung. Angka rupiahnya muncul di layar
+ * detail, tempat ongkirnya sudah diketahui.
+ */
+export async function voucherKirim(): Promise<{
+  kiriman_pertama: boolean
+  jumlah: number
+  voucher: VoucherKirim[]
+}> {
+  const { data } = await apiClient.get('/kirim/voucher')
+  return data
+}
+
 export interface PayloadKirim {
   kendaraan: string
   ukuran: string

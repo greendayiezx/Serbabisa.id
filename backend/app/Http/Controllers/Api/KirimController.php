@@ -117,6 +117,42 @@ class KirimController extends Controller
         ]);
     }
 
+    /**
+     * Katalog voucher, tanpa angka potongan.
+     *
+     * Dipakai layar beranda, di mana rute dan ongkirnya belum ada — dan tanpa
+     * ongkir, potongannya memang belum bisa dihitung. Yang dikirim di sini
+     * SYARATNYA saja; angka rupiahnya baru muncul di layar detail, tempat
+     * ongkirnya sudah diketahui.
+     *
+     * Katalognya tetap satu di server. Menyalinnya ke klien hanya untuk layar
+     * ini berarti dua daftar yang akan mulai berbeda pada perubahan pertama.
+     */
+    public function voucher(Request $request): JsonResponse
+    {
+        $pertama = $this->kirimanPertama($request->user()->id);
+
+        $daftar = collect(PromoKirim::KATALOG)
+            ->map(fn ($p) => [
+                'kode' => $p['kode'],
+                'nama' => $p['nama'],
+                'deskripsi' => $p['deskripsi'],
+                'minimum' => $p['minimum'],
+                'jenis' => $p['jenis'],
+                // Voucher sekali pakai yang sudah terpakai tetap ditampilkan,
+                // tapi ditandai — menghilangkannya membuat orang mengira
+                // vouchernya tidak pernah ada.
+                'terpakai' => ($p['sekali_seumur_hidup'] ?? false) && ! $pertama,
+            ])
+            ->values();
+
+        return response()->json([
+            'kiriman_pertama' => $pertama,
+            'jumlah' => $daftar->where('terpakai', false)->count(),
+            'voucher' => $daftar,
+        ]);
+    }
+
     public function checkout(Request $request): JsonResponse
     {
         $user = $request->user();

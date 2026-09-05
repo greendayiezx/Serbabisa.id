@@ -156,6 +156,7 @@ Route::middleware('auth:sanctum')->group(function () {
      * BisaJemput: isinya koordinat rumah orang, dan itu tidak pantas nyangkut
      * di log akses sebagai query string.
      */
+    Route::get('/kirim/voucher', [KirimController::class, 'voucher']);
     Route::post('/kirim/estimasi', [KirimController::class, 'estimasi']);
     Route::post('/kirim/checkout', [KirimController::class, 'checkout']);
     Route::get('/kirim/{nomor}', [KirimController::class, 'show']);
