@@ -13,12 +13,14 @@ import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import KirimKonfirmasiSkeleton from '@/components/skeleton/KirimKonfirmasiSkeleton.vue'
 import KontakPenerima from '@/components/KontakPenerima.vue'
+import PetaRuteKirim from '@/components/kirim/PetaRuteKirim.vue'
+import SheetMetodeBayar from '@/components/SheetMetodeBayar.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
 import { useKirimStore } from '@/stores/kirim'
 import { useAuthStore } from '@/stores/auth'
 import { pesanKirim } from '@/api/kirim'
 import { pesanError } from '@/api/belanja'
-import { METODE_BAYAR } from '@/lib/jemput'
+import { LABEL_METODE, type MetodeId } from '@/lib/metodeBayar'
 import { rupiah } from '@/lib/kirim'
 
 const router = useRouter()
@@ -43,9 +45,7 @@ const ditandai = ref(false)
 const memproses = ref(false)
 const galat = ref<string | null>(null)
 
-const namaMetode = computed(
-  () => METODE_BAYAR.find((m) => m.id === kirimStore.metode)?.nama ?? kirimStore.metode,
-)
+const namaMetode = computed(() => LABEL_METODE[kirimStore.metode as MetodeId] ?? kirimStore.metode)
 
 const namaPengirimTampil = computed(() =>
   namaPengirim.value.trim()
@@ -156,6 +156,31 @@ async function kirim() {
     </header>
 
     <main v-if="pilihan" class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
+      <!--
+        Peta rute, terakhir kali sebelum pesanan dibuat. Rutenya diambil dari
+        store — hasil hitungan server yang sama dengan layar detail — supaya
+        garisnya tidak berubah jadi lurus putus-putus di sini, bentuk yang di
+        aplikasi ini berarti "rutenya tidak diketahui".
+      -->
+      <section class="bg-(--color-surface-0) rounded-2xl p-3">
+        <PetaRuteKirim
+          :ambil="kirimStore.ambil"
+          :antar="kirimStore.antar"
+          :geometri="kirimStore.geometri"
+          :lewat-jalan="kirimStore.lewatJalan"
+        />
+        <div class="px-1 pt-3 flex flex-col gap-2">
+          <p class="flex items-start gap-2 text-[12.5px] leading-snug">
+            <span class="mt-1.5 w-2 h-2 rounded-full bg-(--color-azure) shrink-0"></span>
+            <span class="min-w-0 truncate">{{ kirimStore.ambil?.alamat }}</span>
+          </p>
+          <p class="flex items-start gap-2 text-[12.5px] leading-snug">
+            <span class="mt-1.5 w-2 h-2 rounded-full bg-orange-500 shrink-0"></span>
+            <span class="min-w-0 truncate">{{ kirimStore.antar?.alamat }}</span>
+          </p>
+        </div>
+      </section>
+
       <!--
         HANYA PENERIMA di sini.
         
@@ -271,53 +296,61 @@ async function kirim() {
       </p>
     </main>
 
-    <!-- Lembar metode bayar -->
-    <div
-      v-if="lembarMetode"
-      class="fixed inset-0 z-50 flex items-end"
-      @click.self="lembarMetode = false"
-    >
-      <div class="absolute inset-0 bg-black/40"></div>
-      <div class="relative w-full max-w-[430px] mx-auto bg-(--color-surface-0) rounded-t-3xl p-5">
-        <div class="w-10 h-1 rounded-full bg-(--color-outline)/30 mx-auto mb-4"></div>
-        <h2 class="text-[16px] font-display font-extrabold mb-3">Metode pembayaran</h2>
-
-        <button
-          v-for="m in METODE_BAYAR"
-          :key="m.id"
-          type="button"
-          class="w-full flex items-center gap-3 rounded-xl px-3 py-3.5 text-left transition-colors"
-          :class="kirimStore.metode === m.id ? 'bg-(--color-secondary-container)/50' : ''"
-          @click="((kirimStore.metode = m.id), (lembarMetode = false))"
-        >
-          <Icon :name="m.ikon" class="w-5 h-5 text-(--color-azure)" />
-          <span class="flex-1 text-[13.5px] font-semibold">{{ m.nama }}</span>
-          <Icon v-if="kirimStore.metode === m.id" name="check" class="w-4 h-4 text-(--color-azure)" />
-        </button>
-      </div>
-    </div>
+    <!--
+      Lembar metode pembayaran yang sama dengan checkout BisaBelanja: daftar,
+      saldo, aktivasi, dan aturannya satu, bukan dua yang bisa berbeda.
+    -->
+    <SheetMetodeBayar
+      v-model="kirimStore.metode"
+      v-model:buka="lembarMetode"
+      :total="total"
+    />
 
     <footer class="fixed bottom-0 inset-x-0 z-40 bg-(--color-surface-0) shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
-      <div class="max-w-[430px] mx-auto px-4 pt-3 pb-[calc(0.875rem+env(safe-area-inset-bottom))]">
-        <div class="flex items-center justify-between gap-3 mb-2.5">
-          <span class="text-[12.5px] text-(--color-on-surface-variant)">{{ namaMetode }}</span>
-          <span class="text-[17px] font-extrabold">{{ rupiah(total) }}</span>
+      <!--
+        Bar bayar sebentuk dengan checkout BisaBelanja: metodenya bisa diganti
+        dari sini, tanpa menggulung balik ke tengah formulir.
+      -->
+      <div
+        class="max-w-[430px] mx-auto px-4 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-4"
+      >
+        <div class="flex flex-col min-w-0">
+          <button
+            type="button"
+            class="flex items-center gap-1 text-[12.5px] font-semibold text-(--color-on-surface-variant) active:scale-95 transition-transform"
+            @click="lembarMetode = true"
+          >
+            {{ namaMetode }}
+            <Icon name="chevron-down" class="w-3.5 h-3.5" />
+          </button>
+          <span class="flex items-center gap-2 min-w-0">
+            <span class="text-[20px] font-extrabold leading-tight truncate">{{ rupiah(total) }}</span>
+            <span
+              v-if="promo"
+              class="shrink-0 text-[10.5px] font-bold text-(--color-secondary) bg-(--color-secondary-container) rounded-full px-2 py-0.5"
+            >
+              Hemat {{ rupiah(promo.potongan) }}
+            </span>
+          </span>
         </div>
 
         <button
           type="button"
-          class="w-full h-12 rounded-full bg-(--color-azure) text-white text-[14.5px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-40"
+          class="flex-1 bg-(--color-azure) text-white rounded-xl py-3.5 text-[15px] font-extrabold active:scale-95 transition-all disabled:opacity-40 disabled:active:scale-100"
           :disabled="memproses"
           @click="kirim"
         >
-          {{ memproses ? 'Memproses…' : 'Pesan BisaKirim' }}
-          <Icon v-if="!memproses" name="arrow-right" class="w-4 h-4" />
+          {{ memproses ? 'Memproses…' : 'Pesan' }}
         </button>
-
-        <p v-if="galat" role="alert" class="mt-2 text-[12px] font-semibold text-(--color-error)">
-          {{ galat }}
-        </p>
       </div>
+
+      <p
+        v-if="galat"
+        role="alert"
+        class="max-w-[430px] mx-auto px-4 pb-3 -mt-1 text-[12px] font-semibold text-(--color-error)"
+      >
+        {{ galat }}
+      </p>
     </footer>
   </div>
 </template>

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { PilihanKirim, PromoKirim, TitikKirim } from '@/lib/kirim'
+import type { MetodeId } from '@/lib/metodeBayar'
 
 /**
  * Draf kiriman BisaKirim.
@@ -16,22 +17,37 @@ export const useKirimStore = defineStore('kirim', () => {
   const isi = ref('')
   const nilaiBarang = ref(0)
   const pakaiKodeTerima = ref(false)
+  /*
+   * Rute yang sudah dihitung server, disimpan supaya layar konfirmasi
+   * menggambar garis YANG SAMA dengan layar detail. Tanpa ini konfirmasi hanya
+   * punya dua titik, dan garisnya jatuh ke lurus putus-putus — bentuk yang di
+   * aplikasi ini berarti 'rutenya tidak diketahui'. Padahal diketahui.
+   */
+  const geometri = ref<[number, number][] | null>(null)
+  const lewatJalan = ref(false)
   const pilihan = ref<PilihanKirim | null>(null)
   const promo = ref<PromoKirim | null>(null)
-  const metode = ref('gopay')
+  /*
+   * Bertipe MetodeId, bukan string: id inilah yang masuk kolom payments.metode
+   * dan dipakai rekonsiliasi, jadi salah ketik harus ketahuan saat dikompilasi.
+   *
+   * Bawaannya tunai, sama dengan checkout BisaBelanja. Sebelumnya gopay —
+   * padahal saldo contohnya Rp5.823, jadi layar terbuka dengan metode yang
+   * lembar pilihannya sendiri tandai 'saldo tidak cukup' dan tidak bisa
+   * dipilih ulang.
+   */
+  const metode = ref<MetodeId>('tunai')
 
   function setAmbil(t: TitikKirim | null) {
     ambil.value = t
-    pilihan.value = null
-    promo.value = null
+    lupakanRute()
   }
 
   function setAntar(t: TitikKirim | null) {
     antar.value = t
     // Rute berubah berarti ongkir berubah; pilihan dan voucher lama tidak
     // berlaku lagi, dan menyimpannya hanya menampilkan harga yang salah.
-    pilihan.value = null
-    promo.value = null
+    lupakanRute()
   }
 
   /** Tukar titik ambil dan antar BESERTA kontaknya. */
@@ -39,8 +55,7 @@ export const useKirimStore = defineStore('kirim', () => {
     const a = ambil.value
     ambil.value = antar.value
     antar.value = a
-    pilihan.value = null
-    promo.value = null
+    lupakanRute()
   }
 
   /**
@@ -58,6 +73,19 @@ export const useKirimStore = defineStore('kirim', () => {
     const titik = sisi === 'ambil' ? ambil : antar
     if (!titik.value) return
     titik.value = { ...titik.value, ...kontak }
+  }
+
+  /** Buang semua yang dihitung dari rute lama. */
+  function lupakanRute() {
+    pilihan.value = null
+    promo.value = null
+    geometri.value = null
+    lewatJalan.value = false
+  }
+
+  function setRute(g: [number, number][] | null, lewat: boolean) {
+    geometri.value = g
+    lewatJalan.value = lewat
   }
 
   function setUkuran(u: string) {
@@ -89,8 +117,7 @@ export const useKirimStore = defineStore('kirim', () => {
     isi.value = ''
     nilaiBarang.value = 0
     pakaiKodeTerima.value = false
-    pilihan.value = null
-    promo.value = null
+    lupakanRute()
   }
 
   return {
@@ -100,12 +127,15 @@ export const useKirimStore = defineStore('kirim', () => {
     isi,
     nilaiBarang,
     pakaiKodeTerima,
+    geometri,
+    lewatJalan,
     pilihan,
     promo,
     metode,
     setAmbil,
     setAntar,
     setKontak,
+    setRute,
     tukar,
     setUkuran,
     setPilihan,

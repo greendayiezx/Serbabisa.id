@@ -10,21 +10,21 @@
  * Semua ongkir datang dari server. Jarak, tarif, dan potongan voucher dihitung
  * di sana, dan server menghitungnya sekali lagi sebelum menagih.
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
 import KirimDetailSkeleton from '@/components/skeleton/KirimDetailSkeleton.vue'
 import SpandukHemat from '@/components/kirim/SpandukHemat.vue'
+import PetaRuteKirim from '@/components/kirim/PetaRuteKirim.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
-import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
 import { useKirimStore } from '@/stores/kirim'
 import { estimasiKirim, type HasilEstimasiKirim } from '@/api/kirim'
 import { pesanError } from '@/api/belanja'
 import { UKURAN, rupiah, type PilihanKirim } from '@/lib/kirim'
+import bisaKirimInstantImg from '@/assets/BisaKirim_Instant.svg'
+import bisaKirimInstantMobilImg from '@/assets/BisaKirim_InstantMobil.svg'
 
 const router = useRouter()
 const kembali = useKembali()
@@ -42,51 +42,7 @@ const dipilih = ref<PilihanKirim | null>(null)
 const lembarPaket = ref(false)
 
 /* ────────── Peta rute ────────── */
-const petaEl = ref<HTMLDivElement | null>(null)
-let peta: L.Map | null = null
-let garis: L.Polyline | null = null
-let bayang: L.Polyline | null = null
-let penandaAmbil: L.Marker | null = null
-let penandaAntar: L.Marker | null = null
-
-function gambarPeta() {
-  if (!petaEl.value || !ambil.value || !antar.value) return
-
-  if (!peta) {
-    peta = L.map(petaEl.value, { zoomControl: false, attributionControl: false })
-    L.tileLayer(TILE_URL, TILE_OPTIONS).addTo(peta)
-  }
-
-  const a: L.LatLngTuple = [ambil.value.lat, ambil.value.lng]
-  const b: L.LatLngTuple = [antar.value.lat, antar.value.lng]
-
-  penandaAmbil?.remove()
-  penandaAntar?.remove()
-  penandaAmbil = L.marker(a, { icon: pinIcon('#1e9bf0') }).addTo(peta)
-  penandaAntar = L.marker(b, { icon: pinIcon('#f97316') }).addTo(peta)
-
-  /*
-   * Garis mengikuti jalan bila server bisa mengambil rutenya — dan titik-titik
-   * itu berasal dari perhitungan yang sama yang dipakai menagih. Kalau tidak,
-   * yang tergambar garis lurus PUTUS-PUTUS: bentuk yang berbeda supaya tidak
-   * terbaca sebagai rute sungguhan.
-   */
-  const titik: L.LatLngExpression[] =
-    (hasil.value?.geometri as L.LatLngExpression[] | null | undefined) ?? [a, b]
-
-  garis?.remove()
-  bayang?.remove()
-  bayang = L.polyline(titik, { color: '#1B2C5E', weight: 8, opacity: 0.22, lineJoin: 'round' }).addTo(peta)
-  garis = L.polyline(titik, {
-    color: '#8BC53F',
-    weight: 5,
-    lineJoin: 'round',
-    dashArray: hasil.value?.lewat_jalan ? undefined : '8 8',
-  }).addTo(peta)
-
-  peta.fitBounds(L.latLngBounds(titik as L.LatLngTuple[]).pad(0.25))
-  setTimeout(() => peta?.invalidateSize(), 120)
-}
+const petaRef = ref<InstanceType<typeof PetaRuteKirim> | null>(null)
 
 async function muatEstimasi() {
   if (!ambil.value || !antar.value) return
@@ -105,11 +61,13 @@ async function muatEstimasi() {
 
     // Kendaraan termurah yang SANGGUP membawa paketnya. Yang tidak sanggup
     // tidak pernah jadi pilihan awal, meski lebih murah.
+    kirimStore.setRute(hasil.value.geometri, hasil.value.lewat_jalan)
+
     const sanggup = hasil.value.pilihan.filter((p) => p.sanggup)
     pilih(sanggup.sort((a, b) => a.total_setelah_promo - b.total_setelah_promo)[0] ?? null)
 
     await nextTick()
-    gambarPeta()
+    petaRef.value?.gambar()
   } catch (e) {
     hasil.value = null
     pilih(null)
@@ -133,17 +91,12 @@ onMounted(async () => {
   await muatEstimasi()
 })
 
-onBeforeUnmount(() => {
-  peta?.remove()
-  peta = null
-})
-
 // Peta dibangun setelah skeleton pergi: selama skeleton tampil, div petanya
 // belum ada di DOM dan gambarPeta() berhenti di penjagaan null-nya.
 watch(skelTampil, async (masihSkeleton) => {
   if (masihSkeleton) return
   await nextTick()
-  gambarPeta()
+  petaRef.value?.gambar()
 })
 
 async function gantiUkuran(id: string) {
@@ -303,7 +256,13 @@ function lanjut() {
           </template>
           <template v-else>Menghitung jarak…</template>
         </p>
-        <div ref="petaEl" class="w-full h-44 rounded-xl overflow-hidden" aria-label="Peta rute kiriman"></div>
+        <PetaRuteKirim
+          ref="petaRef"
+          :ambil="ambil"
+          :antar="antar"
+          :geometri="hasil?.geometri ?? null"
+          :lewat-jalan="hasil?.lewat_jalan ?? false"
+        />
       </section>
 
       <p v-if="galat" role="alert" class="text-[12.5px] font-semibold text-(--color-error) px-1">
@@ -359,14 +318,29 @@ function lanjut() {
               :aria-pressed="dipilih?.kendaraan === p.kendaraan"
               @click="pilih(p)"
             >
-              <span
-                class="w-10 h-10 rounded-xl bg-(--color-primary-container) flex items-center justify-center shrink-0"
-              >
-                <Icon
-                  :name="p.kendaraan === 'motor' ? 'motorcycle' : 'car'"
-                  class="w-5 h-5 text-(--color-on-primary-container)"
+              <div class="w-13 h-13 shrink-0 flex items-center justify-center">
+                <img
+                  v-if="p.kendaraan === 'motor'"
+                  :src="bisaKirimInstantImg"
+                  alt="BisaKirim Instant Motor"
+                  class="w-13 h-13 object-contain"
                 />
-              </span>
+                <img
+                  v-else-if="p.kendaraan === 'mobil'"
+                  :src="bisaKirimInstantMobilImg"
+                  alt="BisaKirim Instant Mobil"
+                  class="w-13 h-13 object-contain"
+                />
+                <span
+                  v-else
+                  class="w-13 h-13 rounded-2xl bg-(--color-primary-container) flex items-center justify-center shrink-0"
+                >
+                  <Icon
+                    name="car"
+                    class="w-6 h-6 text-(--color-on-primary-container)"
+                  />
+                </span>
+              </div>
 
               <div class="flex-1 min-w-0">
                 <p class="text-[13.5px] font-extrabold leading-tight">{{ p.label }}</p>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** Detail pengirim & penerima: dua blok isian, rincian biaya, pembayaran. */
+/** Detail pengirim & penerima: peta rute, isian, rincian biaya, pembayaran. */
 import Skeleton from '@/components/ui/Skeleton.vue'
 import SkNavbar from './SkNavbar.vue'
 </script>
@@ -9,6 +9,15 @@ import SkNavbar from './SkNavbar.vue'
     <SkNavbar />
 
     <div class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
+      <!-- Peta rute: setinggi PetaRuteKirim (h-44) di dalam kartu p-3. -->
+      <section class="bg-(--color-surface-0) rounded-2xl p-3">
+        <Skeleton class="h-44 w-full rounded-xl" />
+        <div class="px-1 pt-3 flex flex-col gap-2">
+          <Skeleton class="h-3 w-4/5" />
+          <Skeleton class="h-3 w-3/5" />
+        </div>
+      </section>
+
       <section v-for="i in 2" :key="i" class="bg-(--color-surface-0) rounded-2xl p-5">
         <Skeleton class="h-3.5 w-32 mb-3" />
         <Skeleton class="h-2.5 w-4/5 mb-3" />
