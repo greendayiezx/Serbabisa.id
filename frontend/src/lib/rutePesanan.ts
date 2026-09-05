@@ -68,6 +68,12 @@ export function ruteTugas(task: Task): RouteLocationRaw {
    * saat membuka pesanan ini bukan rincian tagihan, melainkan pengemudi mana
    * yang datang dan sudah sampai mana.
    */
+  // BisaKirim punya layar kirimannya sendiri: yang dicari orang saat membuka
+  // pesanan ini adalah kode terima paket dan sudah sampai mana kurirnya.
+  if (task.detail_layanan?.layanan === 'kirim' && invoice) {
+    return { name: 'task-kirim-status', params: { nomor: invoice } }
+  }
+
   if (task.detail_layanan?.layanan === 'jemput' && invoice) {
     return { name: 'task-jemput-perjalanan', params: { nomor: invoice } }
   }

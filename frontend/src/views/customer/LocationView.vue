@@ -9,6 +9,7 @@ import PolaBisaBersih from '@/components/bersih/PolaBisaBersih.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import { useLocationStore, kunciAlamat, type PlaceItem, type SavedPlaceKey, type TaskLocation } from '@/stores/location'
 import { useJemputStore } from '@/stores/jemput'
+import { useKirimStore } from '@/stores/kirim'
 import { useAuthStore } from '@/stores/auth'
 import { useDriverStore } from '@/stores/driver'
 import { driverPinIcon } from '@/lib/driverIcon'
@@ -30,6 +31,7 @@ const router = useRouter()
 const route = useRoute()
 const locationStore = useLocationStore()
 const jemputStore = useJemputStore()
+const kirimStore = useKirimStore()
 const authStore = useAuthStore()
 const driverStore = useDriverStore()
 
@@ -240,6 +242,7 @@ const subtitleText = computed(() => {
   if (isBisaAngkut.value) return 'Mau angkut barang ke mana hari ini?'
   if (isBisaBelanja.value) return 'Mau belanja apa hari ini?'
   if (isBisaBersih.value) return 'Bersih-bersih di mana hari ini?'
+  if (isBisaJemput.value) return 'Mau dijemput di mana?'
   return 'Mau anter tugas ke mana hari ini?'
 })
 
@@ -249,11 +252,9 @@ const subtitleText = computed(() => {
  * Menu yang punya hero SVG sendiri dinaikkan sampai kartunya menumpang di atas
  * gelombang hijau — tanpa itu ada pita kosong di antara hero dan kartu, dan
  * petanya terdorong turun sampai nyaris tidak kelihatan tanpa menggulir.
- * BisaJemput dinaikkan lebih jauh karena gelombang di hero-nya paling tinggi.
  */
 const contentSheetMarginClass = computed(() => {
-  if (isBisaJemput.value) return '-mt-24'
-  if (isBisaAngkut.value || isBisaBelanja.value || isBisaBersih.value) return '-mt-14'
+  if (isBisaJemput.value || isBisaAngkut.value || isBisaBelanja.value || isBisaBersih.value) return '-mt-14'
   return '-mt-1'
 })
 
@@ -617,6 +618,17 @@ function finishLocationSelection() {
     return
   }
 
+  /*
+   * BisaKirim: alamat yang dipilih di sini jadi TITIK AMBIL — tempat kurir
+   * menjemput paket. Tujuannya diisi di halaman berikutnya, karena satu
+   * kiriman selalu punya dua titik dan halaman ini hanya menanyakan satu.
+   */
+  if (route.query.category === 'bisakirim') {
+    kirimStore.setAmbil({ alamat: place.alamat, lat: place.lat, lng: place.lng })
+    router.push({ name: 'task-kirim' })
+    return
+  }
+
   goBackOrHome()
 }
 
@@ -739,16 +751,12 @@ watch(skelTampil, async (masihSkeleton) => {
            siluet kota, dan lampu jalan ikut waktu nyata lewat heroTimeOfDay. -->
       <div
         v-else-if="isBisaJemput"
-        class="relative w-full overflow-hidden bg-[#0D1536] rounded-b-[2rem]"
+        class="relative w-full overflow-hidden bg-[#060f29] rounded-b-[2rem]"
       >
         <BisaJemputHeroArt :time-of-day="heroTimeOfDay" />
 
-        <!--
-          Sapaan dinaikkan seiring kartu putihnya: kartu yang naik sampai
-          -mt-24 akan menutupi sapaan kalau sapaannya tetap di bottom-16.
-        -->
         <div
-          class="absolute inset-x-5 bottom-28 z-10 flex flex-col items-center justify-center text-center"
+          class="absolute inset-x-5 bottom-16 z-10 flex flex-col items-center justify-center text-center"
         >
           <h1
             class="font-display font-extrabold text-[16px] sm:text-[18px] leading-tight text-white text-center drop-shadow-sm"
@@ -756,7 +764,7 @@ watch(skelTampil, async (masihSkeleton) => {
             {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
           </h1>
           <p class="text-white/95 text-[12px] sm:text-[13.5px] font-bold text-center mt-0.5">
-            Mau dijemput di mana?
+            {{ subtitleText }}
           </p>
         </div>
       </div>

@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\DisinfektanController;
 use App\Http\Controllers\Api\FreonController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\JemputController;
+use App\Http\Controllers\Api\KirimController;
 use App\Http\Controllers\Api\KantorCheckoutController;
 use App\Http\Controllers\Api\KantorPermintaanController;
 use App\Http\Controllers\Api\LanggananController;
@@ -150,6 +151,15 @@ Route::middleware('auth:sanctum')->group(function () {
      * koordinat titik jemput seseorang tidak pantas nyangkut di log akses
      * sebagai query string.
      */
+    /*
+     * BisaKirim. Estimasi memakai POST dengan alasan yang sama seperti
+     * BisaJemput: isinya koordinat rumah orang, dan itu tidak pantas nyangkut
+     * di log akses sebagai query string.
+     */
+    Route::post('/kirim/estimasi', [KirimController::class, 'estimasi']);
+    Route::post('/kirim/checkout', [KirimController::class, 'checkout']);
+    Route::get('/kirim/{nomor}', [KirimController::class, 'show']);
+
     Route::post('/jemput/estimasi', [JemputController::class, 'estimasi']);
     Route::post('/jemput/checkout', [JemputController::class, 'checkout']);
     Route::get('/jemput/{nomor}', [JemputController::class, 'show']);

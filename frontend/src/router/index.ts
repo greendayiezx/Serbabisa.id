@@ -303,6 +303,35 @@ const router = createRouter({
     },
     {
       /*
+       * BisaKirim. Beranda menerima titik ambil dari halaman lokasi; tujuannya
+       * diisi di sini, dan ongkir baru bisa dihitung setelah keduanya ada.
+       */
+      path: '/tasks/new/kirim',
+      name: 'task-kirim',
+      component: () => import('@/views/kirim/KirimBerandaView.vue'),
+      meta: { induk: 'task-location', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/kirim/detail',
+      name: 'task-kirim-detail',
+      component: () => import('@/views/kirim/KirimDetailView.vue'),
+      meta: { induk: 'task-kirim', roles: ['customer'] as Role[] },
+    },
+    {
+      path: '/tasks/new/kirim/konfirmasi',
+      name: 'task-kirim-konfirmasi',
+      component: () => import('@/views/kirim/KirimKonfirmasiView.vue'),
+      meta: { induk: 'task-kirim-detail', roles: ['customer'] as Role[] },
+    },
+    {
+      // Kiriman yang sudah jadi: di luar /tasks/new.
+      path: '/tasks/kirim/:nomor',
+      name: 'task-kirim-status',
+      component: () => import('@/views/kirim/KirimStatusView.vue'),
+      meta: { induk: 'task-list', roles: ['customer'] as Role[] },
+    },
+    {
+      /*
        * BisaJemput. Titik jemput berdiri sebagai halamannya sendiri, bukan
        * satu langkah di dalam halaman pemesanan: ia harus dilewati sekali per
        * perjalanan, dan halaman berikutnya memulangkan ke sini kalau
