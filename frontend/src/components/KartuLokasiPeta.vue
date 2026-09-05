@@ -14,7 +14,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { TILE_OPTIONS, TILE_URL } from '@/lib/mapTiles'
+import { TILE_OPTIONS, TILE_URL, pinIcon } from '@/lib/mapTiles'
 
 const props = withDefaults(
   defineProps<{
@@ -26,11 +26,18 @@ const props = withDefaults(
     tersembunyi?: boolean
     /** Kosongkan kalau kartunya tidak boleh diketuk. */
     tombol?: string
+    /**
+     * Warna pin. BisaKirim memakai dua kartu di satu alur — biru untuk titik
+     * ambil, oranye untuk tujuan — dan warnanya harus sama dengan pin di peta
+     * rute, karena di situlah orang belajar mana ujung yang mana.
+     */
+    warnaPin?: string
   }>(),
   {
     label: 'Lokasi servis',
     tersembunyi: false,
     tombol: 'Ganti lokasi',
+    warnaPin: '#1e9bf0',
   },
 )
 
@@ -43,13 +50,6 @@ const petaEl = ref<HTMLDivElement | null>(null)
 let peta: L.Map | null = null
 let penanda: L.Marker | null = null
 let pengamat: ResizeObserver | null = null
-
-const pinIcon = L.divIcon({
-  className: '',
-  html: `<svg viewBox="0 0 24 24" width="40" height="40" stroke="#1e9bf0" stroke-width="2" fill="rgba(255,255,255,0.95)" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2))"><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5" fill="#1e9bf0" stroke="none"/></svg>`,
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
-})
 
 function initPeta() {
   if (!petaEl.value || peta) return
@@ -68,7 +68,10 @@ function initPeta() {
     touchZoom: false,
   })
   L.tileLayer(TILE_URL, TILE_OPTIONS).addTo(peta)
-  penanda = L.marker(titik, { icon: pinIcon }).addTo(peta)
+  // pinIcon() dipanggil, bukan dipakai sebagai konstanta bersama: satu objek
+  // DivIcon menyimpan elemen DOM-nya sendiri, jadi kartu kedua di halaman yang
+  // sama akan mencuri pin milik kartu pertama.
+  penanda = L.marker(titik, { icon: pinIcon(props.warnaPin) }).addTo(peta)
 
   pengamat = new ResizeObserver(() => peta?.invalidateSize())
   pengamat.observe(petaEl.value)

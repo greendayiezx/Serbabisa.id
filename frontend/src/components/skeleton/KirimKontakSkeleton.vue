@@ -9,13 +9,19 @@ import SkNavbar from './SkNavbar.vue'
     <SkNavbar />
 
     <div class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
-      <section class="bg-(--color-surface-0) rounded-2xl p-4 flex items-start gap-3">
-        <Skeleton class="w-[22px] h-[22px]" bulat />
-        <div class="flex-1 flex flex-col gap-1.5">
-          <Skeleton class="h-2.5 w-24" />
-          <Skeleton class="h-3.5 w-4/5" />
+      <!-- Kartu peta: tingginya disamakan dengan KartuLokasiPeta (h-40 + p-4). -->
+      <section
+        class="bg-(--color-surface-0) rounded-2xl border border-(--color-outline)/25 overflow-hidden"
+      >
+        <Skeleton class="h-40 w-full rounded-none" />
+        <div class="p-4 flex items-start justify-between gap-3">
+          <div class="flex-1 flex flex-col gap-1.5">
+            <Skeleton class="h-2.5 w-24" />
+            <Skeleton class="h-3.5 w-1/2" />
+            <Skeleton class="h-2.5 w-4/5" />
+          </div>
+          <Skeleton class="h-9 w-24 rounded-full shrink-0" />
         </div>
-        <Skeleton class="h-3 w-10 self-center" />
       </section>
 
       <section class="bg-(--color-surface-0) rounded-2xl p-5">

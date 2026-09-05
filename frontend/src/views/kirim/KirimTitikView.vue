@@ -15,6 +15,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
+import KartuLokasiPeta from '@/components/KartuLokasiPeta.vue'
 import KontakPenerima from '@/components/KontakPenerima.vue'
 import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
 import KirimKontakSkeleton from '@/components/skeleton/KirimKontakSkeleton.vue'
@@ -46,7 +47,9 @@ const salinan = computed(() =>
         pesanKosong: 'Nama dan nomor pengirim dibutuhkan supaya kurir bisa menghubungi saat menjemput.',
         placeholderPatokan: 'Mis. pagar hitam, titip satpam',
         judulPeta: 'Set titik ambil',
-        warnaPin: 'text-(--color-azure)',
+        // Sama dengan pin di peta rute halaman detail: biru untuk yang diambil,
+        // oranye untuk tujuannya.
+        warnaPin: '#1e9bf0',
       }
     : {
         judul: 'Detail Pengiriman Paket',
@@ -56,7 +59,7 @@ const salinan = computed(() =>
         pesanKosong: 'Nama dan nomor penerima dibutuhkan supaya kurir bisa menghubungi saat mengantar.',
         placeholderPatokan: 'Mis. lantai 3, sebelah minimarket',
         judulPeta: 'Set tujuan kiriman',
-        warnaPin: 'text-orange-500',
+        warnaPin: '#f97316',
       },
 )
 
@@ -126,21 +129,24 @@ function simpan() {
     </header>
 
     <main class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
-      <!-- Titik di peta, bisa diganti dari sini -->
-      <button
-        type="button"
-        class="bg-(--color-surface-0) rounded-2xl p-4 flex items-start gap-3 text-left active:scale-[0.99] transition-transform"
-        @click="lembarLokasi = true"
-      >
-        <Icon name="pin" class="w-[22px] h-[22px] mt-0.5 shrink-0" :class="salinan.warnaPin" />
-        <span class="flex-1 min-w-0">
-          <span class="block text-[11px] text-(--color-on-surface-variant)">
-            {{ salinan.labelTitik }}
-          </span>
-          <span class="block text-[13.5px] font-bold leading-snug">{{ titik?.alamat }}</span>
-        </span>
-        <span class="text-[12.5px] font-bold text-(--color-azure) shrink-0 self-center">Ubah</span>
-      </button>
+      <!--
+        Titiknya ditampilkan sebagai peta, bukan sebaris alamat. Alamat hasil
+        pencarian sering menunjuk ke tengah jalan atau ke gedung sebelah, dan
+        teks tidak pernah memperlihatkan itu — petanya yang memperlihatkan.
+
+        Peta di sini hanya untuk dilihat; menggesernya lewat lembar pemilih,
+        tempat pencariannya ada.
+      -->
+      <KartuLokasiPeta
+        :alamat="titik?.alamat ?? ''"
+        :lat="titik?.lat ?? -6.2088"
+        :lng="titik?.lng ?? 106.8456"
+        :label="salinan.labelTitik"
+        :warna-pin="salinan.warnaPin"
+        :tersembunyi="lembarLokasi"
+        tombol="Ubah titik"
+        @ubah="lembarLokasi = true"
+      />
 
       <KontakPenerima
         v-model:nama="nama"
