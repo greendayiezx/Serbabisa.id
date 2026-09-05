@@ -12,6 +12,7 @@ import { useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import KirimKonfirmasiSkeleton from '@/components/skeleton/KirimKonfirmasiSkeleton.vue'
+import KontakPenerima from '@/components/KontakPenerima.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
 import { useKirimStore } from '@/stores/kirim'
 import { useAuthStore } from '@/stores/auth'
@@ -56,10 +57,14 @@ onMounted(() => {
     return
   }
 
-  // Nama pengirim diisi dari akun, tapi tetap bisa diubah: yang menyerahkan
-  // paket belum tentu pemilik akun.
-  namaPengirim.value = kirimStore.ambil.nama ?? authStore.user?.name ?? ''
-  teleponPengirim.value = kirimStore.ambil.telepon ?? authStore.user?.phone ?? ''
+  /*
+   * Hanya dari draf kiriman, bukan dari akun. Mengisi otomatis dari akun
+   * membuat orang mengirim atas nama dirinya tanpa sadar — padahal yang
+   * menyerahkan paket belum tentu pemilik akun. Tombol "Pakai detail saya" di
+   * kartunya ada persis untuk itu, dan itu keputusan yang diambil sengaja.
+   */
+  namaPengirim.value = kirimStore.ambil.nama ?? ''
+  teleponPengirim.value = kirimStore.ambil.telepon ?? ''
   namaPenerima.value = kirimStore.antar.nama ?? ''
   teleponPenerima.value = kirimStore.antar.telepon ?? ''
 
@@ -143,79 +148,62 @@ async function kirim() {
     </header>
 
     <main v-if="pilihan" class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
-      <!-- Pengirim -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <div class="flex items-center gap-2 mb-3">
-          <Icon name="pin" class="w-[18px] h-[18px] text-(--color-azure)" />
-          <h2 class="text-[13.5px] font-display font-extrabold">Diambil dari</h2>
-        </div>
-        <p class="text-[12px] leading-snug text-(--color-on-surface-variant) mb-3">
-          {{ kirimStore.ambil?.alamat }}
-        </p>
-
-        <div class="flex flex-col gap-2.5">
-          <input
-            v-model="namaPengirim"
-            type="text"
-            maxlength="100"
-            placeholder="Nama pengirim"
-            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 outline-none focus:border-(--color-azure)"
-            :class="ditandai && !namaPengirim.trim() ? 'border-(--color-error)' : 'border-transparent'"
-          />
-          <input
-            v-model="teleponPengirim"
-            type="tel"
-            maxlength="30"
-            placeholder="Nomor telepon pengirim"
-            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 outline-none focus:border-(--color-azure)"
-            :class="ditandai && !teleponPengirim.trim() ? 'border-(--color-error)' : 'border-transparent'"
-          />
+      <!--
+        Isian kontak memakai komponen yang sama dengan Detail Penerima di
+        BisaAngkut: nama, pemilih kode negara berbendera, dan "Pakai detail
+        saya". Satu pola yang dipelajari sekali, berlaku di seluruh aplikasi —
+        dan nomornya tersimpan lengkap berkode negara, karena yang menekan dial
+        nanti adalah kurir.
+      -->
+      <KontakPenerima
+        v-model:nama="namaPengirim"
+        v-model:telepon="teleponPengirim"
+        judul="Detail Pengirim"
+        :subjudul="kirimStore.ambil?.alamat"
+        placeholder-nama="Nama yang menyerahkan paket…"
+        pesan-kosong="Nama dan nomor pengirim dibutuhkan supaya kurir bisa menghubungi saat menjemput."
+        :ditandai="ditandai"
+      >
+        <div class="mt-4">
+          <label
+            class="block text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide mb-1.5"
+          >
+            Patokan untuk kurir
+          </label>
           <input
             v-model="catatanAmbil"
             type="text"
             maxlength="255"
-            placeholder="Patokan untuk kurir (opsional)"
-            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
+            placeholder="Mis. pagar hitam, titip satpam"
+            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none placeholder:text-(--color-on-surface-variant)"
           />
         </div>
-      </section>
+      </KontakPenerima>
 
-      <!-- Penerima -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
-        <div class="flex items-center gap-2 mb-3">
-          <Icon name="pin" class="w-[18px] h-[18px] text-orange-500" />
-          <h2 class="text-[13.5px] font-display font-extrabold">Diantar ke</h2>
-        </div>
-        <p class="text-[12px] leading-snug text-(--color-on-surface-variant) mb-3">
-          {{ kirimStore.antar?.alamat }}
-        </p>
-
-        <div class="flex flex-col gap-2.5">
-          <input
-            v-model="namaPenerima"
-            type="text"
-            maxlength="100"
-            placeholder="Nama penerima"
-            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 outline-none focus:border-(--color-azure)"
-            :class="ditandai && !namaPenerima.trim() ? 'border-(--color-error)' : 'border-transparent'"
-          />
-          <input
-            v-model="teleponPenerima"
-            type="tel"
-            maxlength="30"
-            placeholder="Nomor telepon penerima"
-            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 outline-none focus:border-(--color-azure)"
-            :class="ditandai && !teleponPenerima.trim() ? 'border-(--color-error)' : 'border-transparent'"
-          />
+      <KontakPenerima
+        v-model:nama="namaPenerima"
+        v-model:telepon="teleponPenerima"
+        judul="Detail Penerima"
+        :subjudul="kirimStore.antar?.alamat"
+        placeholder-nama="Nama penerima paket…"
+        pesan-kosong="Nama dan nomor penerima dibutuhkan supaya kurir bisa menghubungi saat mengantar."
+        :ditandai="ditandai"
+      >
+        <div class="mt-4">
+          <label
+            class="block text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide mb-1.5"
+          >
+            Patokan untuk kurir
+          </label>
           <input
             v-model="catatanAntar"
             type="text"
             maxlength="255"
-            placeholder="Patokan untuk kurir (opsional)"
-            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none"
+            placeholder="Mis. lantai 3, sebelah minimarket"
+            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none placeholder:text-(--color-on-surface-variant)"
           />
         </div>
-      </section>
+      </KontakPenerima>
 
       <!-- Rincian -->
       <section class="bg-(--color-surface-0) rounded-2xl p-5">

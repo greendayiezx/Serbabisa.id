@@ -25,10 +25,26 @@ interface Negara {
 const props = withDefaults(
   defineProps<{
     judul?: string
+    /** Baris kecil di bawah judul, mis. alamat yang didatangi. */
+    subjudul?: string
     /** Tandai merah kalau wajib dan masih kosong. */
     ditandai?: boolean
+    placeholderNama?: string
+    /**
+     * Kalimat yang muncul saat wajib tapi masih kosong. Bawaannya menyebut
+     * teknisi karena di situlah komponen ini pertama dipakai; menu lain
+     * menggantinya dengan pelaksana yang sebenarnya — kalimat yang menyebut
+     * peran yang salah lebih membingungkan daripada kalimat umum.
+     */
+    pesanKosong?: string
   }>(),
-  { judul: 'Data Pemesan', ditandai: false },
+  {
+    judul: 'Data Pemesan',
+    subjudul: '',
+    ditandai: false,
+    placeholderNama: 'Nama yang ditemui teknisi…',
+    pesanKosong: 'Nama dan nomor telepon dibutuhkan supaya teknisi bisa menghubungi saat tiba.',
+  },
 )
 
 const nama = defineModel<string>('nama', { default: '' })
@@ -122,10 +138,15 @@ onBeforeUnmount(() => document.removeEventListener('click', klikDiLuar))
 <template>
   <section class="bg-(--color-surface-0) rounded-2xl p-5">
     <div class="flex items-center justify-between gap-3 mb-4">
-      <h2 class="text-[14px] font-display font-extrabold">{{ judul }}</h2>
+      <div class="min-w-0">
+        <h2 class="text-[14px] font-display font-extrabold">{{ judul }}</h2>
+        <p v-if="subjudul" class="text-[11.5px] leading-snug text-(--color-on-surface-variant) mt-0.5">
+          {{ subjudul }}
+        </p>
+      </div>
       <button
         type="button"
-        class="text-[12.5px] font-bold text-(--color-azure) active:scale-95 transition-transform"
+        class="shrink-0 whitespace-nowrap text-[12.5px] font-bold text-(--color-azure) active:scale-95 transition-transform"
         @click="pakaiDetailSaya"
       >
         Pakai detail saya
@@ -141,7 +162,7 @@ onBeforeUnmount(() => document.removeEventListener('click', klikDiLuar))
       <input
         v-model="nama"
         type="text"
-        placeholder="Nama yang ditemui teknisi…"
+        :placeholder="placeholderNama"
         class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 outline-none focus:border-(--color-azure) placeholder:text-(--color-on-surface-variant)"
         :class="ditandai && !nama.trim() ? 'border-(--color-error)' : 'border-transparent'"
       />
@@ -216,7 +237,10 @@ onBeforeUnmount(() => document.removeEventListener('click', klikDiLuar))
     </div>
 
     <p v-if="kosongDanDitandai" class="mt-3 text-[11.5px] font-semibold text-(--color-error)">
-      Nama dan nomor telepon dibutuhkan supaya teknisi bisa menghubungi saat tiba.
+      {{ pesanKosong }}
     </p>
+
+    <!-- Ruang untuk isian tambahan milik pemanggil, mis. patokan alamat. -->
+    <slot />
   </section>
 </template>

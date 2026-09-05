@@ -18,6 +18,7 @@ import KirimBerandaSkeleton from '@/components/skeleton/KirimBerandaSkeleton.vue
 import IkonVoucher from '@/components/kirim/IkonVoucher.vue'
 import promoInstant15 from '@/assets/Instant15_BisaKirim.png'
 import promoSameday20 from '@/assets/Sameday20_BisaKirim.png'
+import promoAjakKirim from '@/assets/AjakKirim_BisaKirim.png'
 import { useSkeleton } from '@/composables/useSkeleton'
 import { useKirimStore } from '@/stores/kirim'
 import { useLocationStore } from '@/stores/location'
@@ -59,6 +60,10 @@ const riwayat = ref(locationStore.loadSearchHistory())
 const bannerHero = [
   { src: promoInstant15, alt: 'INSTANT15, diskon 15% sampai Rp20.000 untuk layanan Instant' },
   { src: promoSameday20, alt: 'SAMEDAY20, diskon 20% sampai Rp25.000 untuk layanan Same-Day' },
+  {
+    src: promoAjakKirim,
+    alt: 'AJAKKIRIM, teman dapat diskon Rp25.000 dan kamu dapat cashback Rp25.000',
+  },
 ]
 
 const trackHero = ref<HTMLElement | null>(null)
@@ -229,7 +234,7 @@ function lanjut() {
 
     <main class="max-w-[430px] mx-auto px-4 -mt-5 relative z-10 flex flex-col gap-3.5">
       <!-- Titik ambil & antar -->
-      <section class="bg-(--color-surface-0) rounded-2xl shadow-lg p-4">
+      <section class="bg-white rounded-2xl shadow-lg p-4 border-2 border-white">
         <div class="flex items-start gap-3">
           <div class="flex-1 min-w-0">
             <button
@@ -277,7 +282,7 @@ function lanjut() {
           <button
             type="button"
             aria-label="Tukar titik ambil dan tujuan"
-            class="w-10 h-10 rounded-full border border-(--color-outline)/30 flex items-center justify-center shrink-0 self-center active:scale-90 transition-transform disabled:opacity-40"
+            class="w-10 h-10 rounded-full border-2 border-white flex items-center justify-center shrink-0 self-center active:scale-90 transition-transform disabled:opacity-40 shadow-xs"
             :disabled="!ambil || !antar"
             @click="kirimStore.tukar()"
           >
@@ -290,7 +295,7 @@ function lanjut() {
           kartu sendiri: daftar ini ADALAH cara mengisi kolom di atasnya, dan
           memisahkannya membuat orang mengira keduanya dua hal berbeda.
         -->
-        <div v-if="riwayat.length" class="mt-3 pt-3 border-t border-(--color-outline)/12">
+        <div v-if="riwayat.length" class="mt-3 pt-3 border-t border-white">
           <button
             v-for="r in riwayat.slice(0, 4)"
             :key="r.id"
@@ -313,7 +318,7 @@ function lanjut() {
       <button
         v-if="jumlahVoucher > 0"
         type="button"
-        class="bg-(--color-surface-0) rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+        class="bg-white rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform border-2 border-white shadow-xs"
         @click="lembarVoucher = true"
       >
         <IkonVoucher :ukuran="40" />
@@ -329,7 +334,7 @@ function lanjut() {
       </button>
 
       <!-- Yang benar-benar bisa dilakukan layanan ini -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
+      <section class="bg-white rounded-2xl p-5 border-2 border-white shadow-xs">
         <h2 class="text-[14px] font-display font-extrabold mb-1">BisaKirim siap bantu</h2>
         <p class="text-[11.5px] text-(--color-on-surface-variant) mb-3.5">
           Kirim paket, dokumen, atau kunci — dijemput dan diantar hari itu juga.
@@ -339,9 +344,368 @@ function lanjut() {
           <div
             v-for="k in KEUNGGULAN"
             :key="k.judul"
-            class="flex items-start gap-3 rounded-xl bg-(--color-surface-container) p-3.5"
+            class="flex items-start gap-3 rounded-xl bg-white border-2 border-white shadow-xs p-3.5"
           >
+            <template v-if="k.judul === 'Proteksi paket'">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="40"
+                height="40"
+                viewBox="0 0 40 40"
+                fill="none"
+                class="shrink-0"
+              >
+                <defs>
+                  <linearGradient
+                    id="protectionBg"
+                    x1="4"
+                    y1="4"
+                    x2="36"
+                    y2="36"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop offset="0" stop-color="#167FE8"/>
+                    <stop offset="1" stop-color="#3BBEB8"/>
+                  </linearGradient>
+
+                  <linearGradient
+                    id="shield"
+                    x1="12"
+                    y1="9"
+                    x2="29"
+                    y2="31"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop offset="0" stop-color="#FFFFFF"/>
+                    <stop offset="1" stop-color="#EAF8FF"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- Background -->
+                <rect
+                  width="40"
+                  height="40"
+                  rx="12"
+                  fill="url(#protectionBg)"
+                />
+
+                <!-- Shield -->
+                <path
+                  d="M20 8.5
+                     L29 12.2
+                     V19
+                     C29 25.1 25.3 29.4 20 31.5
+                     C14.7 29.4 11 25.1 11 19
+                     V12.2
+                     L20 8.5Z"
+                  fill="url(#shield)"
+                />
+
+                <!-- Package inside shield -->
+                <path
+                  d="M15.2 17.2
+                     L20 14.8
+                     L24.8 17.2
+                     V23.1
+                     L20 25.6
+                     L15.2 23.1
+                     V17.2Z"
+                  fill="#167FE8"
+                />
+
+                <!-- Package top -->
+                <path
+                  d="M15.2 17.2L20 19.7L24.8 17.2"
+                  stroke="#C8FF00"
+                  stroke-width="1.4"
+                  stroke-linejoin="round"
+                />
+
+                <!-- Package center -->
+                <path
+                  d="M20 19.7V25.5"
+                  stroke="#C8FF00"
+                  stroke-width="1.4"
+                  stroke-linecap="round"
+                />
+
+                <!-- Protection check -->
+                <path
+                  d="M17.5 21.8L19.1 23.3L22.5 20"
+                  stroke="#FFFFFF"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+
+                <!-- Small lime accent -->
+                <circle
+                  cx="29.5"
+                  cy="10"
+                  r="2"
+                  fill="#C8FF00"
+                />
+              </svg>
+            </template>
+            <template v-else-if="k.judul === 'Kode terima paket'">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="40"
+                height="40"
+                viewBox="0 0 40 40"
+                fill="none"
+                class="shrink-0"
+              >
+                <defs>
+                  <linearGradient
+                    id="receiveCodeBg"
+                    x1="4"
+                    y1="4"
+                    x2="36"
+                    y2="36"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop offset="0" stop-color="#167FE8"/>
+                    <stop offset="1" stop-color="#3BBEB8"/>
+                  </linearGradient>
+
+                  <linearGradient
+                    id="packageWhite"
+                    x1="11"
+                    y1="10"
+                    x2="29"
+                    y2="30"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop offset="0" stop-color="#FFFFFF"/>
+                    <stop offset="1" stop-color="#EAF8FF"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- Background -->
+                <rect
+                  width="40"
+                  height="40"
+                  rx="12"
+                  fill="url(#receiveCodeBg)"
+                />
+
+                <!-- Package -->
+                <path
+                  d="M9.5 15.2L20 10L30.5 15.2V25.8L20 31L9.5 25.8V15.2Z"
+                  fill="url(#packageWhite)"
+                />
+
+                <!-- Package top -->
+                <path
+                  d="M9.5 15.2L20 20.5L30.5 15.2"
+                  stroke="#167FE8"
+                  stroke-width="1.5"
+                  stroke-linejoin="round"
+                />
+
+                <!-- Package center -->
+                <path
+                  d="M20 20.5V31"
+                  stroke="#167FE8"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+
+                <!-- Tape -->
+                <path
+                  d="M17.3 11.35L22.7 14.05V18.85L17.3 16.15V11.35Z"
+                  fill="#C8FF00"
+                />
+
+                <!-- Code keypad -->
+                <rect
+                  x="21.5"
+                  y="18"
+                  width="10"
+                  height="9"
+                  rx="2.5"
+                  fill="#167FE8"
+                />
+
+                <!-- PIN dots -->
+                <circle cx="24.2" cy="21" r="0.9" fill="#FFFFFF"/>
+                <circle cx="27" cy="21" r="0.9" fill="#FFFFFF"/>
+                <circle cx="29.8" cy="21" r="0.9" fill="#FFFFFF"/>
+
+                <circle cx="24.2" cy="24.2" r="0.9" fill="#C8FF00"/>
+                <circle cx="27" cy="24.2" r="0.9" fill="#C8FF00"/>
+                <circle cx="29.8" cy="24.2" r="0.9" fill="#C8FF00"/>
+
+                <!-- Verification check -->
+                <path
+                  d="M24.2 26L26.2 27.8L30.5 23.5"
+                  stroke="#C8FF00"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+
+                <!-- Small accent -->
+                <circle
+                  cx="31.5"
+                  cy="10"
+                  r="2"
+                  fill="#C8FF00"
+                />
+              </svg>
+            </template>
+            <template v-else-if="k.judul === 'Ambil di tempat'">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="40"
+                height="40"
+                viewBox="0 0 40 40"
+                fill="none"
+                class="shrink-0"
+              >
+                <defs>
+                  <linearGradient
+                    id="pickupBg"
+                    x1="4"
+                    y1="4"
+                    x2="36"
+                    y2="36"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop offset="0" stop-color="#167FE8"/>
+                    <stop offset="1" stop-color="#3BBEB8"/>
+                  </linearGradient>
+
+                  <linearGradient
+                    id="boxWhite"
+                    x1="10"
+                    y1="13"
+                    x2="25"
+                    y2="29"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop offset="0" stop-color="#FFFFFF"/>
+                    <stop offset="1" stop-color="#EAF8FF"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- Background -->
+                <rect
+                  width="40"
+                  height="40"
+                  rx="12"
+                  fill="url(#pickupBg)"
+                />
+
+                <!-- Package -->
+                <path
+                  d="M7.5 17L16 12.7L24.5 17V26L16 30.3L7.5 26V17Z"
+                  fill="url(#boxWhite)"
+                />
+
+                <!-- Box top -->
+                <path
+                  d="M7.5 17L16 21.3L24.5 17"
+                  stroke="#167FE8"
+                  stroke-width="1.4"
+                  stroke-linejoin="round"
+                />
+
+                <!-- Box center -->
+                <path
+                  d="M16 21.3V30.3"
+                  stroke="#167FE8"
+                  stroke-width="1.4"
+                  stroke-linecap="round"
+                />
+
+                <!-- Box tape -->
+                <path
+                  d="M13.9 13.75L18.1 15.85V20.2L13.9 18.1V13.75Z"
+                  fill="#C8FF00"
+                />
+
+                <!-- Courier -->
+                <!-- Head -->
+                <circle
+                  cx="29"
+                  cy="11.5"
+                  r="3"
+                  fill="#FFFFFF"
+                />
+
+                <!-- Helmet -->
+                <path
+                  d="M26.2 11.5C26.2 9.8 27.45 8.5 29 8.5C30.55 8.5 31.8 9.8 31.8 11.5H26.2Z"
+                  fill="#C8FF00"
+                />
+
+                <!-- Body -->
+                <path
+                  d="M26 15.5C26 14.4 26.9 13.5 28 13.5H30C31.1 13.5 32 14.4 32 15.5V22H26V15.5Z"
+                  fill="#FFFFFF"
+                />
+
+                <!-- Arm reaching package -->
+                <path
+                  d="M27 16.5L23 19.5L20.8 19"
+                  stroke="#FFFFFF"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+
+                <!-- Hand -->
+                <circle
+                  cx="20.7"
+                  cy="19"
+                  r="1.2"
+                  fill="#C8FF00"
+                />
+
+                <!-- Lower body / leg -->
+                <path
+                  d="M28 22L26 27"
+                  stroke="#FFFFFF"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+
+                <path
+                  d="M30.5 22L33 27"
+                  stroke="#FFFFFF"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+
+                <!-- Motion / pickup arrow -->
+                <path
+                  d="M11 10H6.5"
+                  stroke="#C8FF00"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+
+                <path
+                  d="M8.5 8L6.5 10L8.5 12"
+                  stroke="#C8FF00"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+
+                <!-- Small accent -->
+                <circle
+                  cx="34"
+                  cy="8"
+                  r="1.7"
+                  fill="#C8FF00"
+                />
+              </svg>
+            </template>
             <span
+              v-else
               class="w-9 h-9 rounded-xl bg-(--color-primary-container) flex items-center justify-center shrink-0"
             >
               <Icon :name="k.ikon" class="w-4.5 h-4.5 text-(--color-on-primary-container)" />
@@ -364,7 +728,7 @@ function lanjut() {
       >
         <div class="absolute inset-0 bg-black/40"></div>
         <div
-          class="relative w-full max-w-[430px] mx-auto bg-(--color-surface-0) rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto"
+          class="relative w-full max-w-[430px] mx-auto bg-white rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto"
         >
           <div class="w-10 h-1 rounded-full bg-(--color-outline)/30 mx-auto mb-4"></div>
           <h2 class="text-[16px] font-display font-extrabold mb-1">Voucher BisaKirim</h2>
@@ -377,7 +741,7 @@ function lanjut() {
             <div
               v-for="v in voucher"
               :key="v.kode"
-              class="rounded-2xl border-2 border-(--color-outline)/20 p-4"
+              class="rounded-2xl border-2 border-white bg-white p-4 shadow-xs"
               :class="v.terpakai ? 'opacity-55' : ''"
             >
               <div class="flex items-center justify-between gap-3">
