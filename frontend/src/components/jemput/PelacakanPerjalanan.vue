@@ -370,7 +370,7 @@ async function salinNomor() {
             {{ data.jemput?.alamat }}
           </span>
         </div>
-        <span class="block h-px bg-(--color-outline)/15 my-2.5 ml-9"></span>
+        <span class="block h-[2px] bg-(--color-outline)/15 my-2.5 ml-9"></span>
         <div class="flex items-center gap-3">
           <span class="w-6 h-6 flex items-center justify-center shrink-0">
             <span class="w-3.5 h-3.5 rounded-full bg-orange-500"></span>
@@ -382,7 +382,40 @@ async function salinNomor() {
         </div>
       </button>
 
-      <div class="mt-49 flex items-center gap-2">
+      <!--
+        Tombol pulang ke kendaraan, TEPAT DI ATAS tombol kembali.
+
+        Muncul begitu pengguna menggeser petanya sendiri: sejak itu peta berhenti
+        mengikuti kendaraan, dan tanpa tombol ini satu-satunya jalan pulang
+        adalah menebak-nebak arah dengan jari. Dulu ia baru muncul setelah
+        kendaraannya benar-benar keluar layar — geseran yang menyisakan
+        kendaraannya di pinggir tidak memunculkan apa pun, dan yang mencarinya
+        menyimpulkan tombolnya memang tidak ada.
+      -->
+      <Transition
+        enter-active-class="transition duration-200"
+        enter-from-class="opacity-0 -translate-y-1"
+        leave-active-class="transition duration-150"
+        leave-to-class="opacity-0"
+      >
+        <div v-if="!ikuti && posisiPengemudi" class="mt-49 mb-2 flex">
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full bg-(--color-surface-0) shadow-lg pl-3 pr-4 py-2.5 text-[12.5px] font-extrabold active:scale-95 transition-transform"
+            @click="pusatkanKePengemudi"
+          >
+            <Icon name="crosshair" class="w-4 h-4 text-(--color-azure)" />
+            Kembali ke pengemudi
+          </button>
+        </div>
+      </Transition>
+
+      <!--
+        Jarak dari kartu alamat hanya dipasang kalau tombol di atas belum ada;
+        kalau ada, tombol itu yang sudah memberi jaraknya. Tanpa ini, keduanya
+        menumpuk dan barisnya terdorong dua kali lebih jauh ke bawah.
+      -->
+      <div class="flex items-center gap-2" :class="!ikuti && posisiPengemudi ? '' : 'mt-49'">
         <button
           type="button"
           aria-label="Kembali"
@@ -410,30 +443,6 @@ async function salinNomor() {
         </button>
       </div>
 
-      <!--
-        Tombol pulang ke kendaraan.
-
-        Muncul hanya kalau DUA hal benar: pengguna sudah menggeser peta sendiri,
-        DAN kendaraannya sudah keluar dari layar. Geseran kecil yang masih
-        menyisakan kendaraannya di layar bukan tersesat — memunculkan tombol di
-        situ hanya menutupi peta yang sedang dibaca orang.
-      -->
-      <Transition
-        enter-active-class="transition duration-200"
-        enter-from-class="opacity-0 translate-y-1"
-        leave-active-class="transition duration-150"
-        leave-to-class="opacity-0"
-      >
-        <button
-          v-if="!ikuti && !pengemudiTerlihat && posisiPengemudi"
-          type="button"
-          class="mt-3 inline-flex items-center gap-2 rounded-full bg-(--color-surface-0) shadow-lg pl-3 pr-4 py-2.5 text-[12.5px] font-extrabold active:scale-95 transition-transform"
-          @click="pusatkanKePengemudi"
-        >
-          <Icon name="crosshair" class="w-4 h-4 text-(--color-azure)" />
-          Kembali ke pengemudi
-        </button>
-      </Transition>
     </div>
 
     <!-- ── Lembar detail, bisa ditarik ── -->
@@ -673,7 +682,7 @@ async function salinNomor() {
             perjalanan mobil. Lencananya baru digambar kalau server mengirim
             varian; yang tak diketahui tidak ditebak.
           -->
-          <div class="flex items-center gap-2.5 mb-3.5 pb-3.5 border-b border-(--color-outline)/12">
+          <div class="flex items-center gap-2.5 mb-3.5 pb-3.5 border-b-3[px] border-gray-200">
             <span class="w-9 h-9 rounded-full bg-(--color-azure)/12 flex items-center justify-center shrink-0">
               <svg
                 v-if="(data.kelas ?? 'motor').startsWith('motor')"
@@ -704,7 +713,7 @@ async function salinNomor() {
               <span class="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
                 ↑
               </span>
-              <span class="w-0.5 flex-1 my-1 border-l border-dashed border-(--color-outline)/50"></span>
+              <span class="w-0.5 flex-1 my-1 border-l-2 border-dashed border-(--color-outline)/80"></span>
               <span class="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
                 ●
               </span>
