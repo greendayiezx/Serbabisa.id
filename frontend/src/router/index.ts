@@ -347,6 +347,18 @@ const router = createRouter({
       meta: { induk: 'task-kirim-detail', roles: ['customer'] as Role[] },
     },
     {
+      /*
+       * Layar tunggu sesudah memesan. Halamannya sendiri, bukan satu kartu di
+       * layar status: sebelum ada kurir, belum ada apa pun untuk dilacak, dan
+       * satu-satunya kabar yang penting tenggelam kalau ditaruh di antara rute
+       * dan rincian biaya. Berpindah sendiri ke status begitu kurirnya ada.
+       */
+      path: '/tasks/kirim/:nomor/mencari',
+      name: 'task-kirim-mencari',
+      component: () => import('@/views/kirim/KirimMencariView.vue'),
+      meta: { induk: 'task-list', roles: ['customer'] as Role[] },
+    },
+    {
       // Kiriman yang sudah jadi: di luar /tasks/new.
       path: '/tasks/kirim/:nomor',
       name: 'task-kirim-status',

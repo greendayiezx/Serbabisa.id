@@ -11,6 +11,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
+import Spinner from '@/components/ui/Spinner.vue'
 import KirimKonfirmasiSkeleton from '@/components/skeleton/KirimKonfirmasiSkeleton.vue'
 import KontakPenerima from '@/components/KontakPenerima.vue'
 import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
@@ -238,7 +239,9 @@ async function kirim() {
     })
 
     kirimStore.hapus()
-    router.replace({ name: 'task-kirim-status', params: { nomor: hasil.nomor_invoice } })
+    // Ke layar tunggu, bukan langsung ke status: sebelum ada kurir, layar
+    // status hanya berisi hal-hal yang belum berlaku.
+    router.replace({ name: 'task-kirim-mencari', params: { nomor: hasil.nomor_invoice } })
   } catch (e) {
     galat.value = pesanError(e)
   } finally {
@@ -473,10 +476,11 @@ async function kirim() {
 
         <button
           type="button"
-          class="flex-1 bg-(--color-azure) text-white rounded-xl py-3.5 text-[15px] font-extrabold active:scale-95 transition-all disabled:opacity-40 disabled:active:scale-100"
+          class="flex-1 bg-(--color-azure) text-white rounded-xl py-3.5 text-[15px] font-extrabold active:scale-95 transition-all disabled:opacity-40 disabled:active:scale-100 flex items-center justify-center gap-2"
           :disabled="memproses || menghitungUlang || !pilihan"
           @click="kirim"
         >
+          <Spinner v-if="memproses" />
           {{ memproses ? 'Memproses…' : 'Pesan' }}
         </button>
       </div>
