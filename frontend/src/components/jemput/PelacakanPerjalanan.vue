@@ -30,6 +30,7 @@ import { tipPengemudi, type Perjalanan } from '@/api/jemput'
 import { pesanError } from '@/api/belanja'
 import promoMinimalImg from '@/assets/BisaJemput_MinimalTransaksi.png'
 import promoJemputImg from '@/assets/PromoBisaJemput.png'
+import ilustrasiTip from '@/assets/TipBisaJemput.png'
 // Ikon menu yang sama dengan yang dipakai di beranda, supaya BisaJemput
 // tampak sebagai satu menu yang sama — bukan lambang lain yang mirip.
 import ikonBisaJemput from '@/assets/category-antar-jemput.svg'
@@ -138,6 +139,15 @@ function keHalamanPromo() {
   router.push({ name: 'jemput-promo' })
 }
 
+/**
+ * Tinggi lembar saat mengintip.
+ *
+ * Dipakai dua tempat: lembarnya sendiri, dan batas bawah lapisan kendali di
+ * atas peta. Dua angka terpisah berarti tombol-tombolnya bisa jatuh di balik
+ * lembar begitu salah satunya diubah — dan itu memang yang terjadi.
+ */
+const PUNCAK_LEMBAR = 330
+
 /* ────────── Tip untuk pengemudi ────────── */
 const PILIHAN_TIP = [5000, 10000, 20000, 50000]
 
@@ -145,6 +155,15 @@ const tipDipilih = ref<number | null>(null)
 const mengirimTip = ref(false)
 const galatTip = ref<string | null>(null)
 const tipTerkirim = ref(0)
+
+/**
+ * Pemilih nominal disembunyikan sampai orang menekan "Kasih tip".
+ *
+ * Kartunya dibuka sebagai ajakan, bukan formulir: deretan tombol nominal yang
+ * langsung terpampang membuat tip terasa seperti tagihan tambahan. Yang mau
+ * berterima kasih menekan dulu, baru memilih berapa.
+ */
+const tipTerbuka = ref(false)
 
 /**
  * Tip hanya ditawarkan selama pengemudinya masih mengantar.
@@ -467,9 +486,14 @@ async function salinNomor() {
       Diukur di peramban: sentuhan di y=140 sampai y=340 mendarat di div ini,
       bukan di peta. Karena itu wadahnya dibuat tembus sentuhan, dan setiap
       elemen yang MEMANG harus bisa ditekan menyalakannya kembali sendiri.
+
+      Batas bawahnya diikat ke tinggi lembar, bukan jarak tetap. Dengan jarak
+      tetap, tombol kembali dan bagikan jatuh DI BALIK lembar begitu layarnya
+      lebih pendek — terukur hilang di layar setinggi 680 px ke bawah.
     -->
     <div
-      class="relative z-20 max-w-[430px] mx-auto px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pointer-events-none"
+      class="absolute inset-x-0 top-0 z-20 max-w-[430px] mx-auto px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 flex flex-col pointer-events-none"
+      :style="{ bottom: PUNCAK_LEMBAR + 'px' }"
     >
       <!--
         Kartu alamat. TIDAK ada tombol "Edit" di sini: mengubah tujuan setelah
@@ -506,6 +530,13 @@ async function salinNomor() {
       </button>
 
       <!--
+        Pengisi lentur. Tanpa ini, barisan tombol menempel di bawah kartu alamat;
+        dengan ini ia terdorong ke bawah sampai persis di atas lembar, berapa pun
+        tinggi layarnya.
+      -->
+      <div class="flex-1"></div>
+
+      <!--
         Tombol pusatkan, TEPAT DI ATAS tombol kembali dan SELALU ADA.
 
         Dulu ia hanya muncul setelah peta digeser. Tombol yang baru
@@ -524,7 +555,7 @@ async function salinNomor() {
         leave-active-class="transition duration-150"
         leave-to-class="opacity-0"
       >
-        <div v-if="posisiPengemudi" class="mt-49 mb-2 flex">
+        <div v-if="posisiPengemudi" class="mb-2 flex">
           <button
             type="button"
             class="pointer-events-auto inline-flex items-center gap-2 rounded-full shadow-lg pl-3 pr-4 py-2.5 text-[12.5px] font-extrabold active:scale-95 transition-[transform,background-color,color]"
@@ -542,7 +573,7 @@ async function salinNomor() {
         kalau ada, tombol itu yang sudah memberi jaraknya. Tanpa ini, keduanya
         menumpuk dan barisnya terdorong dua kali lebih jauh ke bawah.
       -->
-      <div class="flex items-center gap-2" :class="posisiPengemudi ? '' : 'mt-49'">
+      <div class="flex items-center gap-2">
         <button
           type="button"
           aria-label="Kembali"
@@ -573,7 +604,7 @@ async function salinNomor() {
     </div>
 
     <!-- ── Lembar detail, bisa ditarik ── -->
-    <SheetGeser v-model="terbuka" :puncak="330" label="detail perjalanan">
+    <SheetGeser v-model="terbuka" :puncak="PUNCAK_LEMBAR" label="detail perjalanan">
       <template #header>
         <!-- Pita keadaan, ditaruh di luar card putih -->
         <div
@@ -821,7 +852,7 @@ async function salinNomor() {
           <!-- Detail rute -->
           <div class="flex gap-3">
             <div class="flex flex-col items-center pt-1 shrink-0">
-              <span class="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
+              <span class="w-6 h-6 rounded-full bg-(--color-azure) flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
                 ↑
               </span>
               <span class="w-0.5 flex-1 my-1 border-l-2 border-dashed border-(--color-outline)/80"></span>
@@ -942,54 +973,87 @@ async function salinNomor() {
         uang terima kasih, dan itu ditulis apa adanya di kartunya.
       -->
       <section v-if="bisaTip" class="order-5 px-4 py-1.5">
-        <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
-          <div class="flex items-start gap-3">
-            <div class="flex-1 min-w-0">
-              <p class="text-[14px] font-display font-extrabold">Kasih tip buat pengemudi</p>
-              <p class="text-[12px] leading-snug text-(--color-on-surface-variant) mt-0.5">
-                Diterima pengemudi seluruhnya, tanpa potongan.
+        <div class="relative overflow-hidden rounded-2xl bg-(--color-surface-0) border border-(--color-outline)/20 shadow-sm">
+          <!--
+            Pita ajakan: teks di kiri, ilustrasi pengemudi menembus tepi
+            kanan-bawah. Ilustrasinya hiasan murni — aria-hidden, tak bisa
+            diketuk — supaya tidak ikut dibaca pembaca layar atau menghalangi
+            sentuhan ke tombol di baliknya.
+          -->
+          <div class="relative">
+            <img
+              :src="ilustrasiTip"
+              alt=""
+              aria-hidden="true"
+              class="pointer-events-none select-none absolute right-[-6px] bottom-[-8px] w-[52%] max-w-[205px] h-auto"
+            />
+
+            <div class="relative z-10 p-5 pr-[42%]">
+              <h3 class="font-display font-extrabold text-(--color-on-surface) text-[21px] leading-[1.12]">
+                {{ tipTerkirim > 0 ? 'Terima kasih!' : 'Kasih tip buat driver' }}
+              </h3>
+              <p class="mt-1 text-[13px] font-semibold text-(--color-on-surface-variant) leading-snug">
+                <template v-if="tipTerkirim > 0">
+                  Tip {{ rupiah(tipTerkirim) }} sudah diteruskan ke pengemudi.
+                </template>
+                <template v-else>Tipmu pasti berharga untuknya.</template>
               </p>
+
+              <button
+                v-if="tipTerkirim === 0 && !tipTerbuka"
+                type="button"
+                class="mt-4 inline-flex items-center gap-2 h-11 pl-5 pr-4 rounded-full bg-(--color-azure) text-white text-[14px] font-extrabold active:scale-[0.97] transition-transform"
+                @click="tipTerbuka = true"
+              >
+                Kasih tip
+                <Icon name="arrow-right" class="w-4.5 h-4.5 text-white" />
+              </button>
             </div>
-            <Icon name="sparkle" class="w-6 h-6 text-amber-500 shrink-0" />
           </div>
 
-          <p
-            v-if="tipTerkirim > 0"
-            class="mt-3 rounded-xl bg-(--color-secondary-container) px-3 py-2 text-[12.5px] font-semibold text-(--color-on-secondary-container)"
-          >
-            Terima kasih — tip {{ rupiah(tipTerkirim) }} sudah ditambahkan ke tagihan.
-          </p>
+          <!-- Pemilih nominal, muncul begitu ajakan ditekan -->
+          <div v-if="tipTerbuka && tipTerkirim === 0" class="relative z-10 px-5 pb-5 pt-1">
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="n in PILIHAN_TIP"
+                :key="n"
+                type="button"
+                class="px-3.5 py-2 rounded-full border text-[12.5px] font-bold transition-colors disabled:opacity-40"
+                :class="
+                  tipDipilih === n
+                    ? 'bg-(--color-azure) border-(--color-azure) text-white'
+                    : 'border-(--color-outline)/40 text-(--color-on-surface)'
+                "
+                :disabled="mengirimTip"
+                @click="tipDipilih = n"
+              >
+                {{ rupiah(n) }}
+              </button>
+            </div>
 
-          <div class="mt-3 flex flex-wrap gap-2">
             <button
-              v-for="n in PILIHAN_TIP"
-              :key="n"
               type="button"
-              class="px-3.5 py-2 rounded-full border text-[12.5px] font-bold transition-colors disabled:opacity-40"
-              :class="
-                tipDipilih === n
-                  ? 'bg-(--color-azure) border-(--color-azure) text-white'
-                  : 'border-(--color-outline)/40 text-(--color-on-surface)'
-              "
-              :disabled="mengirimTip"
-              @click="tipDipilih = n"
+              class="mt-3 w-full h-11 rounded-full bg-(--color-azure) text-white text-[13.5px] font-extrabold active:scale-[0.98] transition-transform disabled:opacity-40"
+              :disabled="!tipDipilih || mengirimTip"
+              @click="kirimTip"
             >
-              {{ rupiah(n) }}
+              {{
+                mengirimTip
+                  ? 'Mengirim…'
+                  : tipDipilih
+                    ? `Kasih tip ${rupiah(tipDipilih)}`
+                    : 'Pilih nominal dulu'
+              }}
             </button>
+
+            <p v-if="galatTip" role="alert" class="mt-2 text-[11.5px] font-semibold text-(--color-error)">
+              {{ galatTip }}
+            </p>
+            <!-- Tip tidak dipotong komisi; ditulis supaya orang tahu ke mana perginya. -->
+            <p class="mt-2 text-[11px] leading-snug text-(--color-on-surface-variant)">
+              Diterima pengemudi seluruhnya, tanpa potongan.
+            </p>
           </div>
-
-          <button
-            type="button"
-            class="mt-3 w-full h-11 rounded-full bg-(--color-azure) text-white text-[13.5px] font-extrabold active:scale-[0.98] transition-transform disabled:opacity-40"
-            :disabled="!tipDipilih || mengirimTip"
-            @click="kirimTip"
-          >
-            {{ mengirimTip ? 'Mengirim…' : 'Kasih tip' }}
-          </button>
-
-          <p v-if="galatTip" role="alert" class="mt-2 text-[11.5px] font-semibold text-(--color-error)">
-            {{ galatTip }}
-          </p>
         </div>
       </section>
 
