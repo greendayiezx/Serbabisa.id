@@ -22,9 +22,12 @@ import SheetGeser from '@/components/SheetGeser.vue'
 import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
 import { ikonMotorHtml } from '@/lib/ikonMotor'
 import MetodeBayarIcon from '@/components/MetodeBayarIcon.vue'
+import LencanaVarian from '@/components/jemput/LencanaVarian.vue'
 import { labelMetode, type MetodeId } from '@/lib/metodeBayar'
 import { rupiah } from '@/lib/jemput'
 import type { Perjalanan } from '@/api/jemput'
+import promoMinimalImg from '@/assets/BisaJemput_MinimalTransaksi.png'
+import promoJemputImg from '@/assets/PromoBisaJemput.png'
 
 const props = defineProps<{
   data: Perjalanan
@@ -83,7 +86,7 @@ const pita = computed(() => {
   }
   return {
     judul: `Pengemudi sampai dalam ${p?.tiba_menit ?? '-'} mnt`,
-    keterangan: 'Tunggu di titik jemput supaya tidak perlu berputar.',
+    keterangan: 'Tunggu di titik jemput.',
   }
 })
 
@@ -95,6 +98,25 @@ let bayang: L.Polyline | null = null
 let penandaJemput: L.Marker | null = null
 let penandaTujuan: L.Marker | null = null
 let penandaPengemudi: L.Marker | null = null
+
+/**
+ * Peta masih mengikuti kendaraan, atau pengguna sudah mengambil alih.
+ *
+ * Sekali jarinya menggeser peta, pembaruan berikutnya tidak boleh menyeret
+ * pandangannya kembali — yang dilihat orang saat itu adalah sesuatu yang ia
+ * cari sendiri.
+ */
+const ikuti = ref(true)
+const pengemudiTerlihat = ref(true)
+
+/** Menyala selama PETA yang menggerakkan dirinya, bukan jari pengguna. */
+let sedangAtur = false
+
+/** Banner promo di atas metode pembayaran. */
+const BANNER_PROMO = [
+  { src: promoMinimalImg, alt: 'Promo BisaJemput: minimal transaksi' },
+  { src: promoJemputImg, alt: 'Promo BisaJemput' },
+]
 
 /** Tinggi label jarak di atas kendaraan, termasuk jaraknya ke ikon. */
 const TINGGI_LABEL = 30
@@ -158,6 +180,17 @@ function gambarPeta() {
   if (!peta) {
     peta = L.map(petaEl.value, { zoomControl: false, attributionControl: false })
     L.tileLayer(TILE_URL, TILE_OPTIONS).addTo(peta)
+
+    /*
+     * `dragstart` dan `zoomstart` juga menyala saat PETA SENDIRI yang bergerak
+     * (fitBounds di bawah), jadi keduanya dijaga penanda `sedangAtur`. Tanpa
+     * itu, pemusatan otomatis akan langsung mematikan dirinya sendiri di
+     * gambar pertama, dan peta tidak pernah mengikuti kendaraannya sama sekali.
+     */
+    peta.on('dragstart zoomstart', () => {
+      if (!sedangAtur) ikuti.value = false
+    })
+    peta.on('moveend zoomend', perbaruiTerlihat)
   }
 
   const a: L.LatLngTuple = [j.lat, j.lng]
@@ -218,12 +251,48 @@ function gambarPeta() {
   }
 
   /*
-   * Petanya dipangkas di bawah oleh lembar yang menutupi layar. Tanpa padding
-   * bawah yang besar, kendaraan dan titik jemput jatuh persis di balik lembar
-   * itu — peta yang benar tapi tidak ada yang terlihat.
+   * PETA HANYA DIPUSATKAN ULANG SELAMA PENGGUNA BELUM MENGAMBIL ALIH.
+   *
+   * Layar ini bertanya ke server tiap enam detik, dan setiap jawaban menggambar
+   * ulang petanya. Dulu fitBounds ikut dipanggil setiap kali — jadi peta yang
+   * baru saja digeser jari kembali ke tempat semula dalam hitungan detik.
+   * Petanya sebenarnya bisa digeser; yang terlihat orang adalah peta yang
+   * menolak digeser, dan itu jauh lebih buruk daripada peta yang diam.
+   *
+   * Padding bawahnya besar karena lembar detail menutupi bagian bawah layar:
+   * tanpa itu kendaraan dan titik jemput jatuh persis di baliknya.
    */
-  peta.fitBounds(L.latLngBounds(semua), { paddingTopLeft: [40, 120], paddingBottomRight: [40, 300] })
+  if (ikuti.value) {
+    sedangAtur = true
+    peta.fitBounds(L.latLngBounds(semua), {
+      paddingTopLeft: [40, 120],
+      paddingBottomRight: [40, 300],
+    })
+    // Dilepas di frame berikutnya: fitBounds memicu movestart/zoomstart sendiri,
+    // dan tanpa jeda ini peta akan mengira dirinya digeser pengguna.
+    requestAnimationFrame(() => (sedangAtur = false))
+  }
+
+  perbaruiTerlihat()
   setTimeout(() => peta?.invalidateSize(), 120)
+}
+
+/**
+ * Apakah kendaraannya masih di dalam layar peta.
+ *
+ * Dipakai memutuskan tombol "pusatkan" muncul atau tidak: selama kendaraannya
+ * masih kelihatan, orang tidak sedang tersesat dan tombolnya cuma menutupi
+ * peta.
+ */
+function perbaruiTerlihat() {
+  const p = posisiPengemudi.value
+  pengemudiTerlihat.value = !p || !peta ? true : peta.getBounds().contains(L.latLng(p))
+}
+
+/** Kembalikan peta ke kendaraan, dan ikuti lagi setiap pembaruan berikutnya. */
+function pusatkanKePengemudi() {
+  ikuti.value = true
+  gambarPeta()
 }
 
 onMounted(async () => {
@@ -313,7 +382,7 @@ async function salinNomor() {
         </div>
       </button>
 
-      <div class="mt-3 flex items-center gap-2">
+      <div class="mt-49 flex items-center gap-2">
         <button
           type="button"
           aria-label="Kembali"
@@ -340,6 +409,31 @@ async function salinNomor() {
           <Icon name="send" class="w-4.5 h-4.5" />
         </button>
       </div>
+
+      <!--
+        Tombol pulang ke kendaraan.
+
+        Muncul hanya kalau DUA hal benar: pengguna sudah menggeser peta sendiri,
+        DAN kendaraannya sudah keluar dari layar. Geseran kecil yang masih
+        menyisakan kendaraannya di layar bukan tersesat — memunculkan tombol di
+        situ hanya menutupi peta yang sedang dibaca orang.
+      -->
+      <Transition
+        enter-active-class="transition duration-200"
+        enter-from-class="opacity-0 translate-y-1"
+        leave-active-class="transition duration-150"
+        leave-to-class="opacity-0"
+      >
+        <button
+          v-if="!ikuti && !pengemudiTerlihat && posisiPengemudi"
+          type="button"
+          class="mt-3 inline-flex items-center gap-2 rounded-full bg-(--color-surface-0) shadow-lg pl-3 pr-4 py-2.5 text-[12.5px] font-extrabold active:scale-95 transition-transform"
+          @click="pusatkanKePengemudi"
+        >
+          <Icon name="crosshair" class="w-4 h-4 text-(--color-azure)" />
+          Kembali ke pengemudi
+        </button>
+      </Transition>
     </div>
 
     <!-- ── Lembar detail, bisa ditarik ── -->
@@ -491,27 +585,10 @@ async function salinNomor() {
         peta di baliknya ikut kehilangan simpulnya, dan posisi gulungan
         melompat setiap kali lembarnya dibuka.
       -->
-      <div class="flex flex-col">
+      <div class="flex flex-col gap-1.5 pb-4">
       <!-- Kendaraan dan pengemudi: yang dicocokkan sebelum naik -->
-      <section :class="terbuka ? 'order-2' : 'order-1'">
-        <!--
-          Kartu pengemudi punya dua wajah.
-
-          MENGINTIP: pelat, kendaraan, warna, dan tombol telepon serta chat.
-          Itulah yang dipakai orang di dua menit sebelum kendaraannya sampai —
-          mencocokkan pelat di pinggir jalan, dan menghubungi kalau tidak
-          ketemu. Semua tersedia tanpa perlu menarik apa pun.
-
-          TERBUKA: tinggal nama dan reputasinya. Lembar yang ditarik penuh
-          dibuka untuk membaca biaya dan rincian, bukan untuk mencocokkan
-          pelat; pelat yang ikut naik ke sana hanya mengulang apa yang barusan
-          terlihat, dan mendorong yang dicari makin ke bawah.
-
-          Tombol telepon ikut tersembunyi saat terbuka — bukan hilang: satu
-          tarikan ke bawah mengembalikannya, dan keadaan mengintip inilah yang
-          jadi bawaan setiap kali layar ini dibuka.
-        -->
-        <div v-if="pengemudi" class="px-5 pt-1">
+      <section :class="terbuka ? 'order-2' : 'order-1'" class="px-4 py-1.5">
+        <div v-if="pengemudi" class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
           <div v-if="!terbuka" class="flex items-start gap-3">
             <div class="flex-1 min-w-0">
               <p class="text-[19px] font-display font-extrabold tracking-wide">
@@ -583,33 +660,61 @@ async function salinNomor() {
               <Icon name="chevron-right" class="w-4 h-4 text-(--color-on-surface-variant)" />
             </button>
           </div>
-
-          <p
-            v-if="pengemudi.telepon_tersamar && !terbuka"
-            class="mt-2 text-[11px] leading-snug text-(--color-on-surface-variant)"
-          >
-          </p>
         </div>
-        <div class="h-2.5 bg-(--color-surface-container)"></div>
       </section>
 
       <!-- Rute -->
-      <section class="order-3">
-        <!-- Rute -->
-        <div class="px-5 py-4">
-          <p class="text-[14px] font-display font-extrabold mb-3">Rute perjalanan</p>
+      <section :class="terbuka ? 'order-1' : 'order-2'" class="px-4 py-1.5">
+        <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
+          <!--
+            Kepala kartu: nama menu, ikon kendaraannya, dan lencana varian yang
+            DIPILIH penumpang. Ikonnya mengikuti kelas — motor untuk motor,
+            mobil untuk mobil — supaya tidak menaruh gambar motor di atas
+            perjalanan mobil. Lencananya baru digambar kalau server mengirim
+            varian; yang tak diketahui tidak ditebak.
+          -->
+          <div class="flex items-center gap-2.5 mb-3.5 pb-3.5 border-b border-(--color-outline)/12">
+            <span class="w-9 h-9 rounded-full bg-(--color-azure)/12 flex items-center justify-center shrink-0">
+              <svg
+                v-if="(data.kelas ?? 'motor').startsWith('motor')"
+                viewBox="0 0 24 24"
+                class="w-5 h-5 text-(--color-azure)"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="5.5" cy="17" r="3" />
+                <circle cx="18.5" cy="17" r="3" />
+                <path d="M5.5 17 L10.5 10 H14" />
+                <path d="M10.5 10 H15.5 L18.5 17" />
+                <path d="M13 7 H15 L15.5 10" />
+              </svg>
+              <Icon v-else name="car" class="w-5 h-5 text-(--color-azure)" />
+            </span>
+            <span class="text-[15px] font-display font-extrabold leading-none">BisaJemput</span>
+            <LencanaVarian :label="data.label_varian" class="ml-0.5" />
+          </div>
+
+          <!-- Detail rute -->
           <div class="flex gap-3">
             <div class="flex flex-col items-center pt-1 shrink-0">
-              <span class="w-3 h-3 rounded-full bg-(--color-azure)"></span>
-              <span class="w-0.5 flex-1 my-1 bg-(--color-outline)/30"></span>
-              <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+              <span class="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
+                ↑
+              </span>
+              <span class="w-0.5 flex-1 my-1 border-l border-dashed border-(--color-outline)/50"></span>
+              <span class="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
+                ●
+              </span>
             </div>
-            <div class="flex-1 min-w-0 flex flex-col gap-4">
+            <div class="flex-1 min-w-0 flex flex-col gap-2.5">
               <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-(--color-azure)">
-                  Titik jemput
+                <p class="text-[11px] text-(--color-on-surface-variant)">Lokasi jemput</p>
+                <p class="text-[14px] font-extrabold text-(--color-on-surface) leading-tight mt-0.5">
+                  {{ data.jemput?.alamat }}
                 </p>
-                <p class="text-[13px] font-semibold leading-snug">{{ data.jemput?.alamat }}</p>
                 <p
                   v-if="data.jemput?.catatan"
                   class="text-[11.5px] text-(--color-on-surface-variant) mt-0.5"
@@ -617,45 +722,72 @@ async function salinNomor() {
                   {{ data.jemput.catatan }}
                 </p>
               </div>
+
+              <p class="text-[12px] font-semibold text-(--color-on-surface-variant) py-0.5">
+                {{ data.menit }} menit · {{ data.km?.toFixed(1).replace('.', ',') }} km
+              </p>
+
               <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-orange-500">Tujuan</p>
-                <p class="text-[13px] font-semibold leading-snug">{{ data.tujuan?.alamat }}</p>
+                <p class="text-[11px] text-(--color-on-surface-variant)">Lokasi tujuan</p>
+                <p class="text-[14px] font-extrabold text-(--color-on-surface) leading-tight mt-0.5">
+                  {{ data.tujuan?.alamat }}
+                </p>
               </div>
             </div>
           </div>
-          <p class="mt-3 text-[12px] text-(--color-on-surface-variant)">
-            {{ data.km?.toFixed(1).replace('.', ',') }} km · {{ data.menit }} menit
-          </p>
         </div>
-        <div class="h-2.5 bg-(--color-surface-container)"></div>
+      </section>
+
+      <!--
+        Pita promo, tepat di atas metode pembayaran.
+
+        Digulung mendatar dengan snap: dua gambar berukuran penuh yang
+        ditumpuk ke bawah akan mendorong metode pembayaran keluar layar, dan
+        yang dicari orang saat membuka lembar ini justru metode pembayarannya.
+
+        loading="lazy" karena keduanya berkas besar (1,4 MB) dan berada di
+        bagian yang cuma terlihat setelah lembarnya ditarik — memuatnya di awal
+        berarti menahan hal-hal yang benar-benar dilihat orang lebih dulu.
+      -->
+      <section class="order-3 py-1.5">
+        <!--
+          Gambarnya TIDAK bisa diketuk. Halaman voucher BisaJemput butuh
+          pilihan kendaraan yang sudah dibuang begitu pesanan jadi, jadi
+          ketukan di sini tidak punya tujuan yang benar. Banner yang bisa
+          ditekan tapi tidak membawa ke mana-mana baru ketahuan setelah
+          ditekan — dan yang menekannya sedang di dalam perjalanan.
+        -->
+        <div
+          class="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory px-4 scroll-smooth"
+        >
+          <img
+            v-for="b in BANNER_PROMO"
+            :key="b.src"
+            :src="b.src"
+            :alt="b.alt"
+            loading="lazy"
+            class="shrink-0 w-[86%] snap-center rounded-2xl shadow-sm block h-auto"
+          />
+        </div>
       </section>
 
       <!-- Metode pembayaran -->
-      <section :class="terbuka ? 'order-1' : 'order-3'">
-        <!-- Metode pembayaran -->
-        <div class="px-5 py-4">
+      <section class="order-4 px-4 py-1.5">
+        <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
           <div class="flex items-center justify-between gap-3">
             <p class="text-[14px] font-display font-extrabold">Metode pembayaran</p>
           </div>
           <div class="mt-2.5 flex items-center gap-3">
-            <!--
-              Logo aslinya, bukan ikon dompet umum: komponen yang sama dipakai
-              layar servis AC dan BisaBersih, jadi metode yang sama tidak tampil
-              berbeda dari satu layar ke layar lain.
-            -->
             <MetodeBayarIcon :id="(data.metode ?? 'tunai') as MetodeId" />
             <span class="flex-1 text-[13.5px] font-semibold">{{ labelMetode(data.metode) }}</span>
             <span class="text-[14px] font-extrabold">{{ rupiah(data.total) }}</span>
           </div>
         </div>
-
-        <div class="h-2.5 bg-(--color-surface-container)"></div>
       </section>
 
       <!-- Rincian tarif -->
-      <section class="order-4">
-        <!-- Rincian tarif -->
-        <div class="px-5 py-4">
+      <section class="order-5 px-4 py-1.5">
+        <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
           <p class="text-[14px] font-display font-extrabold mb-3">Rincian tarif</p>
           <div class="flex flex-col gap-2 text-[13px]">
             <div v-for="b in data.baris" :key="b.label" class="flex justify-between gap-3">
@@ -675,14 +807,11 @@ async function salinNomor() {
             <span class="text-[16px] font-extrabold">{{ rupiah(data.total) }}</span>
           </div>
         </div>
-
-        <div class="h-2.5 bg-(--color-surface-container)"></div>
       </section>
 
       <!-- Keselamatan -->
-      <section class="order-5">
-        <!-- Keselamatan -->
-        <div class="px-5 py-4">
+      <section class="order-6 px-4 py-1.5">
+        <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
           <p class="text-[14px] font-display font-extrabold mb-3">Keselamatan</p>
           <div class="grid grid-cols-2 gap-2.5">
             <a
@@ -699,18 +828,15 @@ async function salinNomor() {
               <Icon name="send" class="w-4 h-4" /> Bagikan
             </button>
           </div>
-          <p class="mt-2.5 text-[11px] leading-snug text-(--color-on-surface-variant)">
-            Tombol darurat menelepon 112 langsung. "Bagikan" mengirim titik jemput, tujuan, dan pelat
-            nomor ke orang yang kamu pilih.
+          <p class="mt-2.5 text-[11px] leading-snug text-(--color-on-surface-variant) text-center">
+            Tombol darurat menelepon 112 langsung.
           </p>
         </div>
-
-        <div class="h-2.5 bg-(--color-surface-container)"></div>
       </section>
 
-      <section class="order-6">
-        <!-- Nomor transaksi dan pembatalan -->
-        <div class="px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      <!-- Nomor transaksi dan pembatalan -->
+      <section class="order-7 px-4 py-1.5">
+        <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
           <button
             type="button"
             class="w-full rounded-xl bg-(--color-surface-container) px-4 py-3 flex items-center justify-center gap-2 text-[12px] text-(--color-on-surface-variant) active:scale-[0.99] transition-transform"
@@ -732,15 +858,6 @@ async function salinNomor() {
           >
             {{ membatalkan ? 'Membatalkan…' : 'Batalkan booking' }}
           </button>
-          <!--
-            Disebut apa adanya: pembatalan sesudah pengemudi berangkat bukan hal
-            yang gratis bagi orang yang sudah menempuh jalan ke sini.
-          -->
-          <p
-            v-if="tahap === 'dijemput' || tahap === 'tiba'"
-            class="mt-2 text-[11px] leading-snug text-center text-(--color-on-surface-variant)"
-          >
-          </p>
         </div>
       </section>
       </div>
