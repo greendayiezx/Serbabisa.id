@@ -28,6 +28,9 @@ import { rupiah } from '@/lib/jemput'
 import type { Perjalanan } from '@/api/jemput'
 import promoMinimalImg from '@/assets/BisaJemput_MinimalTransaksi.png'
 import promoJemputImg from '@/assets/PromoBisaJemput.png'
+// Ikon menu yang sama dengan yang dipakai di beranda, supaya BisaJemput
+// tampak sebagai satu menu yang sama — bukan lambang lain yang mirip.
+import ikonBisaJemput from '@/assets/category-antar-jemput.svg'
 
 const props = defineProps<{
   data: Perjalanan
@@ -117,6 +120,46 @@ const BANNER_PROMO = [
   { src: promoMinimalImg, alt: 'Promo BisaJemput: minimal transaksi' },
   { src: promoJemputImg, alt: 'Promo BisaJemput' },
 ]
+
+/* ────────── Perputaran pita promo ────────── */
+const jalurPromo = ref<HTMLElement | null>(null)
+const promoAktif = ref(0)
+
+function perbaruiPromo() {
+  const el = jalurPromo.value
+  if (!el || el.clientWidth === 0) return
+  promoAktif.value = Math.round(el.scrollLeft / el.clientWidth)
+}
+
+function kePromo(i: number) {
+  const el = jalurPromo.value
+  if (!el) return
+  el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' })
+}
+
+let jamPromo: ReturnType<typeof setInterval> | null = null
+
+/**
+ * Perputaran berhenti PERMANEN begitu pengguna menggeser sendiri.
+ *
+ * Carousel yang terus berjalan setelah disentuh akan menarik banner pergi tepat
+ * ketika orang sedang membacanya — itu terasa seperti aplikasi merebut kendali.
+ */
+function hentikanPromo() {
+  if (jamPromo) clearInterval(jamPromo)
+  jamPromo = null
+}
+
+function mulaiPromo() {
+  hentikanPromo()
+
+  // Gerakan yang tidak diminta adalah hal pertama yang dimatikan setelan ini;
+  // menjalankannya tetap berarti mengabaikan permintaan yang jelas.
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  if (BANNER_PROMO.length < 2) return
+
+  jamPromo = setInterval(() => kePromo((promoAktif.value + 1) % BANNER_PROMO.length), 4500)
+}
 
 /** Tinggi label jarak di atas kendaraan, termasuk jaraknya ke ikon. */
 const TINGGI_LABEL = 30
@@ -298,9 +341,21 @@ function pusatkanKePengemudi() {
 onMounted(async () => {
   await nextTick()
   gambarPeta()
+
+  /*
+   * Pendengar dipasang di elemennya, bukan lewat @scroll di template: gulungan
+   * mendatar menyala puluhan kali per geseran, dan menyalurkannya lewat Vue
+   * berarti satu siklus render untuk tiap sentakan jari.
+   */
+  jalurPromo.value?.addEventListener('scroll', perbaruiPromo, { passive: true })
+  jalurPromo.value?.addEventListener('pointerdown', hentikanPromo, { passive: true })
+  mulaiPromo()
 })
 
 onBeforeUnmount(() => {
+  hentikanPromo()
+  jalurPromo.value?.removeEventListener('scroll', perbaruiPromo)
+  jalurPromo.value?.removeEventListener('pointerdown', hentikanPromo)
   if (penandaSalin) clearTimeout(penandaSalin)
   peta?.remove()
   peta = null
@@ -644,13 +699,13 @@ async function salinNomor() {
               <p class="text-[13.5px] font-semibold">{{ pengemudi.nama }}</p>
               <div class="mt-2 flex items-center gap-2 flex-wrap">
                 <span
-                  class="inline-flex items-center gap-1 rounded-full bg-(--color-surface-container) px-2.5 py-1 text-[12px] font-bold"
+                  class="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-400 px-2.5 py-1 text-[12px] font-bold text-amber-900"
                 >
-                  <Icon name="star" class="w-3.5 h-3.5 text-orange-500" />
+                  <Icon name="star" class="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                   {{ pengemudi.bintang }}
                 </span>
                 <span
-                  class="inline-flex items-center gap-1 rounded-full bg-(--color-surface-container) px-2.5 py-1 text-[12px] font-semibold"
+                  class="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-400 px-2.5 py-1 text-[12px] font-semibold text-amber-900"
                 >
                   {{ pengemudi.perjalanan.toLocaleString('id-ID') }} perjalanan
                 </span>
@@ -693,32 +748,14 @@ async function salinNomor() {
       <section :class="terbuka ? 'order-1' : 'order-2'" class="px-4 py-1.5">
         <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
           <!--
-            Kepala kartu: nama menu, ikon kendaraannya, dan lencana varian yang
-            DIPILIH penumpang. Ikonnya mengikuti kelas — motor untuk motor,
-            mobil untuk mobil — supaya tidak menaruh gambar motor di atas
-            perjalanan mobil. Lencananya baru digambar kalau server mengirim
-            varian; yang tak diketahui tidak ditebak.
+            Kepala kartu: nama menu, ikonnya, dan lencana varian yang DIPILIH
+            penumpang. Ikonnya ilustrasi menu yang sama dengan di beranda —
+            satu lambang untuk satu menu. Lencananya baru digambar kalau server
+            mengirim varian; yang tak diketahui tidak ditebak.
           -->
-          <div class="flex items-center gap-2.5 mb-3.5 pb-3.5 border-b-2 border-gray-200">
-            <span class="w-9 h-9 rounded-full bg-(--color-azure)/12 flex items-center justify-center shrink-0">
-              <svg
-                v-if="(data.kelas ?? 'motor').startsWith('motor')"
-                viewBox="0 0 24 24"
-                class="w-5 h-5 text-(--color-azure)"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.7"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="5.5" cy="17" r="3" />
-                <circle cx="18.5" cy="17" r="3" />
-                <path d="M5.5 17 L10.5 10 H14" />
-                <path d="M10.5 10 H15.5 L18.5 17" />
-                <path d="M13 7 H15 L15.5 10" />
-              </svg>
-              <Icon v-else name="car" class="w-5 h-5 text-(--color-azure)" />
+          <div class="flex items-center gap-2.5 mb-3.5 pb-3.5 border-b border-(--color-outline)/12">
+            <span class="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0">
+              <img :src="ikonBisaJemput" alt="BisaJemput" class="w-full h-full object-contain" />
             </span>
             <span class="text-[15px] font-display font-extrabold leading-none">BisaJemput</span>
             <LencanaVarian :label="data.label_varian" class="ml-0.5" />
@@ -783,17 +820,47 @@ async function salinNomor() {
           ditekan tapi tidak membawa ke mana-mana baru ketahuan setelah
           ditekan — dan yang menekannya sedang di dalam perjalanan.
         -->
-        <div
-          class="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory px-4 scroll-smooth"
-        >
-          <img
-            v-for="b in BANNER_PROMO"
-            :key="b.src"
-            :src="b.src"
-            :alt="b.alt"
-            loading="lazy"
-            class="shrink-0 w-[86%] snap-center rounded-2xl shadow-sm block h-auto"
-          />
+        <div class="relative px-4">
+          <div
+            ref="jalurPromo"
+            class="flex overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth rounded-2xl"
+          >
+            <img
+              v-for="b in BANNER_PROMO"
+              :key="b.src"
+              :src="b.src"
+              :alt="b.alt"
+              loading="lazy"
+              class="shrink-0 w-full snap-center rounded-2xl shadow-sm block h-auto"
+            />
+          </div>
+
+          <!--
+            Titik penanda, bukan sekadar hiasan: tanpa itu tidak ada tanda bahwa
+            ada promo kedua sama sekali, dan banner yang berganti sendiri terbaca
+            seperti gambar yang berkedip. Yang aktif dibuat MEMANJANG, bukan
+            sekadar lebih terang — bedanya tetap terbaca oleh mata yang sulit
+            membedakan warna.
+          -->
+          <div
+            v-if="BANNER_PROMO.length > 1"
+            class="absolute inset-x-0 bottom-2.5 flex items-center justify-center gap-1.5"
+          >
+            <button
+              v-for="(b, i) in BANNER_PROMO"
+              :key="b.src"
+              type="button"
+              class="h-5 flex items-center px-0.5"
+              :aria-label="`Ke promo ke-${i + 1}`"
+              :aria-current="i === promoAktif"
+              @click="hentikanPromo(); kePromo(i)"
+            >
+              <span
+                class="block h-1.5 rounded-full transition-all duration-300"
+                :class="i === promoAktif ? 'w-5 bg-white' : 'w-1.5 bg-white/55'"
+              ></span>
+            </button>
+          </div>
         </div>
       </section>
 
