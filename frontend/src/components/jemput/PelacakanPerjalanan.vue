@@ -24,12 +24,14 @@ import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
 import { ikonMotorHtml } from '@/lib/ikonMotor'
 import MetodeBayarIcon from '@/components/MetodeBayarIcon.vue'
 import LencanaVarian from '@/components/jemput/LencanaVarian.vue'
+import AvatarPengemudi from '@/components/jemput/AvatarPengemudi.vue'
 import { labelMetode, type MetodeId } from '@/lib/metodeBayar'
 import { rupiah } from '@/lib/jemput'
 import { tipPengemudi, type Perjalanan } from '@/api/jemput'
 import { pesanError } from '@/api/belanja'
 import promoMinimalImg from '@/assets/BisaJemput_MinimalTransaksi.png'
 import promoJemputImg from '@/assets/PromoBisaJemput.png'
+import promoTemanImg from '@/assets/PromoTemanBisaJemput.png'
 import ilustrasiTip from '@/assets/TipBisaJemput.png'
 // Ikon menu yang sama dengan yang dipakai di beranda, supaya BisaJemput
 // tampak sebagai satu menu yang sama — bukan lambang lain yang mirip.
@@ -124,6 +126,7 @@ let sedangAtur = false
 const BANNER_PROMO = [
   { src: promoMinimalImg, alt: 'Promo BisaJemput: minimal transaksi' },
   { src: promoJemputImg, alt: 'Promo BisaJemput' },
+  { src: promoTemanImg, alt: 'Promo BisaJemput: ajak teman' },
 ]
 
 /**
@@ -555,15 +558,15 @@ async function salinNomor() {
         leave-active-class="transition duration-150"
         leave-to-class="opacity-0"
       >
-        <div v-if="posisiPengemudi" class="mb-2 flex">
+        <div v-if="posisiPengemudi" class="mb-2 flex justify-end">
           <button
             type="button"
-            class="pointer-events-auto inline-flex items-center gap-2 rounded-full shadow-lg pl-3 pr-4 py-2.5 text-[12.5px] font-extrabold active:scale-95 transition-[transform,background-color,color]"
+            :aria-label="ikuti ? 'Mengikuti pengemudi' : 'Kembali ke pengemudi'"
+            class="pointer-events-auto w-10 h-10 rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-[transform,background-color,color]"
             :class="ikuti ? 'bg-(--color-surface-0) text-(--color-on-surface-variant)' : 'bg-(--color-azure) text-white'"
             @click="pusatkanKePengemudi"
           >
-            <Icon name="crosshair" class="w-4 h-4" :class="ikuti ? 'text-(--color-azure)' : ''" />
-            {{ ikuti ? 'Mengikuti pengemudi' : 'Kembali ke pengemudi' }}
+            <Icon name="crosshair" class="w-5 h-5" :class="ikuti ? 'text-(--color-azure)' : ''" />
           </button>
         </div>
       </Transition>
@@ -770,11 +773,11 @@ async function salinNomor() {
                 </span>
               </p>
             </div>
-            <span
-              class="w-14 h-14 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0"
-            >
-              <Icon name="user" class="w-7 h-7 text-(--color-on-surface-variant)" />
-            </span>
+            <AvatarPengemudi
+              :nama="pengemudi.nama"
+              :kelas="data.kelas"
+              class="w-14 h-14 shrink-0"
+            />
           </div>
 
           <div
@@ -802,12 +805,12 @@ async function salinNomor() {
 
             <!-- Saat terbuka, potretnya pindah ke baris ini: baris pelat yang
                  tadinya memuatnya sudah tidak digambar. -->
-            <span
+            <AvatarPengemudi
               v-if="terbuka"
-              class="w-14 h-14 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0"
-            >
-              <Icon name="user" class="w-7 h-7 text-(--color-on-surface-variant)" />
-            </span>
+              :nama="pengemudi.nama"
+              :kelas="data.kelas"
+              class="w-14 h-14 shrink-0"
+            />
           </div>
 
           <div v-if="!terbuka" class="mt-3.5 flex items-center gap-2.5">
@@ -980,12 +983,24 @@ async function salinNomor() {
             diketuk — supaya tidak ikut dibaca pembaca layar atau menghalangi
             sentuhan ke tombol di baliknya.
           -->
-          <div class="relative">
+          <!--
+            min-h menahan tinggi pita saat pemilih nominal terbuka: begitu
+            tombol ajakannya diganti deretan nominal di bawah, blok teks ini
+            memendek — dan ilustrasi yang berjangkar ke bawahnya ikut naik
+            menutupi nominal. Tinggi minimum membuatnya diam di tempat.
+          -->
+          <div class="relative min-h-[136px]">
+            <!--
+              PNG-nya berpadding tembus pandang ~22% di kanan, jadi motif
+              pengemudinya berhenti jauh sebelum tepi kanvas. Jangkar kanan
+              ditarik sampai padding itu keluar dari kartu, supaya SOSOKNYA —
+              bukan kanvasnya — yang menempel ke tepi kanan.
+            -->
             <img
               :src="ilustrasiTip"
               alt=""
               aria-hidden="true"
-              class="pointer-events-none select-none absolute right-[-6px] bottom-[-8px] w-[52%] max-w-[205px] h-auto"
+              class="pointer-events-none select-none absolute right-[-48px] bottom-[-8px] w-[52%] max-w-[205px] h-auto"
             />
 
             <div class="relative z-10 p-5 pr-[42%]">
