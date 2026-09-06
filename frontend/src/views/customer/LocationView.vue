@@ -24,6 +24,7 @@ import BisaBelanjaHeroArt from '@/components/belanja/BisaBelanjaHeroArt.vue'
 import BisaBersihHeroArt from '@/components/bersih/BisaBersihHeroArt.vue'
 import BisaJemputHeroArt from '@/components/jemput/BisaJemputHeroArt.vue'
 import BisaKirimHeroArt from '@/components/kirim/BisaKirimHeroArt.vue'
+import BisaTukangHeroArt from '@/components/tukang/BisaTukangHeroArt.vue'
 import { heroTimeOfDayFromHour } from '@/lib/heroSky'
 import { useSkeleton } from '@/composables/useSkeleton'
 import LokasiSkeleton from '@/components/skeleton/LokasiSkeleton.vue'
@@ -233,6 +234,7 @@ const isBisaBelanja = computed(() => route.query.category === 'bisabelanja')
 const isBisaBersih = computed(() => route.query.category === 'bisabersih')
 const isBisaJemput = computed(() => route.query.category === 'bisajemput')
 const isBisaKirim = computed(() => route.query.category === 'bisakirim')
+const isBisaTukang = computed(() => route.query.category === 'bisatukang')
 
 const cardBorderLocationImg = computed(() =>
   isBisaAngkut.value
@@ -245,6 +247,8 @@ const subtitleText = computed(() => {
   if (isBisaBelanja.value) return 'Mau belanja apa hari ini?'
   if (isBisaBersih.value) return 'Bersih-bersih di mana hari ini?'
   if (isBisaJemput.value) return 'Mau dijemput di mana?'
+  if (isBisaKirim.value) return 'Paketnya diambil di mana?'
+  if (isBisaTukang.value) return 'Teknisi terverifikasi datang ke lokasi Anda'
   return 'Mau anter tugas ke mana hari ini?'
 })
 
@@ -261,7 +265,8 @@ const contentSheetMarginClass = computed(() => {
     isBisaKirim.value ||
     isBisaAngkut.value ||
     isBisaBelanja.value ||
-    isBisaBersih.value
+    isBisaBersih.value ||
+    isBisaTukang.value
   )
     return '-mt-14'
   return '-mt-1'
@@ -638,6 +643,11 @@ function finishLocationSelection() {
     return
   }
 
+  if (route.query.category === 'bisatukang') {
+    router.push({ name: 'task-tukang-detail' })
+    return
+  }
+
   goBackOrHome()
 }
 
@@ -782,7 +792,7 @@ watch(skelTampil, async (masihSkeleton) => {
            siluet kota, dan lampu jalan ikut waktu nyata lewat heroTimeOfDay. -->
       <div
         v-else-if="isBisaKirim"
-        class="relative w-full overflow-hidden bg-[#0D1536] rounded-b-[2rem]"
+        class="relative w-full overflow-hidden bg-[#060f29] rounded-b-[2rem]"
       >
         <BisaKirimHeroArt :time-of-day="heroTimeOfDay" />
 
@@ -795,7 +805,34 @@ watch(skelTampil, async (masihSkeleton) => {
             {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
           </h1>
           <p class="text-white/95 text-[12px] sm:text-[13.5px] font-bold text-center mt-0.5">
-            Paketnya diambil di mana?
+            {{ subtitleText }}
+          </p>
+        </div>
+      </div>
+
+      <!--
+        Full-Width Header: BisaTukang.
+
+        Komponennya sudah ada sejak lama tapi tidak pernah dipasang di sini,
+        jadi satu-satunya menu dengan hero SVG yang tidak menampilkannya —
+        halaman pertamanya jatuh ke ilustrasi umum yang dipakai menu tanpa hero.
+      -->
+      <div
+        v-else-if="isBisaTukang"
+        class="relative w-full overflow-hidden bg-[#0a1a3a] rounded-b-[2rem]"
+      >
+        <BisaTukangHeroArt :time-of-day="heroTimeOfDay" />
+
+        <div
+          class="absolute inset-x-5 bottom-16 z-10 flex flex-col items-center justify-center text-center"
+        >
+          <h1
+            class="font-display font-extrabold text-[16px] sm:text-[18px] leading-tight text-white text-center drop-shadow-sm"
+          >
+            {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
+          </h1>
+          <p class="text-white/95 text-[12px] sm:text-[13.5px] font-bold text-center mt-0.5">
+            {{ subtitleText }}
           </p>
         </div>
       </div>
