@@ -152,5 +152,14 @@ defineExpose({ lepasPeta })
         {{ tombol }}
       </button>
     </div>
+
+    <!--
+      Ruang untuk isian yang menerangkan TEMPATNYA, mis. patokan untuk kurir.
+      Ditaruh di kartu peta, bukan di bawah nama orang: patokan menerangkan
+      alamat, dan yang membacanya membacanya sambil melihat titik ini.
+    -->
+    <div v-if="$slots.default" class="px-4 pb-4 -mt-1">
+      <slot />
+    </div>
   </section>
 </template>

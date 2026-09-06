@@ -61,8 +61,6 @@ async function muatEstimasi() {
 
     // Kendaraan termurah yang SANGGUP membawa paketnya. Yang tidak sanggup
     // tidak pernah jadi pilihan awal, meski lebih murah.
-    kirimStore.setRute(hasil.value.geometri, hasil.value.lewat_jalan)
-
     const sanggup = hasil.value.pilihan.filter((p) => p.sanggup)
     pilih(sanggup.sort((a, b) => a.total_setelah_promo - b.total_setelah_promo)[0] ?? null)
 

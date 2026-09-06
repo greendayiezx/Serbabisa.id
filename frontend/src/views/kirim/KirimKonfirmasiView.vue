@@ -7,18 +7,21 @@
  * berarti satu perjalanan yang berhenti di depan pintu tanpa ada yang bisa
  * dihubungi.
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import KirimKonfirmasiSkeleton from '@/components/skeleton/KirimKonfirmasiSkeleton.vue'
 import KontakPenerima from '@/components/KontakPenerima.vue'
-import PetaRuteKirim from '@/components/kirim/PetaRuteKirim.vue'
+import PemuatBerputar from '@/components/ui/PemuatBerputar.vue'
+import KartuLokasiPeta from '@/components/KartuLokasiPeta.vue'
+import SheetPilihLokasi from '@/components/SheetPilihLokasi.vue'
 import SheetMetodeBayar from '@/components/SheetMetodeBayar.vue'
 import { useSkeleton } from '@/composables/useSkeleton'
 import { useKirimStore } from '@/stores/kirim'
+import { useLocationStore } from '@/stores/location'
 import { useAuthStore } from '@/stores/auth'
-import { pesanKirim } from '@/api/kirim'
+import { estimasiKirim, pesanKirim } from '@/api/kirim'
 import { pesanError } from '@/api/belanja'
 import { LABEL_METODE, type MetodeId } from '@/lib/metodeBayar'
 import { rupiah } from '@/lib/kirim'
@@ -26,6 +29,7 @@ import { rupiah } from '@/lib/kirim'
 const router = useRouter()
 const kembali = useKembali()
 const kirimStore = useKirimStore()
+const locationStore = useLocationStore()
 const authStore = useAuthStore()
 
 const { tampil: skelTampil, tandaiSiap } = useSkeleton()
@@ -41,6 +45,10 @@ const teleponPenerima = ref('')
 const catatanAntar = ref('')
 
 const lembarMetode = ref(false)
+const lembarLokasi = ref(false)
+const alamatTersimpan = ref(false)
+const menghitungUlang = ref(false)
+let penandaSimpan: ReturnType<typeof setTimeout> | null = null
 const ditandai = ref(false)
 const memproses = ref(false)
 const galat = ref<string | null>(null)
@@ -77,6 +85,108 @@ onMounted(() => {
   catatanAntar.value = kirimStore.antar.catatan ?? ''
 
   tandaiSiap()
+})
+
+/**
+ * Titik tujuan digeser dari layar ini.
+ *
+ * Lewat setAntar, bukan setKontak: rutenya berubah, jadi ongkir dan voucher
+ * yang sudah dihitung memang harus dibuang — harga lama sudah tidak berlaku.
+ * Karena itu ongkirnya langsung diminta ulang ke server di sini, bukan
+ * dibiarkan kosong: tanpa itu layar ini kehilangan `pilihan` dan tinggal
+ * kerangka tanpa isi, tanpa satu pun pesan yang menjelaskan kenapa.
+ */
+async function terimaLokasi(l: { alamat: string; lat: number; lng: number }) {
+  const kendaraanLama = kirimStore.pilihan?.kendaraan
+
+  kirimStore.setAntar({
+    ...(kirimStore.antar ?? {}),
+    ...l,
+    nama: namaPenerima.value,
+    telepon: teleponPenerima.value,
+    catatan: catatanAntar.value || null,
+  })
+  locationStore.addSearchHistory(l)
+  lembarLokasi.value = false
+  alamatTersimpan.value = false
+
+  await hitungUlang(kendaraanLama)
+}
+
+/**
+ * Minta ongkir baru untuk titik yang baru.
+ *
+ * Kendaraan yang tadi dipilih dipertahankan kalau masih sanggup. Kalau tidak,
+ * yang termurah di antara yang sanggup diambil — dan itu DIKATAKAN, karena
+ * kendaraan yang berganti sendiri berarti harga yang berganti sendiri.
+ */
+async function hitungUlang(kendaraanLama?: string) {
+  if (!kirimStore.ambil || !kirimStore.antar) return
+
+  menghitungUlang.value = true
+  galat.value = null
+  try {
+    const h = await estimasiKirim({
+      ambil_lat: kirimStore.ambil.lat,
+      ambil_lng: kirimStore.ambil.lng,
+      antar_lat: kirimStore.antar.lat,
+      antar_lng: kirimStore.antar.lng,
+      ukuran: kirimStore.ukuran,
+      nilai_barang: kirimStore.nilaiBarang || undefined,
+    })
+
+    const sanggup = h.pilihan.filter((p) => p.sanggup)
+    const sama = sanggup.find((p) => p.kendaraan === kendaraanLama)
+    const dipakai =
+      sama ?? sanggup.sort((a, b) => a.total_setelah_promo - b.total_setelah_promo)[0] ?? null
+
+    kirimStore.setPilihan(dipakai)
+
+    if (!dipakai) {
+      galat.value = 'Belum ada kurir yang sanggup ke titik itu. Coba geser titiknya sedikit.'
+    } else if (kendaraanLama && !sama) {
+      galat.value = `Kendaraan sebelumnya tidak sanggup ke titik baru, jadi diganti ${dipakai.label}.`
+    }
+  } catch (e) {
+    kirimStore.setPilihan(null)
+    galat.value = pesanError(e)
+  } finally {
+    menghitungUlang.value = false
+  }
+}
+
+/**
+ * Simpan alamat tujuan ke daftar alamat.
+ *
+ * Masuk ke riwayat alamat, BUKAN ke slot "Rumah" seperti di BisaAngkut: yang
+ * disimpan di sini alamat PENERIMA, orang lain. Menimpanya ke Rumah berarti
+ * alamat rumah sendiri hilang tanpa diminta, dan baru ketahuan saat memesan
+ * berikutnya.
+ */
+function simpanAlamat() {
+  const t = kirimStore.antar
+  if (!t) return
+
+  if (alamatTersimpan.value) {
+    alamatTersimpan.value = false
+    if (penandaSimpan) {
+      clearTimeout(penandaSimpan)
+      penandaSimpan = null
+    }
+    return
+  }
+
+  locationStore.addSearchHistory({ alamat: t.alamat, lat: t.lat, lng: t.lng })
+  alamatTersimpan.value = true
+  if (penandaSimpan) clearTimeout(penandaSimpan)
+  penandaSimpan = setTimeout(() => {
+    alamatTersimpan.value = false
+    penandaSimpan = null
+  }, 2500)
+}
+
+onBeforeUnmount(() => {
+  if (penandaSimpan) clearTimeout(penandaSimpan)
 })
 
 async function kirim() {
@@ -155,31 +265,48 @@ async function kirim() {
       </div>
     </header>
 
-    <main v-if="pilihan" class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
+    <main class="max-w-[430px] mx-auto px-4 pt-4 flex flex-col gap-3.5">
       <!--
-        Peta rute, terakhir kali sebelum pesanan dibuat. Rutenya diambil dari
-        store — hasil hitungan server yang sama dengan layar detail — supaya
-        garisnya tidak berubah jadi lurus putus-putus di sini, bentuk yang di
-        aplikasi ini berarti "rutenya tidak diketahui".
+        Peta tujuan, dan bisa diperbaiki dari sini — pola yang sama dengan
+        layar konfirmasi BisaAngkut: ketuk petanya, geser pinnya, simpan.
+
+        Titik yang ditampilkan adalah TUJUAN, bukan rute. Di layar terakhir
+        sebelum memesan, yang masih bisa keliru dan masih sempat diperbaiki
+        adalah tempat paketnya diantar; titik ambil punya kartunya sendiri di
+        bawah. Patokannya ikut di kartu ini, bukan di bawah nama penerima,
+        karena patokan menerangkan TEMPAT, bukan orangnya.
       -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-3">
-        <PetaRuteKirim
-          :ambil="kirimStore.ambil"
-          :antar="kirimStore.antar"
-          :geometri="kirimStore.geometri"
-          :lewat-jalan="kirimStore.lewatJalan"
-        />
-        <div class="px-1 pt-3 flex flex-col gap-2">
-          <p class="flex items-start gap-2 text-[12.5px] leading-snug">
-            <span class="mt-1.5 w-2 h-2 rounded-full bg-(--color-azure) shrink-0"></span>
-            <span class="min-w-0 truncate">{{ kirimStore.ambil?.alamat }}</span>
-          </p>
-          <p class="flex items-start gap-2 text-[12.5px] leading-snug">
-            <span class="mt-1.5 w-2 h-2 rounded-full bg-orange-500 shrink-0"></span>
-            <span class="min-w-0 truncate">{{ kirimStore.antar?.alamat }}</span>
-          </p>
+      <KartuLokasiPeta
+        :alamat="kirimStore.antar?.alamat ?? ''"
+        :lat="kirimStore.antar?.lat ?? -6.2088"
+        :lng="kirimStore.antar?.lng ?? 106.8456"
+        label="Paket diantar ke"
+        warna-pin="#f97316"
+        tombol="Edit"
+        :tersembunyi="lembarLokasi"
+        @ubah="lembarLokasi = true"
+      >
+        <div class="flex items-center gap-2 rounded-xl bg-(--color-surface-container) px-3.5 py-3">
+          <Icon name="pin" class="w-4 h-4 text-(--color-on-surface-variant) shrink-0" />
+          <input
+            v-model="catatanAntar"
+            type="text"
+            maxlength="255"
+            placeholder="Ada patokan terdekat? (opsional)"
+            class="w-full bg-transparent text-[13px] outline-none placeholder:text-(--color-on-surface-variant)"
+          />
         </div>
-      </section>
+      </KartuLokasiPeta>
+
+      <SheetPilihLokasi
+        :tampil="lembarLokasi"
+        :alamat="kirimStore.antar?.alamat ?? ''"
+        :lat="kirimStore.antar?.lat ?? -6.2088"
+        :lng="kirimStore.antar?.lng ?? 106.8456"
+        judul-peta="Set tujuan kiriman"
+        @tutup="lembarLokasi = false"
+        @pilih="terimaLokasi"
+      />
 
       <!--
         HANYA PENERIMA di sini.
@@ -197,24 +324,28 @@ async function kirim() {
         v-model:nama="namaPenerima"
         v-model:telepon="teleponPenerima"
         judul="Detail Penerima"
-        :subjudul="kirimStore.antar?.alamat"
         placeholder-nama="Nama penerima paket…"
         pesan-kosong="Nama dan nomor penerima dibutuhkan supaya kurir bisa menghubungi saat mengantar."
         :ditandai="ditandai"
       >
-        <div class="mt-4">
-          <label
-            class="block text-[11.5px] font-bold text-(--color-on-surface-variant) uppercase tracking-wide mb-1.5"
+        <!-- Simpan alamat? — seperti di konfirmasi BisaAngkut -->
+        <div class="flex items-center justify-between gap-3 flex-wrap pt-4 mt-1">
+          <div class="flex items-center gap-3 min-w-0">
+            <Icon name="bookmark" class="w-[22px] h-[22px] shrink-0" />
+            <span class="font-extrabold text-[14px] truncate">Simpan alamat?</span>
+          </div>
+          <button
+            type="button"
+            class="shrink-0 min-h-11 rounded-full px-6 text-[13px] font-extrabold transition-all active:scale-95 shadow-xs"
+            :class="
+              alamatTersimpan
+                ? 'bg-(--color-primary-container) text-(--color-on-primary-container)'
+                : 'bg-(--color-azure) text-white'
+            "
+            @click="simpanAlamat"
           >
-            Patokan untuk kurir
-          </label>
-          <input
-            v-model="catatanAntar"
-            type="text"
-            maxlength="255"
-            placeholder="Mis. lantai 3, sebelah minimarket"
-            class="w-full rounded-xl bg-(--color-surface-container) px-3.5 py-3 text-[13px] border-2 border-transparent focus:border-(--color-azure) outline-none placeholder:text-(--color-on-surface-variant)"
-          />
+            {{ alamatTersimpan ? 'Tersimpan ✓' : 'Simpan' }}
+          </button>
         </div>
       </KontakPenerima>
 
@@ -237,8 +368,12 @@ async function kirim() {
         <Icon name="chevron-right" class="w-4 h-4 mt-1 shrink-0 text-(--color-on-surface-variant)" />
       </button>
 
-      <!-- Rincian -->
-      <section class="bg-(--color-surface-0) rounded-2xl p-5">
+      <!--
+        Rincian. Hanya bagian INI yang menunggu `pilihan`, bukan seluruh
+        halaman: saat titik tujuan digeser, ongkirnya sesaat belum ada, dan
+        halaman yang lenyap seluruhnya tidak memberi tahu apa pun.
+      -->
+      <section v-if="pilihan" class="bg-(--color-surface-0) rounded-2xl p-5">
         <h2 class="text-[14px] font-display font-extrabold mb-3">Rincian biaya</h2>
 
         <div class="flex flex-col gap-2 text-[13px]">
@@ -273,19 +408,21 @@ async function kirim() {
         </p>
       </section>
 
-      <!-- Pembayaran -->
-      <button
-        type="button"
-        class="bg-(--color-surface-0) rounded-2xl p-5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
-        @click="lembarMetode = true"
+      <!-- Ongkir sedang dihitung ulang untuk titik yang baru digeser -->
+      <section
+        v-else-if="menghitungUlang"
+        class="bg-(--color-surface-0) rounded-2xl p-5 flex items-center gap-3"
       >
-        <Icon name="wallet" class="w-5 h-5 text-(--color-azure) shrink-0" />
-        <div class="flex-1">
-          <p class="text-[13.5px] font-bold">{{ namaMetode }}</p>
-          <p class="text-[11.5px] text-(--color-on-surface-variant)">Metode pembayaran</p>
-        </div>
-        <Icon name="chevron-right" class="w-4 h-4 text-(--color-on-surface-variant)" />
-      </button>
+        <PemuatBerputar class="w-5 h-5 text-(--color-azure) shrink-0" />
+        <p class="text-[13px] text-(--color-on-surface-variant)">
+          Menghitung ongkir untuk titik yang baru…
+        </p>
+      </section>
+
+      <!--
+        Tidak ada kartu metode pembayaran di sini: metodenya diganti dari bar
+        bayar di bawah, satu kendali untuk satu hal.
+      -->
 
       <p
         v-if="kirimStore.pakaiKodeTerima"
@@ -337,7 +474,7 @@ async function kirim() {
         <button
           type="button"
           class="flex-1 bg-(--color-azure) text-white rounded-xl py-3.5 text-[15px] font-extrabold active:scale-95 transition-all disabled:opacity-40 disabled:active:scale-100"
-          :disabled="memproses"
+          :disabled="memproses || menghitungUlang || !pilihan"
           @click="kirim"
         >
           {{ memproses ? 'Memproses…' : 'Pesan' }}

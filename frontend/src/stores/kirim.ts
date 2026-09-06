@@ -17,14 +17,6 @@ export const useKirimStore = defineStore('kirim', () => {
   const isi = ref('')
   const nilaiBarang = ref(0)
   const pakaiKodeTerima = ref(false)
-  /*
-   * Rute yang sudah dihitung server, disimpan supaya layar konfirmasi
-   * menggambar garis YANG SAMA dengan layar detail. Tanpa ini konfirmasi hanya
-   * punya dua titik, dan garisnya jatuh ke lurus putus-putus — bentuk yang di
-   * aplikasi ini berarti 'rutenya tidak diketahui'. Padahal diketahui.
-   */
-  const geometri = ref<[number, number][] | null>(null)
-  const lewatJalan = ref(false)
   const pilihan = ref<PilihanKirim | null>(null)
   const promo = ref<PromoKirim | null>(null)
   /*
@@ -79,13 +71,6 @@ export const useKirimStore = defineStore('kirim', () => {
   function lupakanRute() {
     pilihan.value = null
     promo.value = null
-    geometri.value = null
-    lewatJalan.value = false
-  }
-
-  function setRute(g: [number, number][] | null, lewat: boolean) {
-    geometri.value = g
-    lewatJalan.value = lewat
   }
 
   function setUkuran(u: string) {
@@ -127,15 +112,12 @@ export const useKirimStore = defineStore('kirim', () => {
     isi,
     nilaiBarang,
     pakaiKodeTerima,
-    geometri,
-    lewatJalan,
     pilihan,
     promo,
     metode,
     setAmbil,
     setAntar,
     setKontak,
-    setRute,
     tukar,
     setUkuran,
     setPilihan,
