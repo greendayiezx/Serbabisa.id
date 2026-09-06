@@ -154,27 +154,42 @@ function ketuk() {
 <template>
   <section
     ref="lembarEl"
-    class="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] rounded-t-3xl bg-(--color-surface-0) shadow-[0_-12px_40px_rgba(0,0,0,0.18)] flex flex-col"
+    class="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] flex flex-col pointer-events-auto"
     :style="{
       height: `${penuh * 100}dvh`,
       transform: `translateY(${turun}px)`,
       transition: menggeser ? 'none' : 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1)',
     }"
   >
-    <!-- Kepala: pegangan geser, sekaligus tombol buka-tutup -->
-    <button
-      type="button"
-      class="shrink-0 w-full pt-2.5 pb-1 touch-none cursor-grab active:cursor-grabbing"
-      :aria-expanded="terbuka"
-      :aria-label="terbuka ? `Tutup ${label}` : `Buka ${label}`"
+    <!-- Header luar di atas card (misal pita status hijau) -->
+    <div
+      v-if="$slots.header"
+      class="shrink-0 touch-none cursor-grab active:cursor-grabbing"
       @pointerdown="tangkap"
       @click="ketuk"
     >
-      <span class="block w-10 h-1.5 rounded-full bg-(--color-outline)/40 mx-auto"></span>
-    </button>
+      <slot name="header" />
+    </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-      <slot />
+    <div
+      class="relative flex-1 min-h-0 rounded-t-3xl bg-(--color-surface-0) shadow-[0_-12px_40px_rgba(0,0,0,0.18)] flex flex-col overflow-hidden"
+      :class="$slots.header ? '-mt-3' : ''"
+    >
+      <!-- Kepala: pegangan geser, sekaligus tombol buka-tutup -->
+      <button
+        type="button"
+        class="shrink-0 w-full pt-2.5 pb-1 touch-none cursor-grab active:cursor-grabbing"
+        :aria-expanded="terbuka"
+        :aria-label="terbuka ? `Tutup ${label}` : `Buka ${label}`"
+        @pointerdown="tangkap"
+        @click="ketuk"
+      >
+        <span class="block w-10 h-1.5 rounded-full bg-(--color-outline)/40 mx-auto"></span>
+      </button>
+
+      <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        <slot />
+      </div>
     </div>
   </section>
 </template>
