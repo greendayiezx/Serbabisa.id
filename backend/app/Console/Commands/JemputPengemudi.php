@@ -28,7 +28,8 @@ class JemputPengemudi extends Command
         {nomor? : Nomor pesanan, boleh potongan belakangnya}
         {--terakhir : Ambil perjalanan BisaJemput terbaru}
         {--tahap=dijemput : dijemput, tiba, jalan, atau selesai}
-        {--nama= : Nama pengemudi}';
+        {--nama= : Nama pengemudi}
+        {--maju= : Majukan pengemudi sekian bagian rute (0-1), tanpa ganti tahap}';
 
     protected $description = 'Majukan tahap perjalanan BisaJemput (alat bantu pengembangan)';
 
@@ -80,6 +81,11 @@ class JemputPengemudi extends Command
             $this->error("Pesanan {$task->nomor_invoice} bukan perjalanan BisaJemput.");
 
             return self::FAILURE;
+        }
+
+        // Memajukan posisi tidak mengubah tahap, jadi jalurnya berhenti di sini.
+        if ($this->option('maju') !== null) {
+            return $this->majukanPosisi($task, $d, (float) $this->option('maju'));
         }
 
         $sekarang = $d['tahap'] ?? 'mencari';
@@ -146,6 +152,87 @@ class JemputPengemudi extends Command
         $this->line('  Buka      : /tasks/jemput/'.$task->nomor_invoice);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Majukan pengemudi menyusuri rutenya sendiri, tanpa mengubah tahap.
+     *
+     * Menggantikan aplikasi pengemudi yang mengirim posisinya setiap beberapa
+     * detik. Dipakai untuk melihat angka sisa jarak di layar penumpang benar-
+     * benar menghitung mundur saat kendaraannya mendekat.
+     *
+     * Rutenya DIPOTONG, bukan dihitung ulang ke penyedia rute: sisa jalan yang
+     * belum ditempuh memang bagian belakang rute yang sama, dan memotongnya
+     * membuat jaraknya berkurang menyusuri jalan yang sama persis — bukan
+     * melompat ke rute lain yang kebetulan dihitung ulang dari titik baru.
+     *
+     * @param  array<string, mixed>  $d
+     */
+    private function majukanPosisi(Task $task, array $d, float $bagian): int
+    {
+        if (($d['tahap'] ?? null) !== 'dijemput') {
+            $this->error('Memajukan posisi hanya berlaku saat tahap "dijemput".');
+
+            return self::FAILURE;
+        }
+
+        $p = $d['pengemudi'] ?? null;
+        $rute = $p['rute'] ?? null;
+        if (! is_array($rute) || count($rute) < 2) {
+            $this->error('Rute menjemput belum ada. Buka layar perjalanannya sekali dulu supaya rutenya dilengkapi.');
+
+            return self::FAILURE;
+        }
+
+        $bagian = max(0.01, min(1.0, $bagian));
+        $lompat = max(1, (int) round((count($rute) - 1) * $bagian));
+        $sisa = array_slice($rute, $lompat);
+
+        // Habis: pengemudinya berdiri di titik jemput.
+        if (count($sisa) < 2) {
+            $jemput = $d['jemput'];
+            $p = [...$p, 'lat' => (float) $jemput['lat'], 'lng' => (float) $jemput['lng'], 'rute' => null, 'jarak_km' => 0.0, 'tiba_menit' => 0];
+            $task->update(['detail_layanan' => [...$d, 'pengemudi' => $p]]);
+            $this->info("{$task->nomor_invoice}: pengemudi sampai di titik jemput.");
+
+            return self::SUCCESS;
+        }
+
+        $km = $this->panjangKm($sisa);
+        $p = [
+            ...$p,
+            'lat' => round((float) $sisa[0][0], 6),
+            'lng' => round((float) $sisa[0][1], 6),
+            'rute' => $sisa,
+            'jarak_km' => round($km, 2),
+            // Perkiraan kasar 20 km/jam di dalam kota, dibulatkan ke atas.
+            'tiba_menit' => max(1, (int) ceil($km / 20 * 60)),
+        ];
+        $task->update(['detail_layanan' => [...$d, 'pengemudi' => $p]]);
+
+        $this->info("{$task->nomor_invoice}: sisa {$p['jarak_km']} km, {$p['tiba_menit']} menit lagi.");
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Panjang sebuah rute dalam kilometer.
+     *
+     * @param  list<array{0:float,1:float}>  $rute
+     */
+    private function panjangKm(array $rute): float
+    {
+        $km = 0.0;
+        for ($i = 1, $n = count($rute); $i < $n; $i++) {
+            $km += $this->jarakKm(
+                (float) $rute[$i - 1][0],
+                (float) $rute[$i - 1][1],
+                (float) $rute[$i][0],
+                (float) $rute[$i][1],
+            );
+        }
+
+        return $km;
     }
 
     /**

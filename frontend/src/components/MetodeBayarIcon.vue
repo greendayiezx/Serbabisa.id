@@ -15,6 +15,7 @@ import logoOvo from '@/assets/logo_ovo.svg'
 import logoQris from '@/assets/logo_qris.svg'
 import logoBca from '@/assets/LOGO-BCA.png'
 import logoSpay from '@/assets/LOGO-SPAY.png'
+import logoLinkaja from '@/assets/LOGO_LINKAJA.png'
 
 defineProps<{ id: MetodeId }>()
 </script>
@@ -35,6 +36,9 @@ defineProps<{ id: MetodeId }>()
     <img v-else-if="id === 'ovo'" :src="logoOvo" alt="OVO" class="h-6 w-auto object-contain" />
     <img v-else-if="id === 'shopeepay'" :src="logoSpay" alt="ShopeePay" class="h-9 w-auto object-contain scale-110" />
     <img v-else-if="id === 'dana'" :src="logoDana" alt="DANA" class="h-6 w-auto object-contain" />
+    <!-- LinkAja sempat terlewat: di lembar pemilih ia punya logo, di baris
+         ringkasan jatuh ke ikon kartu umum — metode yang sama tampil beda. -->
+    <img v-else-if="id === 'linkaja'" :src="logoLinkaja" alt="LinkAja" class="h-6 w-auto object-contain" />
     <img v-else-if="id === 'bca'" :src="logoBca" alt="BCA" class="h-6 w-auto object-contain" />
     <img v-else-if="id === 'bni'" :src="logoBni" alt="BNI" class="h-5 w-auto object-contain" />
     <img v-else-if="id === 'bri'" :src="logoBri" alt="BRI" class="h-6 w-auto object-contain" />

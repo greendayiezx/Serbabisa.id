@@ -21,7 +21,8 @@ import Icon from '@/components/icons/Icon.vue'
 import SheetGeser from '@/components/SheetGeser.vue'
 import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
 import { ikonMotorHtml } from '@/lib/ikonMotor'
-import { labelMetode } from '@/lib/metodeBayar'
+import MetodeBayarIcon from '@/components/MetodeBayarIcon.vue'
+import { labelMetode, type MetodeId } from '@/lib/metodeBayar'
 import { rupiah } from '@/lib/jemput'
 import type { Perjalanan } from '@/api/jemput'
 
@@ -95,12 +96,26 @@ let penandaJemput: L.Marker | null = null
 let penandaTujuan: L.Marker | null = null
 let penandaPengemudi: L.Marker | null = null
 
-/** Ikon kendaraan: mengikuti kelas yang dipesan, bukan selalu mobil. */
+/** Tinggi label jarak di atas kendaraan, termasuk jaraknya ke ikon. */
+const TINGGI_LABEL = 30
+
+/**
+ * Ikon kendaraan, dengan sisa jarak menempel di atasnya.
+ *
+ * Labelnya jadi satu dengan penandanya, bukan elemen terpisah yang diposisikan
+ * sendiri: Leaflet yang memindahkan penanda saat peta digeser atau dizum, dan
+ * label yang dipasang terpisah harus dihitung ulang di setiap gerakan itu —
+ * satu perhitungan yang terlewat membuat angkanya melayang jauh dari
+ * kendaraan yang diterangkannya.
+ *
+ * Jaraknya hanya ikut kalau server mengirimkannya. Yang tidak diketahui tidak
+ * ditulis.
+ */
 function ikonKendaraan(): L.DivIcon {
   const motor = (props.data.kelas ?? '').startsWith('motor')
   const ukuran = motor ? 56 : 42
 
-  const html = motor
+  const kendaraan = motor
     ? ikonMotorHtml(ukuran)
     : '<svg viewBox="0 0 24 24" width="42" height="42" style="filter: drop-shadow(0 4px 10px rgba(0,0,0,0.28))">' +
       '<circle cx="12" cy="12" r="11.5" fill="#FFFFFF"/>' +
@@ -110,11 +125,26 @@ function ikonKendaraan(): L.DivIcon {
       '<circle cx="16.5" cy="17.5" r="2.2" fill="#0A326B"/>' +
       '</svg>'
 
+  const label = sisaJarak.value
+    ? `<span style="
+        display:inline-block; white-space:nowrap;
+        background:#FFFFFF; color:#0A326B;
+        font-size:12px; font-weight:800; line-height:1;
+        padding:6px 10px; border-radius:999px;
+        box-shadow:0 3px 10px rgba(0,0,0,0.22);
+      ">${sisaJarak.value} lagi</span>`
+    : ''
+
+  const tinggi = ukuran + (label ? TINGGI_LABEL : 0)
+
   return L.divIcon({
     className: '',
-    html,
-    iconSize: [ukuran, ukuran],
-    iconAnchor: [ukuran / 2, ukuran / 2],
+    html: `<div style="display:flex; flex-direction:column; align-items:center; gap:4px; width:${ukuran}px">${label}${kendaraan}</div>`,
+    iconSize: [ukuran, tinggi],
+    // Jangkarnya di TENGAH KENDARAAN, bukan di tengah kotak: labelnya menambah
+    // tinggi di atas, dan jangkar yang ikut bergeser membuat motornya berdiri
+    // setengah blok dari titik yang sebenarnya.
+    iconAnchor: [ukuran / 2, tinggi - ukuran / 2],
   })
 }
 
@@ -208,7 +238,16 @@ onBeforeUnmount(() => {
 })
 
 watch(
-  () => [props.data.tahap, props.data.geometri, posisiPengemudi.value, pengemudi.value?.rute] as const,
+  // sisaKm ikut dipantau: angkanya ditulis DI DALAM ikon penanda, jadi
+  // penandanya harus digambar ulang saat jaraknya berubah.
+  () =>
+    [
+      props.data.tahap,
+      props.data.geometri,
+      posisiPengemudi.value,
+      pengemudi.value?.rute,
+      sisaKm.value,
+    ] as const,
   gambarPeta,
   { deep: true },
 )
@@ -284,13 +323,13 @@ async function salinNomor() {
           <Icon name="arrow-left" class="w-5 h-5" />
         </button>
 
-        <!-- Sisa jarak hanya muncul kalau server mengirimkannya. -->
-        <span
-          v-if="sisaJarak"
-          class="rounded-full bg-(--color-surface-0) shadow-lg px-3.5 py-2 text-[12.5px] font-extrabold"
-        >
-          {{ sisaJarak }} lagi
-        </span>
+        <!--
+          Sisa jaraknya TIDAK lagi di sini, melainkan menempel di atas
+          kendaraannya di peta. Angka yang mengambang di pojok layar tidak
+          menerangkan apa-apa: yang ingin diketahui orang adalah berapa jauh
+          KENDARAAN ITU, dan angka yang menempel padanya ikut bergerak bersama
+          pin saat pengemudinya mendekat.
+        -->
 
         <button
           type="button"
@@ -431,7 +470,12 @@ async function salinNomor() {
           <p class="text-[14px] font-display font-extrabold">Metode pembayaran</p>
         </div>
         <div class="mt-2.5 flex items-center gap-3">
-          <Icon name="wallet" class="w-5 h-5 text-(--color-azure) shrink-0" />
+          <!--
+            Logo aslinya, bukan ikon dompet umum: komponen yang sama dipakai
+            layar servis AC dan BisaBersih, jadi metode yang sama tidak tampil
+            berbeda dari satu layar ke layar lain.
+          -->
+          <MetodeBayarIcon :id="(data.metode ?? 'tunai') as MetodeId" />
           <span class="flex-1 text-[13.5px] font-semibold">{{ labelMetode(data.metode) }}</span>
           <span class="text-[14px] font-extrabold">{{ rupiah(data.total) }}</span>
         </div>
