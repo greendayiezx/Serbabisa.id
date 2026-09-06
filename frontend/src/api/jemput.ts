@@ -79,6 +79,20 @@ export interface Pengemudi {
   perjalanan: number
   telepon_tersamar: boolean
   tiba_menit: number
+
+  /*
+   * Posisi pengemudi, DARI SERVER dan boleh tidak ada.
+   *
+   * Layar penantian menggambar kendaraannya di peta dan menyebut sisa
+   * jaraknya. Angka itu tidak boleh dikarang di sini: orang menakar kapan
+   * harus turun ke lobi berdasarkan angka tersebut. Kalau server belum tahu
+   * posisinya, layar tidak menyebut jarak sama sekali.
+   */
+  lat?: number
+  lng?: number
+  /** Sedang menuju titik jemput atau tujuan. */
+  menuju?: 'jemput' | 'tujuan'
+  jarak_km?: number
 }
 
 export interface Perjalanan {

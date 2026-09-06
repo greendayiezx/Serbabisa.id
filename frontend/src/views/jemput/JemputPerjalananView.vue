@@ -18,6 +18,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import JemputPerjalananSkeleton from '@/components/skeleton/JemputPerjalananSkeleton.vue'
+import PelacakanPerjalanan from '@/components/jemput/PelacakanPerjalanan.vue'
 import LottieIcon from '@/components/LottieIcon.vue'
 import animasiMencari from '@/assets/lottie/jemput-mencari-pengemudi.json'
 import {
@@ -75,6 +76,16 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (pewaktu) clearInterval(pewaktu)
 })
+
+/*
+ * Tata letak pelacakan dipakai saat pengemudinya SUDAH ADA dan perjalanannya
+ * masih berjalan. Sesudah selesai atau batal, yang dicari orang bukan lagi
+ * "di mana mobilnya" melainkan nota dan penilaian — dan itu lebih terbaca
+ * sebagai daftar kartu daripada peta yang tidak berubah lagi.
+ */
+const melacak = computed(
+  () => !!data.value?.pengemudi && ['dijemput', 'tiba', 'jalan'].includes(tahap.value),
+)
 
 const bolehBatal = computed(() => ['mencari', 'dijemput', 'tiba'].includes(tahap.value))
 const membatalkan = ref(false)
@@ -147,6 +158,21 @@ async function kirimNilai() {
 
 <template>
   <JemputPerjalananSkeleton v-if="memuat" />
+
+  <!--
+    Pengemudi sudah menerima dan perjalanannya berjalan: peta memenuhi layar,
+    detailnya di lembar yang ditarik. Sesudah selesai atau batal, kembali ke
+    daftar kartu di bawah — di situ yang dicari nota dan penilaian, bukan
+    posisi kendaraan.
+  -->
+  <PelacakanPerjalanan
+    v-else-if="melacak && data"
+    :data="data"
+    :membatalkan="membatalkan"
+    @kembali="kembali"
+    @bagikan="bagikan"
+    @batal="batal"
+  />
 
   <div v-else class="min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-28">
     <header class="sticky top-0 z-30 bg-(--color-surface-0) border-b border-(--color-outline)/10">

@@ -30,6 +30,8 @@
       <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" /></symbol>
       <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7" /></symbol>
       <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" /></symbol>
+      <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" /></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4H6a2 2 0 0 0-2 2v7.5A1.5 1.5 0 0 0 5.5 15" /></symbol>
       <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M20 20l-5-5" /></symbol>
       <symbol id="i-users" viewBox="0 0 24 24"><circle cx="8.5" cy="8" r="3" /><path d="M2.5 19c1-3.5 3.7-5 6-5s5 1.5 6 5" /><circle cx="17" cy="9" r="2.5" /><path d="M15.5 13.2c2 0 4.3 1.2 5 4.8" /></symbol>
       <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5V3Z" /><path d="M8.5 8h7M8.5 12h7" /></symbol>

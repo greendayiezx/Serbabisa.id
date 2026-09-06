@@ -34,11 +34,25 @@ class JemputPengemudi extends Command
     /** @var list<string> */
     private const URUTAN = ['mencari', 'dijemput', 'tiba', 'jalan', 'selesai'];
 
-    /** @var list<array<string, string>> */
+    /**
+     * Armada dipisah menurut jenisnya.
+     *
+     * Pemesan motor harus dijemput motor. Sebelumnya kendaraannya diundi dari
+     * satu daftar campur, jadi order motor bisa dijawab Toyota Avanza — dan
+     * pelat yang dicocokkan penumpang di pinggir jalan menunjuk kendaraan yang
+     * tidak pernah ia pesan.
+     *
+     * @var array<string, list<array<string, string>>>
+     */
     private const ARMADA = [
-        ['nama' => 'Budi Santoso', 'kendaraan' => 'Honda Vario', 'plat' => 'B 1234 XYZ', 'warna' => 'Hitam'],
-        ['nama' => 'Sri Wahyuni', 'kendaraan' => 'Toyota Avanza', 'plat' => 'B 5678 ABC', 'warna' => 'Silver'],
-        ['nama' => 'Agus Priyanto', 'kendaraan' => 'Yamaha NMAX', 'plat' => 'B 9012 DEF', 'warna' => 'Putih'],
+        'motor' => [
+            ['nama' => 'Budi Santoso', 'kendaraan' => 'Honda Vario', 'plat' => 'B 1234 XYZ', 'warna' => 'Hitam'],
+            ['nama' => 'Agus Priyanto', 'kendaraan' => 'Yamaha NMAX', 'plat' => 'B 9012 DEF', 'warna' => 'Putih'],
+        ],
+        'mobil' => [
+            ['nama' => 'Sri Wahyuni', 'kendaraan' => 'Toyota Avanza', 'plat' => 'B 5678 ABC', 'warna' => 'Silver'],
+            ['nama' => 'Rina Kusuma', 'kendaraan' => 'Daihatsu Xenia', 'plat' => 'B 3344 KLM', 'warna' => 'Hitam Metalik'],
+        ],
     ];
 
     public function handle(): int
@@ -84,7 +98,10 @@ class JemputPengemudi extends Command
 
         $pengemudi = $d['pengemudi'] ?? null;
         if ($tahap === 'dijemput') {
-            $pilih = self::ARMADA[array_rand(self::ARMADA)];
+            // Jenis kendaraan mengikuti kelas yang DIPESAN, bukan diundi.
+            $jenis = str_starts_with((string) ($d['kelas'] ?? 'motor'), 'motor') ? 'motor' : 'mobil';
+            $armada = self::ARMADA[$jenis];
+            $pilih = $armada[array_rand($armada)];
             $pengemudi = [
                 'nama' => $this->option('nama') ?: $pilih['nama'],
                 'kendaraan' => $pilih['kendaraan'],
@@ -97,6 +114,22 @@ class JemputPengemudi extends Command
                 'telepon_tersamar' => true,
                 'tiba_menit' => random_int(2, 7),
             ];
+        }
+
+        /*
+         * Posisi pengemudi ditulis DI SINI, bukan ditebak layar.
+         *
+         * Layar penantian menggambar mobil di peta dan menyebut "x,xx km lagi".
+         * Kalau angkanya dikarang di sisi penumpang, yang tampil adalah jarak
+         * yang tidak pernah diketahui siapa pun — dan orang menakar kapan harus
+         * turun ke lobi berdasarkan angka itu. Jadi posisinya datang dari sini,
+         * dan kalau tidak ada, layar tidak menyebut jarak sama sekali.
+         *
+         * Nilainya memang buatan: aplikasi pengemudi belum ada, dan perintah ini
+         * yang menggantikannya selama pengembangan.
+         */
+        if ($pengemudi) {
+            $pengemudi = [...$pengemudi, ...$this->posisi($d, $tahap)];
         }
 
         $task->update([
@@ -112,6 +145,93 @@ class JemputPengemudi extends Command
         $this->line('  Buka      : /tasks/jemput/'.$task->nomor_invoice);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Di mana pengemudinya sekarang, dan menuju ke mana.
+     *
+     * - dijemput : masih di jalan menuju titik jemput, ditaruh di sekitarnya
+     * - tiba     : sudah sampai di titik jemput
+     * - jalan    : bergerak di sepanjang rute menuju tujuan
+     * - selesai  : di tujuan
+     *
+     * @param  array<string, mixed>  $d
+     * @return array<string, mixed>
+     */
+    private function posisi(array $d, string $tahap): array
+    {
+        $jemput = $d['jemput'] ?? null;
+        $tujuan = $d['tujuan'] ?? null;
+        if (! $jemput || ! $tujuan) {
+            return [];
+        }
+
+        $titik = match ($tahap) {
+            // Sekitar 1–3 km dari titik jemput, arah acak. 1 derajat lintang
+            // kira-kira 111 km, jadi jaraknya dibagi angka itu.
+            'dijemput' => $this->geser($jemput, random_int(10, 30) / 10, random_int(0, 359)),
+            'tiba' => ['lat' => $jemput['lat'], 'lng' => $jemput['lng']],
+            'jalan' => $this->diRute($d, 0.35) ?? ['lat' => $jemput['lat'], 'lng' => $jemput['lng']],
+            default => ['lat' => $tujuan['lat'], 'lng' => $tujuan['lng']],
+        };
+
+        $menuju = in_array($tahap, ['dijemput', 'tiba'], true) ? 'jemput' : 'tujuan';
+        $sasaran = $menuju === 'jemput' ? $jemput : $tujuan;
+
+        return [
+            'lat' => round($titik['lat'], 6),
+            'lng' => round($titik['lng'], 6),
+            'menuju' => $menuju,
+            'jarak_km' => round(
+                $this->jarakKm($titik['lat'], $titik['lng'], $sasaran['lat'], $sasaran['lng']),
+                2,
+            ),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $titik
+     * @return array{lat: float, lng: float}
+     */
+    private function geser(array $titik, float $km, int $derajat): array
+    {
+        $rad = deg2rad($derajat);
+        $lat = (float) $titik['lat'];
+        $lng = (float) $titik['lng'];
+
+        return [
+            'lat' => $lat + ($km / 111) * cos($rad),
+            // Garis bujur menyempit mengikuti lintang; tanpa cos() ini,
+            // pergeseran ke timur di Jakarta jadi ~10% lebih jauh dari maunya.
+            'lng' => $lng + ($km / (111 * cos(deg2rad($lat)))) * sin($rad),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $d
+     * @return array{lat: float, lng: float}|null
+     */
+    private function diRute(array $d, float $bagian): ?array
+    {
+        $rute = $d['geometri'] ?? null;
+        if (! is_array($rute) || count($rute) < 2) {
+            return null;
+        }
+
+        $i = (int) floor((count($rute) - 1) * $bagian);
+
+        return ['lat' => (float) $rute[$i][0], 'lng' => (float) $rute[$i][1]];
+    }
+
+    private function jarakKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $r = 6371;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
+        return $r * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     private function cari(string $nomor): ?Task
