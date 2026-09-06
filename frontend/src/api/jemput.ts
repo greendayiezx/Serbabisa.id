@@ -108,6 +108,8 @@ export interface Perjalanan {
   nomor: string
   tahap: string
   label: string | null
+  /** Teks lencana varian dari server: 'CEPAT', 'HEMAT', 'COMFORT', … */
+  label_varian: string | null
   kelas: string | null
   km: number | null
   menit: number | null
@@ -155,5 +157,37 @@ export async function nilaiPerjalanan(
   payload: { bintang: number; tag?: string[]; ulasan?: string; tip?: number },
 ): Promise<unknown> {
   const { data } = await apiClient.post(`/jemput/${encodeURIComponent(nomor)}/nilai`, payload)
+  return data
+}
+
+export interface VoucherJemput {
+  kode: string
+  nama: string
+  deskripsi: string
+  jenis: 'akuisisi' | 'berulang'
+  minimum: number
+  terpakai: boolean
+}
+
+/**
+ * Katalog promo tanpa angka potongan.
+ *
+ * Dipakai halaman promo yang bisa dibuka dari mana saja — termasuk dari
+ * perjalanan yang sedang berlangsung, tempat tidak ada tarif yang bisa
+ * dijadikan dasar hitungan. Angka rupiahnya muncul di layar pemesanan, tempat
+ * tarifnya sudah diketahui.
+ */
+export async function voucherJemput(): Promise<{
+  perjalanan_pertama: boolean
+  jumlah: number
+  voucher: VoucherJemput[]
+}> {
+  const { data } = await apiClient.get('/jemput/voucher')
+  return data
+}
+
+/** Tip untuk pengemudi selama perjalanan; seluruhnya milik pengemudi. */
+export async function tipPengemudi(nomor: string, tip: number): Promise<{ tip: number }> {
+  const { data } = await apiClient.post(`/jemput/${encodeURIComponent(nomor)}/tip`, { tip })
   return data
 }

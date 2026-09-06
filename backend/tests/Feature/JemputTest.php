@@ -624,6 +624,55 @@ class JemputTest extends TestCase
         }
     }
 
+    public function test_katalog_voucher_tanpa_angka_potongan(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        $res = $this->getJson('/api/jemput/voucher')->assertOk();
+
+        $res->assertJsonPath('perjalanan_pertama', true);
+        $this->assertSame(count(PromoJemput::KATALOG), $res->json('jumlah'));
+
+        /*
+         * Tidak boleh ada angka potongan di sini. Katalog ini dibuka dari layar
+         * yang tidak punya tarif — angka rupiah apa pun di situ adalah janji
+         * yang belum tentu berlaku untuk perjalanan berikutnya.
+         */
+        foreach ($res->json('voucher') as $v) {
+            $this->assertArrayNotHasKey('potongan', $v);
+            $this->assertArrayHasKey('deskripsi', $v);
+        }
+    }
+
+    public function test_tip_selama_perjalanan_menambah_tagihan_dan_bisa_berulang(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/jemput/checkout', $this->payload())->assertCreated();
+        $task = Task::latest('id')->first();
+        $nomor = $task->nomor_invoice;
+        $semula = (int) $task->payment->jumlah;
+        $komisiSemula = (int) $task->payment->komisi_platform;
+
+        // Belum ada pengemudi: tidak ada yang bisa diberi tip.
+        $this->postJson("/api/jemput/{$nomor}/tip", ['tip' => 5000])->assertStatus(422);
+
+        $this->artisan('jemput:pengemudi', ['nomor' => $nomor, '--tahap' => 'dijemput'])
+            ->assertSuccessful();
+
+        $this->postJson("/api/jemput/{$nomor}/tip", ['tip' => 5000])
+            ->assertOk()->assertJsonPath('tip', 5000);
+
+        // Tip kedua MENAMBAH, bukan mengganti.
+        $this->postJson("/api/jemput/{$nomor}/tip", ['tip' => 3000])
+            ->assertOk()->assertJsonPath('tip', 8000);
+
+        $task->refresh();
+        $this->assertSame($semula + 8000, (int) $task->payment->jumlah);
+
+        // Komisi platform TIDAK ikut naik: tip seluruhnya milik pengemudi.
+        $this->assertSame($komisiSemula, (int) $task->payment->komisi_platform);
+    }
+
     public function test_tahap_tidak_bisa_melompat(): void
     {
         Sanctum::actingAs(User::factory()->create(['role' => 'customer']));

@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\ACCheckoutController;
+use App\Http\Controllers\Api\ACPerbaikanController;
 use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\Admin\PermintaanController as AdminPermintaanController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
@@ -11,24 +13,22 @@ use App\Http\Controllers\Api\BersihPesananController;
 use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CleanerController;
-use App\Http\Controllers\Api\DisputeController;
-use App\Http\Controllers\Api\ACCheckoutController;
-use App\Http\Controllers\Api\ACPerbaikanController;
-use App\Http\Controllers\Api\PenawaranACController;
 use App\Http\Controllers\Api\DeepCheckoutController;
 use App\Http\Controllers\Api\DisinfektanController;
+use App\Http\Controllers\Api\DisputeController;
 use App\Http\Controllers\Api\FreonController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\JemputController;
-use App\Http\Controllers\Api\KirimController;
 use App\Http\Controllers\Api\KantorCheckoutController;
 use App\Http\Controllers\Api\KantorPermintaanController;
+use App\Http\Controllers\Api\KirimController;
 use App\Http\Controllers\Api\LanggananController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\PaymentController;
-use App\Http\Controllers\Api\PesananController;
 use App\Http\Controllers\Api\PayoutRequestController;
+use App\Http\Controllers\Api\PenawaranACController;
 use App\Http\Controllers\Api\PenawaranController;
+use App\Http\Controllers\Api\PesananController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TaskFotoController;
@@ -163,8 +163,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/jemput/estimasi', [JemputController::class, 'estimasi']);
     Route::post('/jemput/checkout', [JemputController::class, 'checkout']);
+    // Katalog promo: didaftarkan SEBELUM /jemput/{nomor}, kalau tidak
+    // 'voucher' akan tertangkap sebagai nomor pesanan dan menjawab 404.
+    Route::get('/jemput/voucher', [JemputController::class, 'voucher']);
     Route::get('/jemput/{nomor}', [JemputController::class, 'show']);
     Route::post('/jemput/{nomor}/batal', [JemputController::class, 'batal']);
+    Route::post('/jemput/{nomor}/tip', [JemputController::class, 'tip']);
     Route::post('/jemput/{nomor}/nilai', [JemputController::class, 'nilai']);
 
     // BisaBersih Kantor: pesan langsung (kantor kecil/menengah).

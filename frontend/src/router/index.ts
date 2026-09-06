@@ -115,6 +115,12 @@ const router = createRouter({
       meta: { roles: ['customer', 'mitra', 'admin'] as Role[] },
     },
     {
+      path: '/tasks/new/tukang/detail',
+      name: 'task-tukang-detail',
+      component: () => import('@/views/tukang/TukangDetailView.vue'),
+      meta: { induk: 'task-location', roles: ['customer', 'mitra', 'admin'] as Role[] },
+    },
+    {
       path: '/tasks/new/bersih/rumah',
       name: 'task-bersih-rumah',
       component: () => import('@/views/bersih/rumah/BersihRumahView.vue'),
@@ -409,6 +415,20 @@ const router = createRouter({
       name: 'task-jemput-voucher',
       component: () => import('@/views/jemput/JemputVoucherView.vue'),
       meta: { induk: 'task-jemput-pesan', roles: ['customer'] as Role[] },
+    },
+    {
+      /*
+       * Katalog promo BisaJemput yang berdiri sendiri.
+       *
+       * Berbeda dari /tasks/new/jemput/voucher, yang menghitung potongan dari
+       * tarif pilihan yang sedang disusun dan karena itu hanya berarti di dalam
+       * alur pemesanan. Halaman ini bisa dibuka dari mana saja, termasuk dari
+       * perjalanan yang sedang berlangsung.
+       */
+      path: '/promo/jemput',
+      name: 'jemput-promo',
+      component: () => import('@/views/jemput/JemputPromoView.vue'),
+      meta: { induk: 'home', roles: ['customer'] as Role[] },
     },
     {
       /*

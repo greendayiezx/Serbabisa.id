@@ -344,6 +344,11 @@ class JemputController extends Controller
             'nomor' => $task->nomor_invoice,
             'tahap' => $d['tahap'] ?? 'mencari',
             'label' => $d['label'] ?? null,
+            // Teks lencana varian (CEPAT/HEMAT/COMFORT/…) tidak ikut disimpan
+            // saat checkout; dihitung ulang dari tipe+varian yang tersimpan.
+            // Dengan begitu perjalanan lama pun tetap punya lencananya tanpa
+            // menambah kolom yang perlu diisi surut.
+            'label_varian' => JemputTarif::TIPE[$d['tipe'] ?? '']['varian'][$d['varian'] ?? '']['label'] ?? null,
             'kelas' => $d['kelas'] ?? null,
             'km' => $d['km'] ?? null,
             'menit' => $d['menit'] ?? null,
@@ -401,6 +406,78 @@ class JemputController extends Controller
             'tahap' => 'batal',
             'pengemudi_sudah_jalan' => $tahap !== 'mencari',
         ]);
+    }
+
+    /**
+     * Katalog promo BisaJemput, tanpa angka potongan.
+     *
+     * Dipakai halaman promo yang dibuka dari mana saja — termasuk dari layar
+     * perjalanan yang sedang berlangsung, tempat tidak ada lagi tarif yang bisa
+     * dijadikan dasar hitungan. Potongan rupiahnya baru muncul di layar
+     * pemesanan, tempat tarifnya sudah diketahui; menampilkan angka di sini
+     * berarti menjanjikan potongan yang belum tentu berlaku untuk perjalanan
+     * berikutnya.
+     */
+    public function voucher(Request $request): JsonResponse
+    {
+        $pertama = $this->perjalananPertama($request->user()->id);
+
+        $daftar = array_map(fn (array $p) => [
+            'kode' => $p['kode'],
+            'nama' => $p['nama'],
+            'deskripsi' => $p['deskripsi'],
+            'jenis' => $p['jenis'],
+            'minimum' => $p['minimum'],
+            // Promo sekali seumur hidup yang sudah lewat masanya tetap
+            // ditampilkan, dengan keterangannya — menyembunyikannya membuat
+            // orang mengira promonya tidak pernah ada.
+            'terpakai' => ! empty($p['sekali_seumur_hidup']) && ! $pertama,
+        ], PromoJemput::KATALOG);
+
+        return response()->json([
+            'perjalanan_pertama' => $pertama,
+            'jumlah' => count($daftar),
+            'voucher' => $daftar,
+        ]);
+    }
+
+    /**
+     * Tip untuk pengemudi, diberikan SELAMA perjalanan.
+     *
+     * Terpisah dari penilaian, yang baru bisa diisi setelah selesai. Orang yang
+     * ingin berterima kasih saat masih di dalam kendaraan tidak punya jalan
+     * lain, dan tombol yang menunggu sampai perjalanan berakhir sering
+     * terlewat begitu penumpang turun.
+     *
+     * Seperti tip di penilaian: seluruhnya milik pengemudi, platform tidak
+     * mengambil komisi dari uang terima kasih.
+     */
+    public function tip(Request $request, string $nomor): JsonResponse
+    {
+        $data = $request->validate([
+            'tip' => ['required', 'integer', 'min:1000', 'max:100000'],
+        ]);
+
+        $task = $this->milikSaya($request, $nomor);
+        $d = $task->detail_layanan;
+        $tahap = $d['tahap'] ?? 'mencari';
+
+        if (! in_array($tahap, ['dijemput', 'tiba', 'jalan'], true)) {
+            throw ValidationException::withMessages([
+                'tip' => $tahap === 'selesai'
+                    ? 'Perjalanan sudah selesai. Tipnya diberikan lewat penilaian.'
+                    : 'Belum ada pengemudi yang bisa diberi tip.',
+            ]);
+        }
+
+        // Ditambahkan, bukan diganti: orang boleh menambah tip lebih dari sekali,
+        // dan yang kedua tidak boleh menghapus yang pertama.
+        $total = (int) ($d['tip'] ?? 0) + (int) $data['tip'];
+
+        $task->update(['detail_layanan' => [...$d, 'tip' => $total]]);
+        $task->payment()?->increment('jumlah', (int) $data['tip']);
+
+        return response()->json(['tip' => $total]);
     }
 
     /** Penilaian pengemudi setelah perjalanan selesai. */

@@ -15,6 +15,7 @@
  * memakai angka itu untuk memutuskan kapan turun ke lobi.
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import Icon from '@/components/icons/Icon.vue'
@@ -25,7 +26,8 @@ import MetodeBayarIcon from '@/components/MetodeBayarIcon.vue'
 import LencanaVarian from '@/components/jemput/LencanaVarian.vue'
 import { labelMetode, type MetodeId } from '@/lib/metodeBayar'
 import { rupiah } from '@/lib/jemput'
-import type { Perjalanan } from '@/api/jemput'
+import { tipPengemudi, type Perjalanan } from '@/api/jemput'
+import { pesanError } from '@/api/belanja'
 import promoMinimalImg from '@/assets/BisaJemput_MinimalTransaksi.png'
 import promoJemputImg from '@/assets/PromoBisaJemput.png'
 // Ikon menu yang sama dengan yang dipakai di beranda, supaya BisaJemput
@@ -42,6 +44,8 @@ const emit = defineEmits<{
   bagikan: []
   batal: []
 }>()
+
+const router = useRouter()
 
 const terbuka = ref(false)
 const nomorTersalin = ref(false)
@@ -120,6 +124,53 @@ const BANNER_PROMO = [
   { src: promoMinimalImg, alt: 'Promo BisaJemput: minimal transaksi' },
   { src: promoJemputImg, alt: 'Promo BisaJemput' },
 ]
+
+/**
+ * Ketukan pada banner membuka katalog promo yang BERDIRI SENDIRI.
+ *
+ * Bukan halaman voucher di alur pemesanan: yang itu menghitung potongan dari
+ * tarif pilihan yang sedang disusun, dan pilihan itu sudah dibuang begitu
+ * pesanan jadi — membukanya dari sini hanya menghasilkan halaman kosong.
+ * Katalognya menyebut syaratnya saja, tanpa angka rupiah yang belum tentu
+ * berlaku untuk perjalanan berikutnya.
+ */
+function keHalamanPromo() {
+  router.push({ name: 'jemput-promo' })
+}
+
+/* ────────── Tip untuk pengemudi ────────── */
+const PILIHAN_TIP = [5000, 10000, 20000, 50000]
+
+const tipDipilih = ref<number | null>(null)
+const mengirimTip = ref(false)
+const galatTip = ref<string | null>(null)
+const tipTerkirim = ref(0)
+
+/**
+ * Tip hanya ditawarkan selama pengemudinya masih mengantar.
+ *
+ * Sesudah selesai, jalurnya lewat penilaian — dan menampilkan dua tempat untuk
+ * hal yang sama membuat orang memberi dua kali tanpa sadar.
+ */
+const bisaTip = computed(
+  () => !!pengemudi.value && ['dijemput', 'tiba', 'jalan'].includes(tahap.value),
+)
+
+async function kirimTip() {
+  if (!tipDipilih.value || mengirimTip.value) return
+
+  mengirimTip.value = true
+  galatTip.value = null
+  try {
+    const h = await tipPengemudi(props.data.nomor, tipDipilih.value)
+    tipTerkirim.value = h.tip
+    tipDipilih.value = null
+  } catch (e) {
+    galatTip.value = pesanError(e)
+  } finally {
+    mengirimTip.value = false
+  }
+}
 
 /* ────────── Perputaran pita promo ────────── */
 const jalurPromo = ref<HTMLElement | null>(null)
@@ -455,14 +506,17 @@ async function salinNomor() {
       </button>
 
       <!--
-        Tombol pulang ke kendaraan, TEPAT DI ATAS tombol kembali.
+        Tombol pusatkan, TEPAT DI ATAS tombol kembali dan SELALU ADA.
 
-        Muncul begitu pengguna menggeser petanya sendiri: sejak itu peta berhenti
-        mengikuti kendaraan, dan tanpa tombol ini satu-satunya jalan pulang
-        adalah menebak-nebak arah dengan jari. Dulu ia baru muncul setelah
-        kendaraannya benar-benar keluar layar — geseran yang menyisakan
-        kendaraannya di pinggir tidak memunculkan apa pun, dan yang mencarinya
-        menyimpulkan tombolnya memang tidak ada.
+        Dulu ia hanya muncul setelah peta digeser. Tombol yang baru
+        menampakkan diri setelah keadaan tertentu tercapai tidak bisa
+        ditemukan oleh orang yang mencarinya — ia harus melakukan sesuatu
+        dulu, tanpa tahu apa.
+
+        Yang berubah bukan ada-tidaknya melainkan rupanya: selama peta masih
+        mengikuti kendaraan ia diam dan menyebut dirinya sedang mengikuti;
+        begitu petanya digeser sendiri ia menyala biru dan menawarkan jalan
+        pulang. Dengan begitu tombolnya sekaligus jadi penanda keadaan.
       -->
       <Transition
         enter-active-class="transition duration-200"
@@ -470,14 +524,15 @@ async function salinNomor() {
         leave-active-class="transition duration-150"
         leave-to-class="opacity-0"
       >
-        <div v-if="!ikuti && posisiPengemudi" class="mt-49 mb-2 flex">
+        <div v-if="posisiPengemudi" class="mt-49 mb-2 flex">
           <button
             type="button"
-            class="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-(--color-surface-0) shadow-lg pl-3 pr-4 py-2.5 text-[12.5px] font-extrabold active:scale-95 transition-transform"
+            class="pointer-events-auto inline-flex items-center gap-2 rounded-full shadow-lg pl-3 pr-4 py-2.5 text-[12.5px] font-extrabold active:scale-95 transition-[transform,background-color,color]"
+            :class="ikuti ? 'bg-(--color-surface-0) text-(--color-on-surface-variant)' : 'bg-(--color-azure) text-white'"
             @click="pusatkanKePengemudi"
           >
-            <Icon name="crosshair" class="w-4 h-4 text-(--color-azure)" />
-            Kembali ke pengemudi
+            <Icon name="crosshair" class="w-4 h-4" :class="ikuti ? 'text-(--color-azure)' : ''" />
+            {{ ikuti ? 'Mengikuti pengemudi' : 'Kembali ke pengemudi' }}
           </button>
         </div>
       </Transition>
@@ -487,7 +542,7 @@ async function salinNomor() {
         kalau ada, tombol itu yang sudah memberi jaraknya. Tanpa ini, keduanya
         menumpuk dan barisnya terdorong dua kali lebih jauh ke bawah.
       -->
-      <div class="flex items-center gap-2" :class="!ikuti && posisiPengemudi ? '' : 'mt-49'">
+      <div class="flex items-center gap-2" :class="posisiPengemudi ? '' : 'mt-49'">
         <button
           type="button"
           aria-label="Kembali"
@@ -699,13 +754,15 @@ async function salinNomor() {
               <p class="text-[13.5px] font-semibold">{{ pengemudi.nama }}</p>
               <div class="mt-2 flex items-center gap-2 flex-wrap">
                 <span
-                  class="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-400 px-2.5 py-1 text-[12px] font-bold text-amber-900"
+                  class="inline-flex items-center gap-1 rounded-full bg-[#8BC53F] px-2.5 py-1 text-[12px] font-extrabold text-white shadow-xs"
                 >
-                  <Icon name="star" class="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 shrink-0" fill="#FFD700" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
                   {{ pengemudi.bintang }}
                 </span>
                 <span
-                  class="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-400 px-2.5 py-1 text-[12px] font-semibold text-amber-900"
+                  class="inline-flex items-center gap-1 rounded-full bg-[#8BC53F] px-2.5 py-1 text-[12px] font-extrabold text-white shadow-xs"
                 >
                   {{ pengemudi.perjalanan.toLocaleString('id-ID') }} perjalanan
                 </span>
@@ -753,7 +810,7 @@ async function salinNomor() {
             satu lambang untuk satu menu. Lencananya baru digambar kalau server
             mengirim varian; yang tak diketahui tidak ditebak.
           -->
-          <div class="flex items-center gap-2.5 mb-3.5 pb-3.5 border-b border-(--color-outline)/12">
+          <div class="flex items-center gap-2.5 mb-3.5 pb-3.5 border-b-2 border-gray-200">
             <span class="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0">
               <img :src="ikonBisaJemput" alt="BisaJemput" class="w-full h-full object-contain" />
             </span>
@@ -813,13 +870,6 @@ async function salinNomor() {
         berarti menahan hal-hal yang benar-benar dilihat orang lebih dulu.
       -->
       <section class="order-3 py-1.5">
-        <!--
-          Gambarnya TIDAK bisa diketuk. Halaman voucher BisaJemput butuh
-          pilihan kendaraan yang sudah dibuang begitu pesanan jadi, jadi
-          ketukan di sini tidak punya tujuan yang benar. Banner yang bisa
-          ditekan tapi tidak membawa ke mana-mana baru ketahuan setelah
-          ditekan — dan yang menekannya sedang di dalam perjalanan.
-        -->
         <div class="relative px-4">
           <div
             ref="jalurPromo"
@@ -831,7 +881,9 @@ async function salinNomor() {
               :src="b.src"
               :alt="b.alt"
               loading="lazy"
-              class="shrink-0 w-full snap-center rounded-2xl shadow-sm block h-auto"
+              role="button"
+              class="shrink-0 w-full snap-center rounded-2xl shadow-sm block h-auto cursor-pointer active:scale-[0.99] transition-transform"
+              @click="keHalamanPromo"
             />
           </div>
 
@@ -878,8 +930,71 @@ async function salinNomor() {
         </div>
       </section>
 
+      <!--
+        Kasih tip, tepat di atas rincian tarif.
+
+        Ada endpoint-nya sendiri, bukan menumpang penilaian: penilaian baru bisa
+        diisi setelah perjalanan selesai, sementara orang yang ingin berterima
+        kasih biasanya sedang di dalam kendaraan. Tombol yang menunggu sampai
+        perjalanan berakhir sering terlewat begitu penumpang turun.
+
+        Tipnya SELURUHNYA milik pengemudi — platform tidak mengambil komisi dari
+        uang terima kasih, dan itu ditulis apa adanya di kartunya.
+      -->
+      <section v-if="bisaTip" class="order-5 px-4 py-1.5">
+        <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <p class="text-[14px] font-display font-extrabold">Kasih tip buat pengemudi</p>
+              <p class="text-[12px] leading-snug text-(--color-on-surface-variant) mt-0.5">
+                Diterima pengemudi seluruhnya, tanpa potongan.
+              </p>
+            </div>
+            <Icon name="sparkle" class="w-6 h-6 text-amber-500 shrink-0" />
+          </div>
+
+          <p
+            v-if="tipTerkirim > 0"
+            class="mt-3 rounded-xl bg-(--color-secondary-container) px-3 py-2 text-[12.5px] font-semibold text-(--color-on-secondary-container)"
+          >
+            Terima kasih — tip {{ rupiah(tipTerkirim) }} sudah ditambahkan ke tagihan.
+          </p>
+
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button
+              v-for="n in PILIHAN_TIP"
+              :key="n"
+              type="button"
+              class="px-3.5 py-2 rounded-full border text-[12.5px] font-bold transition-colors disabled:opacity-40"
+              :class="
+                tipDipilih === n
+                  ? 'bg-(--color-azure) border-(--color-azure) text-white'
+                  : 'border-(--color-outline)/40 text-(--color-on-surface)'
+              "
+              :disabled="mengirimTip"
+              @click="tipDipilih = n"
+            >
+              {{ rupiah(n) }}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="mt-3 w-full h-11 rounded-full bg-(--color-azure) text-white text-[13.5px] font-extrabold active:scale-[0.98] transition-transform disabled:opacity-40"
+            :disabled="!tipDipilih || mengirimTip"
+            @click="kirimTip"
+          >
+            {{ mengirimTip ? 'Mengirim…' : 'Kasih tip' }}
+          </button>
+
+          <p v-if="galatTip" role="alert" class="mt-2 text-[11.5px] font-semibold text-(--color-error)">
+            {{ galatTip }}
+          </p>
+        </div>
+      </section>
+
       <!-- Rincian tarif -->
-      <section class="order-5 px-4 py-1.5">
+      <section class="order-6 px-4 py-1.5">
         <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
           <p class="text-[14px] font-display font-extrabold mb-3">Rincian tarif</p>
           <div class="flex flex-col gap-2 text-[13px]">
@@ -903,7 +1018,7 @@ async function salinNomor() {
       </section>
 
       <!-- Keselamatan -->
-      <section class="order-6 px-4 py-1.5">
+      <section class="order-7 px-4 py-1.5">
         <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
           <p class="text-[14px] font-display font-extrabold mb-3">Keselamatan</p>
           <div class="grid grid-cols-2 gap-2.5">
@@ -928,7 +1043,7 @@ async function salinNomor() {
       </section>
 
       <!-- Nomor transaksi dan pembatalan -->
-      <section class="order-7 px-4 py-1.5">
+      <section class="order-8 px-4 py-1.5">
         <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
           <button
             type="button"
