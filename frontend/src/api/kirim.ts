@@ -115,7 +115,33 @@ export interface Kiriman {
   promo: { kode: string; nama: string; potongan: number } | null
   metode: string | null
   kode_terima: string | null
-  kurir: unknown | null
+  lewat_jalan: boolean
+  kurir: KurirKiriman | null
+}
+
+export interface KurirKiriman {
+  nama: string
+  kendaraan: string
+  plat: string
+  warna: string
+  bintang: number
+  kiriman: number
+  telepon_tersamar: boolean
+  tiba_menit: number
+
+  /*
+   * Posisi kurir, DARI SERVER dan boleh tidak ada.
+   *
+   * Layar pelacakan menggambar kendaraannya di peta dan menyebut sisa
+   * jaraknya. Angka itu tidak boleh dikarang di sini: orang menakar kapan
+   * harus menyiapkan paketnya di depan pintu berdasarkan angka tersebut.
+   */
+  lat?: number
+  lng?: number
+  menuju?: 'ambil' | 'antar'
+  /** Rute kurir menuju titik ambil, sudah [lat,lng] dan lewat jalan. */
+  rute?: [number, number][] | null
+  jarak_km?: number
 }
 
 export async function ambilKiriman(nomor: string): Promise<Kiriman> {

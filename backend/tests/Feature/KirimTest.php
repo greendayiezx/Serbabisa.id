@@ -444,6 +444,48 @@ class KirimTest extends TestCase
         $this->assertSame(count(PromoKirim::KATALOG) - $sekaliPakai, $res->json('jumlah'));
     }
 
+    public function test_kurir_ditugaskan_dengan_kendaraan_sesuai_pesanan(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        foreach (['motor' => ['Honda Beat', 'Yamaha Mio'], 'mobil' => ['Daihatsu Gran Max', 'Suzuki Carry']] as $kendaraan => $armada) {
+            $this->postJson('/api/kirim/checkout', $this->payload(['kendaraan' => $kendaraan]))
+                ->assertCreated();
+            $nomor = Task::latest('id')->first()->nomor_invoice;
+
+            $this->artisan('kirim:kurir', ['nomor' => $nomor, '--tahap' => 'menjemput'])
+                ->assertSuccessful();
+
+            $k = $this->getJson("/api/kirim/{$nomor}")->json('kurir');
+
+            /*
+             * Pelat yang dicocokkan pengirim di pinggir jalan harus menunjuk
+             * kendaraan yang benar-benar ia pesan — kendaraan yang salah jenis
+             * membuatnya membiarkan kurir yang benar lewat begitu saja.
+             */
+            $this->assertContains($k['kendaraan'], $armada, "Pesanan {$kendaraan} dijawab kendaraan di luar armadanya.");
+            $this->assertIsFloat($k['lat']);
+            $this->assertIsFloat($k['lng']);
+            $this->assertSame('ambil', $k['menuju']);
+            $this->assertGreaterThan(0, $k['jarak_km']);
+        }
+    }
+
+    public function test_tahap_kiriman_tidak_bisa_mundur_atau_melompat(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/kirim/checkout', $this->payload())->assertCreated();
+        $nomor = Task::latest('id')->first()->nomor_invoice;
+
+        // Tidak bisa melompat ke 'selesai' dari 'mencari': kiriman yang tiba-tiba
+        // selesai tanpa pernah ada kurir adalah tagihan tanpa asal-usul.
+        $this->artisan('kirim:kurir', ['nomor' => $nomor, '--tahap' => 'selesai'])->assertFailed();
+        $this->getJson("/api/kirim/{$nomor}")->assertJsonPath('tahap', 'mencari');
+
+        $this->artisan('kirim:kurir', ['nomor' => $nomor, '--tahap' => 'menjemput'])->assertSuccessful();
+        $this->artisan('kirim:kurir', ['nomor' => $nomor, '--tahap' => 'menjemput'])->assertFailed();
+    }
+
     public function test_butuh_login(): void
     {
         $this->postJson('/api/kirim/checkout', $this->payload())->assertUnauthorized();

@@ -15,6 +15,7 @@ import { useKembali } from '@/composables/useKembali'
 import Icon from '@/components/icons/Icon.vue'
 import LottieIcon from '@/components/LottieIcon.vue'
 import KirimStatusSkeleton from '@/components/skeleton/KirimStatusSkeleton.vue'
+import PelacakanKiriman from '@/components/kirim/PelacakanKiriman.vue'
 import animasiMencari from '@/assets/lottie/jemput-mencari-pengemudi.json'
 import { ambilKiriman, type Kiriman } from '@/api/kirim'
 import { pesanError } from '@/api/belanja'
@@ -32,6 +33,39 @@ let pewaktu: ReturnType<typeof setInterval> | null = null
 const tahap = computed(() => data.value?.tahap ?? 'mencari')
 const judul = computed(() => TAHAP_KIRIM[tahap.value] ?? TAHAP_KIRIM.mencari)
 const selesai = computed(() => tahap.value === 'selesai')
+
+/*
+ * Tata letak pelacakan dipakai saat kurirnya SUDAH ADA dan kirimannya masih
+ * berjalan. Sesudah selesai, yang dicari orang bukan lagi "di mana kurirnya"
+ * melainkan notanya — dan itu lebih terbaca sebagai daftar kartu daripada peta
+ * yang tidak berubah lagi.
+ */
+const melacak = computed(
+  () => !!data.value?.kurir && ['menjemput', 'diantar'].includes(tahap.value),
+)
+
+/** Pesan pelacakan untuk dikirim ke penerima — isinya fakta, bukan tautan palsu. */
+function bagikan() {
+  const d = data.value
+  if (!d) return
+  const teks = [
+    'Paket saya sedang dikirim lewat BisaKirim.',
+    `Dari: ${d.ambil?.alamat ?? '-'}`,
+    `Ke: ${d.antar?.alamat ?? '-'}`,
+    d.kurir ? `Kurir: ${d.kurir.nama} · ${d.kurir.kendaraan} ${d.kurir.plat}` : 'Kurir belum ditugaskan.',
+    `Nomor kiriman: ${d.nomor}`,
+  ].join('\n')
+
+  const waLink = `https://wa.me/?text=${encodeURIComponent(teks)}`
+
+  if (navigator.share) {
+    navigator.share({ title: 'Kiriman BisaKirim', text: teks }).catch(() => {
+      window.open(waLink, '_blank', 'noopener')
+    })
+    return
+  }
+  window.open(waLink, '_blank', 'noopener')
+}
 
 async function muat() {
   try {
@@ -59,6 +93,18 @@ onBeforeUnmount(() => {
 
 <template>
   <KirimStatusSkeleton v-if="memuat" />
+
+  <!--
+    Kurir sudah menerima dan kirimannya berjalan: peta memenuhi layar, detailnya
+    di lembar yang ditarik — susunan yang sama dengan layar perjalanan
+    BisaJemput, karena pekerjaannya memang sebentuk.
+  -->
+  <PelacakanKiriman
+    v-else-if="melacak && data"
+    :data="data"
+    @kembali="kembali"
+    @bagikan="bagikan"
+  />
 
   <div v-else class="min-h-dvh w-full bg-(--color-surface-container) text-(--color-on-surface) pb-16">
     <header class="sticky top-0 z-30 bg-(--color-surface-0) border-b border-(--color-outline)/10">

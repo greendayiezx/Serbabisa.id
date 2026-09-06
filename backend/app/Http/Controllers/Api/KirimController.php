@@ -387,6 +387,7 @@ class KirimController extends Controller
             'isi' => $d['isi'] ?? null,
             'km' => $d['km'] ?? null,
             'geometri' => $d['geometri'] ?? null,
+            'lewat_jalan' => $d['lewat_jalan'] ?? false,
             'ambil' => $d['ambil'] ?? null,
             'antar' => $d['antar'] ?? null,
             'baris' => $d['baris'] ?? [],
@@ -398,8 +399,45 @@ class KirimController extends Controller
             'promo' => $d['promo'] ?? null,
             'metode' => $d['metode'] ?? null,
             'kode_terima' => $d['kode_terima'] ?? null,
-            'kurir' => $d['kurir'] ?? null,
+            'kurir' => $this->lengkapiRuteKurir($d),
         ]);
+    }
+
+    /**
+     * Lengkapi rute kurir menuju titik ambil kalau belum tersimpan.
+     *
+     * Sepola dengan BisaJemput. Rutenya ditulis saat kurir ditugaskan; kiriman
+     * yang kurirnya ditugaskan saat penyedia rute kebetulan mati hanya punya
+     * koordinat, dan layar menariknya sebagai garis lurus. Garis lurus melintasi
+     * gedung dan sungai; yang membacanya menyimpulkan kurirnya masih jauh atau
+     * aplikasinya rusak, dan dua-duanya keliru.
+     *
+     * @param  array<string, mixed>  $d
+     * @return array<string, mixed>|null
+     */
+    private function lengkapiRuteKurir(array $d): ?array
+    {
+        $k = $d['kurir'] ?? null;
+        $ambil = $d['ambil'] ?? null;
+
+        if (! is_array($k) || ! $ambil) {
+            return $k;
+        }
+        if (($d['tahap'] ?? null) !== 'menjemput' || ! empty($k['rute'])) {
+            return $k;
+        }
+        if (! isset($k['lat'], $k['lng'])) {
+            return $k;
+        }
+
+        $rute = $this->rute->cari((float) $k['lat'], (float) $k['lng'], (float) $ambil['lat'], (float) $ambil['lng']);
+        if (! $rute) {
+            return $k;
+        }
+
+        // Jaraknya ikut diperbarui: yang benar adalah jarak yang ditempuh di
+        // jalan, bukan garis lurus yang tersimpan sebelumnya.
+        return [...$k, 'rute' => $rute['geometri'], 'jarak_km' => round($rute['km'], 2)];
     }
 
     private function kirimanPertama(int $userId): bool
