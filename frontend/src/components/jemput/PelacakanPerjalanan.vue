@@ -494,9 +494,25 @@ async function salinNomor() {
       <div class="flex flex-col">
       <!-- Kendaraan dan pengemudi: yang dicocokkan sebelum naik -->
       <section :class="terbuka ? 'order-2' : 'order-1'">
-        <!-- Kendaraan dan pengemudi: yang dicocokkan sebelum naik -->
+        <!--
+          Kartu pengemudi punya dua wajah.
+
+          MENGINTIP: pelat, kendaraan, warna, dan tombol telepon serta chat.
+          Itulah yang dipakai orang di dua menit sebelum kendaraannya sampai —
+          mencocokkan pelat di pinggir jalan, dan menghubungi kalau tidak
+          ketemu. Semua tersedia tanpa perlu menarik apa pun.
+
+          TERBUKA: tinggal nama dan reputasinya. Lembar yang ditarik penuh
+          dibuka untuk membaca biaya dan rincian, bukan untuk mencocokkan
+          pelat; pelat yang ikut naik ke sana hanya mengulang apa yang barusan
+          terlihat, dan mendorong yang dicari makin ke bawah.
+
+          Tombol telepon ikut tersembunyi saat terbuka — bukan hilang: satu
+          tarikan ke bawah mengembalikannya, dan keadaan mengintip inilah yang
+          jadi bawaan setiap kali layar ini dibuka.
+        -->
         <div v-if="pengemudi" class="px-5 pt-1">
-          <div class="flex items-start gap-3">
+          <div v-if="!terbuka" class="flex items-start gap-3">
             <div class="flex-1 min-w-0">
               <p class="text-[19px] font-display font-extrabold tracking-wide">
                 {{ pengemudi.plat }}
@@ -517,24 +533,38 @@ async function salinNomor() {
             </span>
           </div>
 
-          <div class="mt-3 pt-3 border-t border-(--color-outline)/15">
-            <p class="text-[13.5px] font-semibold">{{ pengemudi.nama }}</p>
-            <div class="mt-2 flex items-center gap-2 flex-wrap">
-              <span
-                class="inline-flex items-center gap-1 rounded-full bg-(--color-surface-container) px-2.5 py-1 text-[12px] font-bold"
-              >
-                <Icon name="star" class="w-3.5 h-3.5 text-orange-500" />
-                {{ pengemudi.bintang }}
-              </span>
-              <span
-                class="inline-flex items-center gap-1 rounded-full bg-(--color-surface-container) px-2.5 py-1 text-[12px] font-semibold"
-              >
-                {{ pengemudi.perjalanan.toLocaleString('id-ID') }} perjalanan
-              </span>
+          <div
+            class="flex items-center gap-3"
+            :class="terbuka ? '' : 'mt-3 pt-3 border-t border-(--color-outline)/15'"
+          >
+            <div class="flex-1 min-w-0">
+              <p class="text-[13.5px] font-semibold">{{ pengemudi.nama }}</p>
+              <div class="mt-2 flex items-center gap-2 flex-wrap">
+                <span
+                  class="inline-flex items-center gap-1 rounded-full bg-(--color-surface-container) px-2.5 py-1 text-[12px] font-bold"
+                >
+                  <Icon name="star" class="w-3.5 h-3.5 text-orange-500" />
+                  {{ pengemudi.bintang }}
+                </span>
+                <span
+                  class="inline-flex items-center gap-1 rounded-full bg-(--color-surface-container) px-2.5 py-1 text-[12px] font-semibold"
+                >
+                  {{ pengemudi.perjalanan.toLocaleString('id-ID') }} perjalanan
+                </span>
+              </div>
             </div>
+
+            <!-- Saat terbuka, potretnya pindah ke baris ini: baris pelat yang
+                 tadinya memuatnya sudah tidak digambar. -->
+            <span
+              v-if="terbuka"
+              class="w-14 h-14 rounded-full bg-(--color-surface-container) flex items-center justify-center shrink-0"
+            >
+              <Icon name="user" class="w-7 h-7 text-(--color-on-surface-variant)" />
+            </span>
           </div>
 
-          <div class="mt-3.5 flex items-center gap-2.5">
+          <div v-if="!terbuka" class="mt-3.5 flex items-center gap-2.5">
             <a
               href="tel:+62000000000"
               aria-label="Telepon pengemudi"
@@ -555,7 +585,7 @@ async function salinNomor() {
           </div>
 
           <p
-            v-if="pengemudi.telepon_tersamar"
+            v-if="pengemudi.telepon_tersamar && !terbuka"
             class="mt-2 text-[11px] leading-snug text-(--color-on-surface-variant)"
           >
           </p>
