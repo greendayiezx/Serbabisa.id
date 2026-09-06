@@ -555,6 +555,30 @@ class JemputTest extends TestCase
         $this->assertEqualsWithDelta(9.0, $p['jarak_km'], 0.01);
     }
 
+    public function test_rute_menjemput_dilengkapi_saat_dibaca(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/jemput/checkout', $this->payload())->assertCreated();
+        $task = Task::latest('id')->first();
+        $nomor = $task->nomor_invoice;
+
+        // Penyedia rute mati saat pengemudi ditugaskan: barisnya hanya punya
+        // koordinat. Begitulah rupa perjalanan yang pengemudinya ditugaskan
+        // sebelum fitur rute ini ada.
+        $this->artisan('jemput:pengemudi', ['nomor' => $nomor, '--tahap' => 'dijemput'])
+            ->assertSuccessful();
+        $this->assertNull($task->fresh()->detail_layanan['pengemudi']['rute']);
+
+        // Penyedia rute hidup lagi. Jawaban API harus lengkap tanpa perlu
+        // menugaskan ulang pengemudinya.
+        $this->fakeRute(4200);
+        $p = $this->getJson("/api/jemput/{$nomor}")->json('pengemudi');
+
+        $this->assertIsArray($p['rute']);
+        $this->assertGreaterThanOrEqual(2, count($p['rute']));
+        $this->assertEqualsWithDelta(4.2, $p['jarak_km'], 0.01);
+    }
+
     public function test_rute_menjemput_kosong_saat_penyedia_rute_mati(): void
     {
         Sanctum::actingAs(User::factory()->create(['role' => 'customer']));

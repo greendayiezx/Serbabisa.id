@@ -337,6 +337,7 @@ class JemputController extends Controller
     {
         $task = $this->milikSaya($request, $nomor);
         $d = $task->detail_layanan;
+        $d['pengemudi'] = $this->lengkapiRutePengemudi($d);
 
         return response()->json([
             'id' => $task->id,
@@ -447,6 +448,49 @@ class JemputController extends Controller
         }
 
         return response()->json(['penilaian' => $task->fresh()->detail_layanan['penilaian']]);
+    }
+
+    /**
+     * Lengkapi rute pengemudi menuju titik jemput kalau belum tersimpan.
+     *
+     * Rutenya ditulis saat pengemudi ditugaskan. Perjalanan yang pengemudinya
+     * ditugaskan SEBELUM rute itu ada — atau saat penyedia rute kebetulan mati
+     * — hanya punya koordinat, dan layar menariknya sebagai garis lurus. Garis
+     * lurus melintasi gedung dan sungai; yang membacanya menyimpulkan
+     * pengemudinya masih jauh atau aplikasinya rusak, dan dua-duanya keliru.
+     *
+     * Diisi di sini, bukan lewat migrasi data, karena posisi pengemudi memang
+     * berubah terus di sistem yang sungguhan — yang perlu dijamin adalah
+     * jawabannya selalu lengkap, bukan barisnya pernah ditambal sekali.
+     * RuteJalan menyimpan hasilnya sepuluh menit, jadi pemanggilan berulang
+     * dari layar pelacakan tidak menjadi panggilan berulang ke penyedia rute.
+     *
+     * @param  array<string, mixed>  $d
+     * @return array<string, mixed>|null
+     */
+    private function lengkapiRutePengemudi(array $d): ?array
+    {
+        $p = $d['pengemudi'] ?? null;
+        $jemput = $d['jemput'] ?? null;
+
+        if (! is_array($p) || ! $jemput) {
+            return $p;
+        }
+        if (($d['tahap'] ?? null) !== 'dijemput' || ! empty($p['rute'])) {
+            return $p;
+        }
+        if (! isset($p['lat'], $p['lng'])) {
+            return $p;
+        }
+
+        $rute = $this->rute->cari((float) $p['lat'], (float) $p['lng'], (float) $jemput['lat'], (float) $jemput['lng']);
+        if (! $rute) {
+            return $p;
+        }
+
+        // Jaraknya ikut diperbarui: yang benar adalah jarak yang ditempuh di
+        // jalan, bukan garis lurus yang tersimpan sebelumnya.
+        return [...$p, 'rute' => $rute['geometri'], 'jarak_km' => round($rute['km'], 2)];
     }
 
     private function milikSaya(Request $request, string $nomor): Task
