@@ -421,8 +421,23 @@ async function pesan() {
       catatan: catatan.value || undefined,
     })
 
+    const terjadwal = dijadwalkan.value
     jemputStore.hapus()
-    router.replace({ name: 'task-jemput-perjalanan', params: { nomor: hasilPesan.nomor_invoice } })
+
+    /*
+     * Layar tunggu hanya untuk perjalanan SEKARANG.
+     *
+     * Perjalanan terjadwal juga dimulai dengan tahap "mencari" di server, tapi
+     * tidak ada yang sedang dicari — jemputnya masih berjam-jam lagi. Membuka
+     * layar "mencari pengemudi terdekat" lengkap dengan penghitung waktu
+     * menunggu untuk pesanan besok pagi adalah kalimat yang tidak benar, dan
+     * yang membacanya akan menunggui layar yang tidak akan berubah.
+     */
+    router.replace(
+      terjadwal
+        ? { name: 'task-jemput-perjalanan', params: { nomor: hasilPesan.nomor_invoice } }
+        : { name: 'task-jemput-mencari', params: { nomor: hasilPesan.nomor_invoice } },
+    )
   } catch (e) {
     galatPesan.value = pesanError(e)
   } finally {

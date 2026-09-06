@@ -411,6 +411,16 @@ const router = createRouter({
       meta: { induk: 'task-jemput-pesan', roles: ['customer'] as Role[] },
     },
     {
+      /*
+       * Layar tunggu sesudah memesan, sepola dengan BisaKirim. Berpindah
+       * sendiri ke layar perjalanan begitu tahapnya bukan "mencari" lagi.
+       */
+      path: '/tasks/jemput/:nomor/mencari',
+      name: 'task-jemput-mencari',
+      component: () => import('@/views/jemput/JemputMencariView.vue'),
+      meta: { induk: 'task-list', roles: ['customer'] as Role[] },
+    },
+    {
       // Perjalanan yang sudah jadi: di luar /tasks/new.
       path: '/tasks/jemput/:nomor',
       name: 'task-jemput-perjalanan',
