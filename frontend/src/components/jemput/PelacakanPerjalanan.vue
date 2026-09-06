@@ -347,7 +347,24 @@ async function salinNomor() {
     <div ref="petaEl" class="absolute inset-0 isolate" aria-label="Peta perjalanan"></div>
 
     <!-- ── Lapisan atas peta ── -->
-    <div class="relative z-20 max-w-[430px] mx-auto px-4 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+    <!--
+      LAPISAN INI TIDAK BOLEH MENANGKAP SENTUHAN.
+
+      Ia sekadar wadah yang menata kartu alamat dan tombol-tombol di atas peta,
+      tapi sebagai div blok ia selebar layar dan setinggi isinya — dari tepi
+      atas sampai kira-kira 355 piksel ke bawah. Selama ia menerima sentuhan,
+      seluruh pita itu menelan jari yang mencoba menggeser peta: yang tersisa
+      hanya celah sempit antara tombol dan lembar detail. Petanya bergerak kalau
+      jarinya kebetulan turun di celah itu, dan diam di mana pun yang lain —
+      persis rasanya seperti peta yang rusak.
+
+      Diukur di peramban: sentuhan di y=140 sampai y=340 mendarat di div ini,
+      bukan di peta. Karena itu wadahnya dibuat tembus sentuhan, dan setiap
+      elemen yang MEMANG harus bisa ditekan menyalakannya kembali sendiri.
+    -->
+    <div
+      class="relative z-20 max-w-[430px] mx-auto px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pointer-events-none"
+    >
       <!--
         Kartu alamat. TIDAK ada tombol "Edit" di sini: mengubah tujuan setelah
         pengemudi berangkat butuh tarif dan rute yang dihitung ulang, dan
@@ -357,7 +374,7 @@ async function salinNomor() {
       -->
       <button
         type="button"
-        class="w-full bg-(--color-surface-0) rounded-2xl shadow-lg px-4 py-3 text-left active:scale-[0.99] transition-transform"
+        class="pointer-events-auto w-full bg-(--color-surface-0) rounded-2xl shadow-lg px-4 py-3 text-left active:scale-[0.99] transition-transform"
         @click="terbuka = true"
       >
         <div class="flex items-center gap-3">
@@ -401,7 +418,7 @@ async function salinNomor() {
         <div v-if="!ikuti && posisiPengemudi" class="mt-49 mb-2 flex">
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-full bg-(--color-surface-0) shadow-lg pl-3 pr-4 py-2.5 text-[12.5px] font-extrabold active:scale-95 transition-transform"
+            class="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-(--color-surface-0) shadow-lg pl-3 pr-4 py-2.5 text-[12.5px] font-extrabold active:scale-95 transition-transform"
             @click="pusatkanKePengemudi"
           >
             <Icon name="crosshair" class="w-4 h-4 text-(--color-azure)" />
@@ -419,7 +436,7 @@ async function salinNomor() {
         <button
           type="button"
           aria-label="Kembali"
-          class="w-10 h-10 rounded-full bg-(--color-surface-0) shadow-lg flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+          class="pointer-events-auto w-10 h-10 rounded-full bg-(--color-surface-0) shadow-lg flex items-center justify-center shrink-0 active:scale-95 transition-transform"
           @click="emit('kembali')"
         >
           <Icon name="arrow-left" class="w-5 h-5" />
@@ -436,7 +453,7 @@ async function salinNomor() {
         <button
           type="button"
           aria-label="Bagikan perjalanan"
-          class="ml-auto w-10 h-10 rounded-full bg-(--color-surface-0) shadow-lg flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+          class="pointer-events-auto ml-auto w-10 h-10 rounded-full bg-(--color-surface-0) shadow-lg flex items-center justify-center shrink-0 active:scale-95 transition-transform"
           @click="emit('bagikan')"
         >
           <Icon name="send" class="w-4.5 h-4.5" />
@@ -682,7 +699,7 @@ async function salinNomor() {
             perjalanan mobil. Lencananya baru digambar kalau server mengirim
             varian; yang tak diketahui tidak ditebak.
           -->
-          <div class="flex items-center gap-2.5 mb-3.5 pb-3.5 border-b-3[px] border-gray-200">
+          <div class="flex items-center gap-2.5 mb-3.5 pb-3.5 border-b-2 border-gray-200">
             <span class="w-9 h-9 rounded-full bg-(--color-azure)/12 flex items-center justify-center shrink-0">
               <svg
                 v-if="(data.kelas ?? 'motor').startsWith('motor')"
@@ -811,7 +828,7 @@ async function salinNomor() {
               <span class="font-semibold">-{{ rupiah(data.potongan) }}</span>
             </div>
           </div>
-          <div class="mt-3 pt-3 border-t border-(--color-outline)/15 flex justify-between gap-3">
+          <div class="mt-3 pt-3 border-t-2 border-gray-300 flex justify-between gap-3">
             <span class="text-[14px] font-extrabold">Total</span>
             <span class="text-[16px] font-extrabold">{{ rupiah(data.total) }}</span>
           </div>
@@ -838,7 +855,7 @@ async function salinNomor() {
             </button>
           </div>
           <p class="mt-2.5 text-[11px] leading-snug text-(--color-on-surface-variant) text-center">
-            Tombol darurat menelepon 112 langsung.
+            Tombol darurat menelepon pihak SerbaBisa langsung.
           </p>
         </div>
       </section>
