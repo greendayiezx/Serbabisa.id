@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Task;
+use App\Services\RuteJalan;
 use Illuminate\Console\Command;
 
 /**
@@ -178,12 +179,31 @@ class JemputPengemudi extends Command
         $menuju = in_array($tahap, ['dijemput', 'tiba'], true) ? 'jemput' : 'tujuan';
         $sasaran = $menuju === 'jemput' ? $jemput : $tujuan;
 
+        /*
+         * Rute pengemudi menuju titik jemput dihitung DI SINI, lewat layanan
+         * yang sama dengan rute perjalanan.
+         *
+         * Layar penumpang menggambar garis dari kendaraan ke titik jemput. Kalau
+         * garis itu ditarik lurus di sisi klien sementara jaraknya dihitung
+         * dengan cara lain, yang tampil adalah dua angka yang tidak pernah
+         * sepakat. Jaraknya pun diambil dari rute ini, bukan dari garis lurus —
+         * itulah jarak yang benar-benar ditempuh.
+         *
+         * Kalau layanan rutenya tidak menjawab, `rute` null dan layar menarik
+         * garis lurus PUTUS-PUTUS: bentuk yang berbeda supaya tidak terbaca
+         * sebagai jalan yang sungguh dilewati.
+         */
+        $rute = $tahap === 'dijemput'
+            ? app(RuteJalan::class)->cari($titik['lat'], $titik['lng'], $sasaran['lat'], $sasaran['lng'])
+            : null;
+
         return [
             'lat' => round($titik['lat'], 6),
             'lng' => round($titik['lng'], 6),
             'menuju' => $menuju,
+            'rute' => $rute['geometri'] ?? null,
             'jarak_km' => round(
-                $this->jarakKm($titik['lat'], $titik['lng'], $sasaran['lat'], $sasaran['lng']),
+                $rute['km'] ?? $this->jarakKm($titik['lat'], $titik['lng'], $sasaran['lat'], $sasaran['lng']),
                 2,
             ),
         ];

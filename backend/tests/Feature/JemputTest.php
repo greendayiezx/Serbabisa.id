@@ -532,6 +532,74 @@ class JemputTest extends TestCase
         $this->assertTrue($res->json('pengemudi.telepon_tersamar'));
     }
 
+    public function test_posisi_pengemudi_dan_rute_menjemput_ikut_dikirim(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->fakeRute(9000);
+        $this->postJson('/api/jemput/checkout', $this->payload())->assertCreated();
+        $nomor = Task::latest('id')->first()->nomor_invoice;
+
+        $this->artisan('jemput:pengemudi', ['nomor' => $nomor, '--tahap' => 'dijemput'])
+            ->assertSuccessful();
+
+        $p = $this->getJson("/api/jemput/{$nomor}")->json('pengemudi');
+
+        // Layar menggambar kendaraan dan garisnya dari angka-angka ini; tanpa
+        // salah satunya, layar memang tidak menggambar apa pun — tapi kalau
+        // ada, harus lengkap dan masuk akal.
+        $this->assertIsFloat($p['lat']);
+        $this->assertIsFloat($p['lng']);
+        $this->assertSame('jemput', $p['menuju']);
+        $this->assertIsArray($p['rute']);
+        $this->assertGreaterThanOrEqual(2, count($p['rute']));
+        $this->assertEqualsWithDelta(9.0, $p['jarak_km'], 0.01);
+    }
+
+    public function test_rute_menjemput_kosong_saat_penyedia_rute_mati(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/jemput/checkout', $this->payload())->assertCreated();
+        $nomor = Task::latest('id')->first()->nomor_invoice;
+
+        // $ruteJawaban dibiarkan null: penyedia rute menjawab 500.
+        $this->artisan('jemput:pengemudi', ['nomor' => $nomor, '--tahap' => 'dijemput'])
+            ->assertSuccessful();
+
+        $p = $this->getJson("/api/jemput/{$nomor}")->json('pengemudi');
+
+        /*
+         * Rutenya kosong, TAPI jaraknya tetap ada — dihitung garis lurus.
+         * Layar membedakan keduanya: garis putus-putus untuk jarak yang bukan
+         * hasil menyusuri jalan. Yang tidak boleh terjadi adalah pesanan gagal
+         * hanya karena penyedia rute sedang mati.
+         */
+        $this->assertNull($p['rute']);
+        $this->assertGreaterThan(0, $p['jarak_km']);
+        $this->assertIsFloat($p['lat']);
+    }
+
+    public function test_kendaraan_pengemudi_mengikuti_kelas_yang_dipesan(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+
+        foreach (['motor' => ['Honda Vario', 'Yamaha NMAX'], 'mobil' => ['Toyota Avanza', 'Daihatsu Xenia']] as $kelas => $armada) {
+            $this->postJson('/api/jemput/checkout', [...$this->payload(), 'tipe' => $kelas])
+                ->assertCreated();
+            $nomor = Task::latest('id')->first()->nomor_invoice;
+
+            $this->artisan('jemput:pengemudi', ['nomor' => $nomor, '--tahap' => 'dijemput'])
+                ->assertSuccessful();
+
+            // Pelat yang dicocokkan penumpang di pinggir jalan harus menunjuk
+            // kendaraan yang benar-benar ia pesan.
+            $this->assertContains(
+                $this->getJson("/api/jemput/{$nomor}")->json('pengemudi.kendaraan'),
+                $armada,
+                "Kelas {$kelas} dijawab kendaraan di luar armadanya.",
+            );
+        }
+    }
+
     public function test_tahap_tidak_bisa_melompat(): void
     {
         Sanctum::actingAs(User::factory()->create(['role' => 'customer']));

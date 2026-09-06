@@ -20,6 +20,7 @@ import 'leaflet/dist/leaflet.css'
 import Icon from '@/components/icons/Icon.vue'
 import SheetGeser from '@/components/SheetGeser.vue'
 import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
+import { ikonMotorHtml } from '@/lib/ikonMotor'
 import { labelMetode } from '@/lib/metodeBayar'
 import { rupiah } from '@/lib/jemput'
 import type { Perjalanan } from '@/api/jemput'
@@ -97,24 +98,23 @@ let penandaPengemudi: L.Marker | null = null
 /** Ikon kendaraan: mengikuti kelas yang dipesan, bukan selalu mobil. */
 function ikonKendaraan(): L.DivIcon {
   const motor = (props.data.kelas ?? '').startsWith('motor')
-  const isi = motor
-    ? '<circle cx="7" cy="17" r="3.2" fill="none" stroke="#0A326B" stroke-width="2"/>' +
-      '<circle cx="17" cy="17" r="3.2" fill="none" stroke="#0A326B" stroke-width="2"/>' +
-      '<path d="M7 17 L11 10 H15 l2 7" fill="none" stroke="#8BC53F" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>'
-    : '<rect x="3" y="10" width="18" height="7" rx="2.6" fill="#8BC53F"/>' +
+  const ukuran = motor ? 56 : 42
+
+  const html = motor
+    ? ikonMotorHtml(ukuran)
+    : '<svg viewBox="0 0 24 24" width="42" height="42" style="filter: drop-shadow(0 4px 10px rgba(0,0,0,0.28))">' +
+      '<circle cx="12" cy="12" r="11.5" fill="#FFFFFF"/>' +
+      '<rect x="3" y="10" width="18" height="7" rx="2.6" fill="#8BC53F"/>' +
       '<path d="M6 10 l2.4-4h7.2L18 10z" fill="#6FAE33"/>' +
       '<circle cx="7.5" cy="17.5" r="2.2" fill="#0A326B"/>' +
-      '<circle cx="16.5" cy="17.5" r="2.2" fill="#0A326B"/>'
+      '<circle cx="16.5" cy="17.5" r="2.2" fill="#0A326B"/>' +
+      '</svg>'
 
   return L.divIcon({
     className: '',
-    html:
-      '<svg viewBox="0 0 24 24" width="42" height="42" style="filter: drop-shadow(0 4px 10px rgba(0,0,0,0.28))">' +
-      '<circle cx="12" cy="12" r="11.5" fill="#FFFFFF"/>' +
-      isi +
-      '</svg>',
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
+    html,
+    iconSize: [ukuran, ukuran],
+    iconAnchor: [ukuran / 2, ukuran / 2],
   })
 }
 
@@ -141,14 +141,35 @@ function gambarPeta() {
   penandaPengemudi = null
 
   penandaJemput = L.marker(a, { icon: pinIcon('#1e9bf0') }).addTo(peta)
-  penandaTujuan = L.marker(b, { icon: pinIcon('#f97316') }).addTo(peta)
 
   /*
+   * GARIS YANG DIGAMBAR MENGIKUTI APA YANG SEDANG TERJADI.
+   *
+   * Selama menjemput, yang ditunggu orang adalah kendaraan yang menuju DIA —
+   * jadi yang digambar jalur pengemudi ke titik jemput, dan tujuan akhir belum
+   * ikut ditampilkan supaya petanya bisa dizum ke bagian yang sedang berjalan.
+   * Sesudah naik, barulah rute perjalanan yang digambar.
+   *
    * Garis mengikuti jalan bila server tahu rutenya, lurus PUTUS-PUTUS bila
-   * tidak — bentuk yang berbeda supaya tidak terbaca sebagai rute sungguhan.
+   * tidak — bentuk yang berbeda supaya tidak terbaca sebagai jalan yang sungguh
+   * dilewati.
    */
-  const titik: L.LatLngExpression[] =
-    (props.data.geometri as L.LatLngExpression[] | null | undefined) ?? [a, b]
+  const menjemput = props.data.tahap === 'dijemput' && !!posisiPengemudi.value
+  let titik: L.LatLngExpression[]
+  let lewatJalan: boolean
+
+  if (menjemput) {
+    const p = pengemudi.value
+    titik = (p?.rute as L.LatLngExpression[] | null | undefined) ?? [
+      posisiPengemudi.value as L.LatLngTuple,
+      a,
+    ]
+    lewatJalan = !!p?.rute?.length
+  } else {
+    penandaTujuan = L.marker(b, { icon: pinIcon('#f97316') }).addTo(peta)
+    titik = (props.data.geometri as L.LatLngExpression[] | null | undefined) ?? [a, b]
+    lewatJalan = props.data.lewat_jalan
+  }
 
   garis?.remove()
   bayang?.remove()
@@ -157,7 +178,7 @@ function gambarPeta() {
     color: '#8BC53F',
     weight: 5.5,
     lineJoin: 'round',
-    dashArray: props.data.lewat_jalan ? undefined : '8 8',
+    dashArray: lewatJalan ? undefined : '8 8',
   }).addTo(peta)
 
   const semua: L.LatLngTuple[] = [...(titik as L.LatLngTuple[])]
@@ -187,7 +208,7 @@ onBeforeUnmount(() => {
 })
 
 watch(
-  () => [props.data.tahap, props.data.geometri, posisiPengemudi.value] as const,
+  () => [props.data.tahap, props.data.geometri, posisiPengemudi.value, pengemudi.value?.rute] as const,
   gambarPeta,
   { deep: true },
 )
@@ -343,9 +364,9 @@ async function salinNomor() {
           <a
             href="tel:+62000000000"
             aria-label="Telepon pengemudi"
-            class="w-12 h-12 rounded-full bg-(--color-secondary-container) flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+            class="w-12 h-12 rounded-full bg-(--color-azure) flex items-center justify-center shrink-0 active:scale-95 transition-transform"
           >
-            <Icon name="phone" class="w-5 h-5 text-(--color-on-secondary-container)" />
+            <Icon name="phone" class="w-5 h-5 text-white" />
           </a>
           <button
             type="button"
@@ -363,26 +384,12 @@ async function salinNomor() {
           v-if="pengemudi.telepon_tersamar"
           class="mt-2 text-[11px] leading-snug text-(--color-on-surface-variant)"
         >
-          Panggilan lewat aplikasi. Nomor kamu dan pengemudi sama-sama disamarkan.
         </p>
       </div>
 
       <div class="h-2.5 bg-(--color-surface-container) mt-4"></div>
 
       <!-- ── Yang muncul setelah lembarnya ditarik ── -->
-      <div class="px-5 py-4">
-        <div class="flex items-center justify-between gap-3">
-          <p class="text-[14px] font-display font-extrabold">Metode pembayaran</p>
-        </div>
-        <div class="mt-2.5 flex items-center gap-3">
-          <Icon name="wallet" class="w-5 h-5 text-(--color-azure) shrink-0" />
-          <span class="flex-1 text-[13.5px] font-semibold">{{ labelMetode(data.metode) }}</span>
-          <span class="text-[14px] font-extrabold">{{ rupiah(data.total) }}</span>
-        </div>
-      </div>
-
-      <div class="h-2.5 bg-(--color-surface-container)"></div>
-
       <!-- Rute -->
       <div class="px-5 py-4">
         <p class="text-[14px] font-display font-extrabold mb-3">Rute perjalanan</p>
@@ -414,6 +421,20 @@ async function salinNomor() {
         <p class="mt-3 text-[12px] text-(--color-on-surface-variant)">
           {{ data.km?.toFixed(1).replace('.', ',') }} km · {{ data.menit }} menit
         </p>
+      </div>
+
+      <div class="h-2.5 bg-(--color-surface-container)"></div>
+
+      <!-- Metode pembayaran -->
+      <div class="px-5 py-4">
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-[14px] font-display font-extrabold">Metode pembayaran</p>
+        </div>
+        <div class="mt-2.5 flex items-center gap-3">
+          <Icon name="wallet" class="w-5 h-5 text-(--color-azure) shrink-0" />
+          <span class="flex-1 text-[13.5px] font-semibold">{{ labelMetode(data.metode) }}</span>
+          <span class="text-[14px] font-extrabold">{{ rupiah(data.total) }}</span>
+        </div>
       </div>
 
       <div class="h-2.5 bg-(--color-surface-container)"></div>

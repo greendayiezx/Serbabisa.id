@@ -90,6 +90,14 @@ export interface Pengemudi {
    */
   lat?: number
   lng?: number
+  /**
+   * Rute pengemudi menuju titik jemput, sudah [lat,lng] dan lewat jalan.
+   *
+   * Hanya ada selama menjemput. Kosong berarti layanan rute tidak menjawab,
+   * dan layar menarik garis lurus putus-putus — bentuk yang berbeda supaya
+   * tidak terbaca sebagai jalan yang sungguh dilewati.
+   */
+  rute?: [number, number][] | null
   /** Sedang menuju titik jemput atau tujuan. */
   menuju?: 'jemput' | 'tujuan'
   jarak_km?: number
