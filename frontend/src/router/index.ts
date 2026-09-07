@@ -115,10 +115,18 @@ const router = createRouter({
       meta: { roles: ['customer', 'mitra', 'admin'] as Role[] },
     },
     {
+      // Beranda layanan: dua model kerja, kategori, dan janji layanan.
       path: '/tasks/new/tukang/detail',
       name: 'task-tukang-detail',
       component: () => import('@/views/tukang/TukangDetailView.vue'),
       meta: { induk: 'task-location', roles: ['customer', 'mitra', 'admin'] as Role[] },
+    },
+    {
+      // Alur pemesanan enam fase, dibuka dari beranda layanan.
+      path: '/tasks/new/tukang/pesan',
+      name: 'task-tukang-pesan',
+      component: () => import('@/views/tukang/TukangPesanView.vue'),
+      meta: { induk: 'task-tukang-detail', roles: ['customer', 'mitra', 'admin'] as Role[] },
     },
     {
       path: '/tasks/new/bersih/rumah',

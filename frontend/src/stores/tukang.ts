@@ -199,6 +199,143 @@ export const KATEGORI_TUKANG: CategoryItem[] = [
   },
 ]
 
+/**
+ * Dua model kerja BisaTukang.
+ *
+ * Bedanya bukan besar kecilnya pekerjaan, melainkan CARA HARGANYA DITENTUKAN:
+ * harian dihitung per jam/hari dan bisa langsung dipesan, borongan disurvei
+ * dulu lalu diikat RAB. Menggabungkan keduanya jadi satu alur membuat salah
+ * satunya selalu terasa salah — yang mau pasang lampu dipaksa menunggu survei,
+ * yang mau renovasi total dikasih tarif per jam.
+ */
+export interface ModelKerja {
+  id: 'harian' | 'borongan'
+  nama: string
+  lencana: string
+  tempo: string
+  ringkas: string
+  cakupan: string[]
+  ajakan: string
+}
+
+export const MODEL_KERJA: ModelKerja[] = [
+  {
+    id: 'harian',
+    nama: 'Tukang Harian',
+    lencana: 'Pesan instan',
+    tempo: 'Perbaikan cepat, 1–2 jam',
+    ringkas:
+      'Pekerjaan cepat: pasang lampu, cat dinding, keramik lepas, ganti kran. Beres hitungan jam.',
+    cakupan: [
+      'Cat dinding, pintu, jendela, dan plafon',
+      'Ganti aksesoris listrik & pipa bocor',
+      'Bongkar-pasang keramik & kran',
+    ],
+    ajakan: 'Pesan tukang harian',
+  },
+  {
+    id: 'borongan',
+    nama: 'Borongan Full Service',
+    lencana: 'Survei gratis',
+    tempo: 'Proyek renovasi skala besar',
+    ringkas:
+      'Perbaikan bangunan secara borongan untuk rumah, kantor, ruko, dan apartemen.',
+    cakupan: [
+      'Survei + jasa + material + pengawasan',
+      'Renovasi total & dak beton bocor',
+      'RAB rinci sebelum dikerjakan',
+    ],
+    ajakan: 'Jadwalkan survei borongan',
+  },
+]
+
+/** Tipe properti; memengaruhi akses dan lama pengerjaan, bukan tarif dasarnya. */
+export const TIPE_PROPERTI = [
+  { id: 'rumah', nama: 'Rumah tinggal', ikon: 'home' },
+  { id: 'ruko', nama: 'Ruko/Toko', ikon: 'store' },
+  { id: 'apartemen', nama: 'Apartemen/Kos', ikon: 'building' },
+  { id: 'kantor', nama: 'Kantor', ikon: 'briefcase' },
+] as const
+
+export type TipePropertiId = (typeof TIPE_PROPERTI)[number]['id']
+
+/**
+ * Siapa yang menyediakan material.
+ *
+ * Ditanyakan di awal karena inilah yang paling sering jadi selisih paham di
+ * akhir: pemesan mengira harga sudah termasuk barang, tukang mengira tidak.
+ */
+export const PENYEDIAAN_MATERIAL = [
+  {
+    id: 'pelanggan',
+    nama: 'Material disiapkan pelanggan',
+    ringkas: 'Kran, kabel, cat, atau keramiknya sudah kamu beli sendiri.',
+  },
+  {
+    id: 'tukang',
+    nama: 'Tukang yang membelikan',
+    ringkas: 'Struk belanja ditunjukkan; harga material masuk rincian akhir.',
+  },
+] as const
+
+export type PenyediaanMaterialId = (typeof PENYEDIAAN_MATERIAL)[number]['id']
+
+/** Janji layanan yang membedakan BisaTukang; dipakai di beranda layanan. */
+export const KEUNGGULAN_TUKANG = [
+  {
+    ikon: 'wallet',
+    judul: 'Harga transparan',
+    ringkas: 'Rincian biaya disetujui dulu, tidak ada tambahan diam-diam.',
+  },
+  {
+    ikon: 'clipboard',
+    judul: 'Bertanggung jawab',
+    ringkas: 'Pengerjaan terjadwal dan kemajuannya dilaporkan.',
+  },
+  {
+    ikon: 'shield',
+    judul: 'Bergaransi',
+    ringkas: 'Diperbaiki ulang gratis kalau hasilnya belum sesuai.',
+  },
+  {
+    ikon: 'check-circle',
+    judul: 'Tukang terverifikasi',
+    ringkas: 'Uji keahlian dan pemeriksaan identitas sebelum diterima.',
+  },
+]
+
+/**
+ * CONTOH tukang pilihan — data mitra sungguhan belum ada endpoint-nya.
+ *
+ * Nama, rating, dan jumlah ulasan di sini karangan, sama seperti sisa alur
+ * BisaTukang yang masih sepenuhnya di sisi klien. Harus diganti data server
+ * sebelum layar ini dilihat pemakai sungguhan: profil mitra yang tidak ada
+ * adalah bukti sosial palsu, bukan sekadar tempat sementara.
+ */
+export const TUKANG_PILIHAN = [
+  {
+    nama: 'Madrohim',
+    keahlian: 'Keramik & dinding',
+    tahun: 7,
+    bintang: 4.95,
+    ulasan: 142,
+  },
+  {
+    nama: 'Suhendar',
+    keahlian: 'Listrik & MCB',
+    tahun: 10,
+    bintang: 4.98,
+    ulasan: 215,
+  },
+  {
+    nama: 'Danang',
+    keahlian: 'Atap & waterproofing',
+    tahun: 5,
+    bintang: 4.92,
+    ulasan: 98,
+  },
+]
+
 export const useTukangStore = defineStore('tukang', () => {
   // App Mode (Pelanggan / Sisi Tukang)
   const appMode = ref<'customer' | 'tukang'>('customer')
@@ -207,14 +344,17 @@ export const useTukangStore = defineStore('tukang', () => {
   const customerStep = ref<number>(1) // 1 to 13
   const selectedCategoryId = ref<string>('listrik')
   const selectedSubCategory = ref<string>('Stop kontak rusak')
-  const deskripsiMasalah = ref<string>(
-    'Keran air di kamar mandi utama bocor, air menetes terus meskipun sudah ditutup.',
-  )
+  const deskripsiMasalah = ref<string>('')
   const uploadedPhotos = ref<string[]>([])
   const uploadedVideos = ref<string[]>([])
   const lokasiMasalah = ref<string>('Dalam rumah')
   const lokasiMasalahLainnya = ref<string>('')
   const kondisiAkses = ref<string>('Mudah dijangkau')
+
+  // Model kerja, tipe properti, dan penyediaan material
+  const modelKerja = ref<ModelKerja['id']>('harian')
+  const tipeProperti = ref<TipePropertiId>('rumah')
+  const penyediaanMaterial = ref<PenyediaanMaterialId>('tukang')
 
   // Schedule State
   const jadwalTipe = ref<'secepatnya' | 'hari_ini' | 'besok' | 'lainnya'>('secepatnya')
@@ -373,6 +513,9 @@ export const useTukangStore = defineStore('tukang', () => {
     lokasiMasalah,
     lokasiMasalahLainnya,
     kondisiAkses,
+    modelKerja,
+    tipeProperti,
+    penyediaanMaterial,
     jadwalTipe,
     jadwalJam,
     jadwalTanggal,
