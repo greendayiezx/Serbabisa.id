@@ -157,7 +157,7 @@ const PILIHAN_TIP = [5000, 10000, 20000, 50000]
 const tipDipilih = ref<number | null>(null)
 const mengirimTip = ref(false)
 const galatTip = ref<string | null>(null)
-const tipTerkirim = ref(0)
+const tipTerkirim = ref(props.data.tip ?? 0)
 
 /**
  * Pemilih nominal disembunyikan sampai orang menekan "Kasih tip".
@@ -168,6 +168,9 @@ const tipTerkirim = ref(0)
  */
 const tipTerbuka = ref(false)
 
+/** Yang benar-benar dibayar: tarif perjalanan ditambah tip yang sudah diberi. */
+const totalTagihan = computed(() => props.data.total + tipTerkirim.value)
+
 /**
  * Tip hanya ditawarkan selama pengemudinya masih mengantar.
  *
@@ -176,6 +179,14 @@ const tipTerbuka = ref(false)
  */
 const bisaTip = computed(
   () => !!pengemudi.value && ['dijemput', 'tiba', 'jalan'].includes(tahap.value),
+)
+
+/** Server pemegang catatannya; pemuatan berkala boleh menaikkan angka ini. */
+watch(
+  () => props.data.tip,
+  (t) => {
+    if (typeof t === 'number' && t > tipTerkirim.value) tipTerkirim.value = t
+  },
 )
 
 async function kirimTip() {
@@ -959,7 +970,7 @@ async function salinNomor() {
           <div class="mt-2.5 flex items-center gap-3">
             <MetodeBayarIcon :id="(data.metode ?? 'tunai') as MetodeId" />
             <span class="flex-1 text-[13.5px] font-semibold">{{ labelMetode(data.metode) }}</span>
-            <span class="text-[14px] font-extrabold">{{ rupiah(data.total) }}</span>
+            <span class="text-[14px] font-extrabold">{{ rupiah(totalTagihan) }}</span>
           </div>
         </div>
       </section>
@@ -1028,12 +1039,12 @@ async function salinNomor() {
 
           <!-- Pemilih nominal, muncul begitu ajakan ditekan -->
           <div v-if="tipTerbuka && tipTerkirim === 0" class="relative z-10 px-5 pb-5 pt-1">
-            <div class="flex flex-wrap gap-2">
+            <div class="grid grid-cols-4 gap-2">
               <button
                 v-for="n in PILIHAN_TIP"
                 :key="n"
                 type="button"
-                class="px-3.5 py-2 rounded-full border text-[12.5px] font-bold transition-colors disabled:opacity-40"
+                class="px-1 py-2 rounded-full border text-center text-[12.5px] font-bold transition-colors disabled:opacity-40"
                 :class="
                   tipDipilih === n
                     ? 'bg-(--color-azure) border-(--color-azure) text-white'
@@ -1088,10 +1099,15 @@ async function salinNomor() {
               <span>Promo {{ data.promo?.kode }}</span>
               <span class="font-semibold">-{{ rupiah(data.potongan) }}</span>
             </div>
+            <!-- Tip berdiri sendiri: nota harus bisa menjelaskan tiap angkanya. -->
+            <div v-if="tipTerkirim > 0" class="flex justify-between gap-3">
+              <span class="text-(--color-on-surface-variant)">Tip pengemudi</span>
+              <span class="font-semibold">{{ rupiah(tipTerkirim) }}</span>
+            </div>
           </div>
           <div class="mt-3 pt-3 border-t-2 border-gray-300 flex justify-between gap-3">
             <span class="text-[14px] font-extrabold">Total</span>
-            <span class="text-[16px] font-extrabold">{{ rupiah(data.total) }}</span>
+            <span class="text-[16px] font-extrabold">{{ rupiah(totalTagihan) }}</span>
           </div>
         </div>
       </section>

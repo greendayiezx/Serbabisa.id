@@ -364,6 +364,11 @@ class JemputController extends Controller
             'tarif' => $d['tarif'] ?? 0,
             'potongan' => $d['potongan'] ?? 0,
             'total' => (float) $task->harga,
+            // Tip yang sudah diberikan, dari kedua pintunya: selama perjalanan
+            // dan saat menilai. Keduanya menambah tagihan yang sama, jadi layar
+            // menerimanya sebagai satu angka — dan menuliskannya sebagai baris
+            // sendiri, bukan melebur ke tarif yang tidak berubah.
+            'tip' => (int) ($d['tip'] ?? 0) + (int) ($d['penilaian']['tip'] ?? 0),
             'promo' => $d['promo'] ?? null,
             'metode' => $d['metode'] ?? null,
             'sibuk' => $d['sibuk'] ?? null,

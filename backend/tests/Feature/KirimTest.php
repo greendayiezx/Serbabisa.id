@@ -486,6 +486,70 @@ class KirimTest extends TestCase
         $this->artisan('kirim:kurir', ['nomor' => $nomor, '--tahap' => 'menjemput'])->assertFailed();
     }
 
+    public function test_tip_kurir_menambah_tagihan_tanpa_menambah_komisi(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/kirim/checkout', $this->payload())->assertCreated();
+        $task = Task::latest('id')->first();
+        $nomor = $task->nomor_invoice;
+        $semula = (int) $task->payment->jumlah;
+        $komisiSemula = (int) $task->payment->komisi_platform;
+
+        // Belum ada kurir: tidak ada yang bisa diberi tip.
+        $this->postJson("/api/kirim/{$nomor}/tip", ['tip' => 5000])->assertStatus(422);
+
+        $this->artisan('kirim:kurir', ['nomor' => $nomor, '--tahap' => 'menjemput'])
+            ->assertSuccessful();
+
+        $this->postJson("/api/kirim/{$nomor}/tip", ['tip' => 5000])
+            ->assertOk()->assertJsonPath('tip', 5000);
+
+        // Tip kedua MENAMBAH, bukan mengganti.
+        $this->postJson("/api/kirim/{$nomor}/tip", ['tip' => 2000])
+            ->assertOk()->assertJsonPath('tip', 7000);
+
+        $task->refresh();
+        $this->assertSame($semula + 7000, (int) $task->payment->jumlah);
+
+        // Uang terima kasih seluruhnya milik kurir.
+        $this->assertSame($komisiSemula, (int) $task->payment->komisi_platform);
+    }
+
+    /**
+     * Layar status membaca tip dari sini untuk menuliskannya sebagai baris
+     * sendiri di nota. Tanpa angka ini, tagihan yang sudah naik tidak punya
+     * penjelasan di layar mana pun.
+     */
+    public function test_status_kiriman_melaporkan_tip(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/kirim/checkout', $this->payload())->assertCreated();
+        $nomor = Task::latest('id')->first()->nomor_invoice;
+
+        // Belum ada tip: nol, bukan null — layar menjumlahkannya.
+        $this->getJson("/api/kirim/{$nomor}")->assertOk()->assertJsonPath('tip', 0);
+
+        $this->artisan('kirim:kurir', ['nomor' => $nomor, '--tahap' => 'menjemput'])
+            ->assertSuccessful();
+        $this->postJson("/api/kirim/{$nomor}/tip", ['tip' => 10000])->assertOk();
+
+        $this->getJson("/api/kirim/{$nomor}")->assertOk()->assertJsonPath('tip', 10000);
+    }
+
+    public function test_tip_kiriman_orang_lain_ditolak(): void
+    {
+        $pemilik = User::factory()->create(['role' => 'customer']);
+        Sanctum::actingAs($pemilik);
+        $this->postJson('/api/kirim/checkout', $this->payload())->assertCreated();
+        $nomor = Task::latest('id')->first()->nomor_invoice;
+        $this->artisan('kirim:kurir', ['nomor' => $nomor, '--tahap' => 'menjemput'])->assertSuccessful();
+
+        // Penjagaan kepemilikan yang sama dengan show(); satu helper, bukan dua
+        // salinan yang bisa berbeda.
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson("/api/kirim/{$nomor}/tip", ['tip' => 5000])->assertNotFound();
+    }
+
     public function test_butuh_login(): void
     {
         $this->postJson('/api/kirim/checkout', $this->payload())->assertUnauthorized();

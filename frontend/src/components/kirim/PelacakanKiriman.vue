@@ -29,7 +29,8 @@ import { TILE_URL, TILE_OPTIONS, pinIcon } from '@/lib/mapTiles'
 import { ikonMotorHtml } from '@/lib/ikonMotor'
 import { labelMetode, type MetodeId } from '@/lib/metodeBayar'
 import { UKURAN, rupiah } from '@/lib/kirim'
-import type { Kiriman } from '@/api/kirim'
+import { pesanError } from '@/api/belanja'
+import { tipKurir, type Kiriman } from '@/api/kirim'
 
 const props = defineProps<{ data: Kiriman }>()
 
@@ -38,12 +39,65 @@ const emit = defineEmits<{ kembali: []; bagikan: [] }>()
 /** Tinggi lembar saat mengintip; dipakai lembar DAN batas lapisan kendali. */
 const PUNCAK_LEMBAR = 330
 
+/* ────────── Tip untuk kurir ────────── */
+const PILIHAN_TIP = [5000, 10000, 20000, 50000]
+
+const tipDipilih = ref<number | null>(null)
+const mengirimTip = ref(false)
+const galatTip = ref<string | null>(null)
+const tipTerkirim = ref(props.data.tip ?? 0)
+
+/**
+ * Pemilih nominal disembunyikan sampai orang menekan "Kasih tip".
+ *
+ * Sama alasannya dengan BisaJemput: deretan nominal yang langsung terpampang
+ * membuat tip terbaca sebagai tagihan tambahan. Yang mau berterima kasih
+ * menekan dulu, baru memilih berapa.
+ */
+const tipTerbuka = ref(false)
+
+/**
+ * Tip hanya ditawarkan selama kurirnya masih di jalan.
+ *
+ * Sesudah paket sampai, layar ini berganti jadi nota — dan tombol tip di
+ * sana menagih orang untuk pekerjaan yang sudah tutup bukunya.
+ */
+const bisaTip = computed(
+  () => !!kurir.value && ['menjemput', 'diantar'].includes(tahap.value),
+)
+
+watch(
+  () => props.data.tip,
+  (t) => {
+    if (typeof t === 'number' && t > tipTerkirim.value) tipTerkirim.value = t
+  },
+)
+
+async function kirimTip() {
+  if (!tipDipilih.value || mengirimTip.value) return
+
+  mengirimTip.value = true
+  galatTip.value = null
+  try {
+    const h = await tipKurir(props.data.nomor, tipDipilih.value)
+    tipTerkirim.value = h.tip
+    tipDipilih.value = null
+  } catch (e) {
+    galatTip.value = pesanError(e)
+  } finally {
+    mengirimTip.value = false
+  }
+}
+
 const terbuka = ref(false)
 const nomorTersalin = ref(false)
 let penandaSalin: ReturnType<typeof setTimeout> | null = null
 
 const kurir = computed(() => props.data.kurir)
 const tahap = computed(() => props.data.tahap)
+
+/** Yang benar-benar dibayar: harga kiriman ditambah tip yang sudah diberi. */
+const totalTagihan = computed(() => props.data.total + tipTerkirim.value)
 
 const ukuran = computed(() => UKURAN.find((u) => u.id === props.data.ukuran) ?? null)
 
@@ -519,13 +573,98 @@ async function salinNomor() {
             <div class="mt-2.5 flex items-center gap-3">
               <MetodeBayarIcon :id="(data.metode ?? 'tunai') as MetodeId" />
               <span class="flex-1 text-[13.5px] font-semibold">{{ labelMetode(data.metode) }}</span>
-              <span class="text-[14px] font-extrabold">{{ rupiah(data.total) }}</span>
+              <span class="text-[14px] font-extrabold">{{ rupiah(totalTagihan) }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!--
+          Kasih tip, tepat di atas rincian biaya — sepola dengan BisaJemput.
+
+          BisaKirim bahkan tidak punya layar penilaian tempat tip bisa
+          menumpang, jadi tanpa bagian ini tidak ada jalan sama sekali untuk
+          berterima kasih. Momennya pun memang di sini: saat kurirnya masih
+          terlihat, bukan setelah paketnya sampai di kota lain.
+        -->
+        <section v-if="bisaTip" class="order-5 px-4 py-1.5">
+          <div class="rounded-2xl bg-(--color-surface-0) border border-(--color-outline)/30 shadow-sm overflow-hidden">
+            <div class="p-4">
+              <div class="flex items-start gap-3">
+                <span class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <Icon name="sparkle" class="w-5 h-5 text-amber-500" />
+                </span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[15px] font-display font-extrabold leading-tight">
+                    {{ tipTerkirim > 0 ? 'Terima kasih!' : 'Kasih tip buat kurir' }}
+                  </p>
+                  <p class="mt-0.5 text-[12px] leading-snug text-(--color-on-surface-variant)">
+                    <template v-if="tipTerkirim > 0">
+                      Tip {{ rupiah(tipTerkirim) }} sudah diteruskan ke kurir.
+                    </template>
+                    <template v-else>Diterima kurir seluruhnya, tanpa potongan.</template>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                v-if="tipTerkirim === 0 && !tipTerbuka"
+                type="button"
+                class="mt-3.5 inline-flex items-center gap-2 h-11 pl-5 pr-4 rounded-full bg-(--color-azure) text-white text-[13.5px] font-extrabold active:scale-[0.97] transition-transform"
+                @click="tipTerbuka = true"
+              >
+                Kasih tip
+                <Icon name="arrow-right" class="w-4.5 h-4.5 text-white" />
+              </button>
+            </div>
+
+            <!-- Pemilih nominal, muncul begitu ajakan ditekan -->
+            <div v-if="tipTerbuka && tipTerkirim === 0" class="px-4 pb-4 -mt-1">
+              <div class="grid grid-cols-4 gap-2">
+                <button
+                  v-for="n in PILIHAN_TIP"
+                  :key="n"
+                  type="button"
+                  class="px-1 py-2 rounded-full border text-center text-[12.5px] font-bold transition-colors disabled:opacity-40"
+                  :class="
+                    tipDipilih === n
+                      ? 'bg-(--color-azure) border-(--color-azure) text-white'
+                      : 'border-(--color-outline)/40 text-(--color-on-surface)'
+                  "
+                  :disabled="mengirimTip"
+                  @click="tipDipilih = n"
+                >
+                  {{ rupiah(n) }}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                class="mt-3 w-full h-11 rounded-full bg-(--color-azure) text-white text-[13.5px] font-extrabold active:scale-[0.98] transition-transform disabled:opacity-40"
+                :disabled="!tipDipilih || mengirimTip"
+                @click="kirimTip"
+              >
+                {{
+                  mengirimTip
+                    ? 'Mengirim…'
+                    : tipDipilih
+                      ? `Kasih tip ${rupiah(tipDipilih)}`
+                      : 'Pilih nominal dulu'
+                }}
+              </button>
+
+              <p v-if="galatTip" role="alert" class="mt-2 text-[11.5px] font-semibold text-(--color-error)">
+                {{ galatTip }}
+              </p>
+              <!-- Tip tidak dipotong komisi; ditulis supaya orang tahu ke mana perginya. -->
+              <p class="mt-2 text-[11px] leading-snug text-(--color-on-surface-variant)">
+                Tip ditambahkan ke tagihan dan diteruskan utuh ke kurir.
+              </p>
             </div>
           </div>
         </section>
 
         <!-- Rincian biaya -->
-        <section class="order-5 px-4 py-1.5">
+        <section class="order-6 px-4 py-1.5">
           <div class="bg-(--color-surface-0) rounded-2xl p-4 border border-(--color-outline)/30 shadow-sm">
             <p class="text-[14px] font-display font-extrabold mb-3">Rincian biaya</p>
             <div class="flex flex-col gap-2 text-[13px]">
@@ -540,16 +679,25 @@ async function salinNomor() {
                 <span>Promo {{ data.promo?.kode }}</span>
                 <span class="font-semibold">-{{ rupiah(data.potongan) }}</span>
               </div>
+              <!--
+                Tip berdiri sebagai barisnya sendiri. Melebur ke ongkir membuat
+                nota yang tidak bisa dijelaskan: angkanya naik tanpa ada tarif
+                yang berubah.
+              -->
+              <div v-if="tipTerkirim > 0" class="flex justify-between gap-3">
+                <span class="text-(--color-on-surface-variant)">Tip kurir</span>
+                <span class="font-semibold">{{ rupiah(tipTerkirim) }}</span>
+              </div>
             </div>
             <div class="mt-3 pt-3 border-t border-(--color-outline)/15 flex justify-between gap-3">
               <span class="text-[14px] font-extrabold">Total</span>
-              <span class="text-[16px] font-extrabold">{{ rupiah(data.total) }}</span>
+              <span class="text-[16px] font-extrabold">{{ rupiah(totalTagihan) }}</span>
             </div>
           </div>
         </section>
 
         <!-- Nomor kiriman -->
-        <section class="order-6 px-4 py-1.5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        <section class="order-7 px-4 py-1.5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           <button
             type="button"
             class="w-full rounded-xl bg-(--color-surface-0) border border-(--color-outline)/30 px-4 py-3 flex items-center justify-center gap-2 text-[12px] text-(--color-on-surface-variant) active:scale-[0.99] transition-transform"

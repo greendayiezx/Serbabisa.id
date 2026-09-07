@@ -367,7 +367,7 @@ async function kirimNilai() {
           <span class="text-(--color-on-surface-variant)">
             {{ data.km?.toFixed(1).replace('.', ',') }} km · {{ data.menit }} menit
           </span>
-          <span class="font-extrabold">{{ rupiah(data.total) }}</span>
+          <span class="font-extrabold">{{ rupiah(data.total + data.tip) }}</span>
         </div>
       </section>
 
@@ -410,10 +410,15 @@ async function kirimNilai() {
             <span>Promo {{ data.promo?.kode }}</span>
             <span class="font-semibold">-{{ rupiah(data.potongan) }}</span>
           </div>
+          <!-- Tip berdiri sendiri: nota harus bisa menjelaskan tiap angkanya. -->
+          <div v-if="data.tip > 0" class="flex justify-between gap-3">
+            <span class="text-(--color-on-surface-variant)">Tip pengemudi</span>
+            <span class="font-semibold">{{ rupiah(data.tip) }}</span>
+          </div>
         </div>
         <div class="mt-3 pt-3 border-t border-(--color-outline)/15 flex justify-between gap-3">
           <span class="text-[14px] font-extrabold">Total</span>
-          <span class="text-[16px] font-extrabold">{{ rupiah(data.total) }}</span>
+          <span class="text-[16px] font-extrabold">{{ rupiah(data.total + data.tip) }}</span>
         </div>
       </section>
 

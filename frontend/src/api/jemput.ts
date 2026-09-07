@@ -125,6 +125,8 @@ export interface Perjalanan {
   tarif: number
   potongan: number
   total: number
+  /** Tip yang sudah diberikan; menambah tagihan, bukan tarif. */
+  tip: number
   promo: { kode: string; nama: string; potongan: number } | null
   metode: string | null
   sibuk: string | null

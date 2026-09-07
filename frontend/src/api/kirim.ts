@@ -112,6 +112,8 @@ export interface Kiriman {
   proteksi_plafon: number
   potongan: number
   total: number
+  /** Tip kurir yang sudah diberikan; menambah tagihan, bukan ongkir. */
+  tip: number
   promo: { kode: string; nama: string; potongan: number } | null
   metode: string | null
   kode_terima: string | null
@@ -146,5 +148,16 @@ export interface KurirKiriman {
 
 export async function ambilKiriman(nomor: string): Promise<Kiriman> {
   const { data } = await apiClient.get<Kiriman>(`/kirim/${encodeURIComponent(nomor)}`)
+  return data
+}
+
+/**
+ * Tip untuk kurir selama kiriman berjalan; seluruhnya milik kurir.
+ *
+ * Terpisah dari ongkir dan tidak dipotong komisi — server yang menjaga itu,
+ * layar hanya menyebutkannya.
+ */
+export async function tipKurir(nomor: string, tip: number): Promise<{ tip: number }> {
+  const { data } = await apiClient.post(`/kirim/${encodeURIComponent(nomor)}/tip`, { tip })
   return data
 }

@@ -673,6 +673,38 @@ class JemputTest extends TestCase
         $this->assertSame($komisiSemula, (int) $task->payment->komisi_platform);
     }
 
+    /**
+     * Nota membaca tip dari sini untuk menuliskannya sebagai baris sendiri.
+     *
+     * Tip punya dua pintu — selama perjalanan dan saat menilai — dan keduanya
+     * menambah tagihan yang sama. Yang dilaporkan jumlahnya, supaya layar tidak
+     * perlu tahu lewat pintu mana uangnya masuk.
+     */
+    public function test_status_perjalanan_melaporkan_tip_dari_kedua_pintunya(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'customer']));
+        $this->postJson('/api/jemput/checkout', $this->payload())->assertCreated();
+        $nomor = Task::latest('id')->first()->nomor_invoice;
+
+        // Belum ada tip: nol, bukan null — layar menjumlahkannya.
+        $this->getJson("/api/jemput/{$nomor}")->assertOk()->assertJsonPath('tip', 0);
+
+        $this->artisan('jemput:pengemudi', ['nomor' => $nomor, '--tahap' => 'dijemput'])
+            ->assertSuccessful();
+        $this->postJson("/api/jemput/{$nomor}/tip", ['tip' => 5000])->assertOk();
+        $this->getJson("/api/jemput/{$nomor}")->assertJsonPath('tip', 5000);
+
+        foreach (['tiba', 'jalan', 'selesai'] as $tahap) {
+            $this->artisan('jemput:pengemudi', ['nomor' => $nomor, '--tahap' => $tahap])
+                ->assertSuccessful();
+        }
+        $this->postJson("/api/jemput/{$nomor}/nilai", ['bintang' => 5, 'tip' => 10_000])
+            ->assertOk();
+
+        // Keduanya dijumlahkan, bukan yang terakhir menang.
+        $this->getJson("/api/jemput/{$nomor}")->assertJsonPath('tip', 15_000);
+    }
+
     public function test_tahap_tidak_bisa_melompat(): void
     {
         Sanctum::actingAs(User::factory()->create(['role' => 'customer']));

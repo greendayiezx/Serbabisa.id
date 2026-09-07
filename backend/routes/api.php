@@ -160,6 +160,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/kirim/estimasi', [KirimController::class, 'estimasi']);
     Route::post('/kirim/checkout', [KirimController::class, 'checkout']);
     Route::get('/kirim/{nomor}', [KirimController::class, 'show']);
+    Route::post('/kirim/{nomor}/tip', [KirimController::class, 'tip']);
 
     Route::post('/jemput/estimasi', [JemputController::class, 'estimasi']);
     Route::post('/jemput/checkout', [JemputController::class, 'checkout']);

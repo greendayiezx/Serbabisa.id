@@ -367,16 +367,50 @@ class KirimController extends Controller
         ], 201);
     }
 
+    /**
+     * Tip untuk kurir, diberikan SELAMA kiriman berjalan.
+     *
+     * Sepola dengan tip BisaJemput dan dengan alasan yang sama: orang yang ingin
+     * berterima kasih biasanya melakukannya saat kurirnya masih terlihat — baru
+     * saja menerima paket di depan pintu. Menunggu sampai kiriman selesai
+     * membuat momennya lewat, dan BisaKirim bahkan tidak punya layar penilaian
+     * tempat tip bisa menumpang.
+     *
+     * Seluruhnya milik kurir: platform tidak mengambil komisi dari uang terima
+     * kasih, jadi komisi_platform sengaja tidak disentuh.
+     */
+    public function tip(Request $request, string $nomor): JsonResponse
+    {
+        $data = $request->validate([
+            'tip' => ['required', 'integer', 'min:1000', 'max:100000'],
+        ]);
+
+        $task = $this->milikSaya($request, $nomor);
+        $d = $task->detail_layanan;
+        $tahap = $d['tahap'] ?? 'mencari';
+
+        if (! in_array($tahap, ['menjemput', 'diantar'], true)) {
+            throw ValidationException::withMessages([
+                'tip' => $tahap === 'selesai'
+                    ? 'Kirimannya sudah selesai.'
+                    : 'Belum ada kurir yang bisa diberi tip.',
+            ]);
+        }
+
+        // Ditambahkan, bukan diganti: orang boleh menambah tip lebih dari sekali,
+        // dan yang kedua tidak boleh menghapus yang pertama.
+        $total = (int) ($d['tip'] ?? 0) + (int) $data['tip'];
+
+        $task->update(['detail_layanan' => [...$d, 'tip' => $total]]);
+        $task->payment()?->increment('jumlah', (int) $data['tip']);
+
+        return response()->json(['tip' => $total]);
+    }
+
     public function show(Request $request, string $nomor): JsonResponse
     {
-        $task = Task::where('nomor_invoice', strtoupper(trim($nomor)))
-            ->where('customer_id', $request->user()->id)
-            ->firstOrFail();
-
+        $task = $this->milikSaya($request, $nomor);
         $d = $task->detail_layanan ?? [];
-        if (($d['layanan'] ?? null) !== 'kirim') {
-            abort(404);
-        }
 
         return response()->json([
             'id' => $task->id,
@@ -396,6 +430,11 @@ class KirimController extends Controller
             'proteksi_plafon' => $d['proteksi_plafon'] ?? 0,
             'potongan' => $d['potongan'] ?? 0,
             'total' => (float) $task->harga,
+            // Tip dilaporkan terpisah supaya layar bisa menuliskannya sebagai
+            // barisnya sendiri: yang ditagih memang bertambah, tapi ongkirnya
+            // tidak — dan dua hal itu tidak boleh melebur jadi satu angka yang
+            // tidak bisa dijelaskan.
+            'tip' => (int) ($d['tip'] ?? 0),
             'promo' => $d['promo'] ?? null,
             'metode' => $d['metode'] ?? null,
             'kode_terima' => $d['kode_terima'] ?? null,
@@ -438,6 +477,27 @@ class KirimController extends Controller
         // Jaraknya ikut diperbarui: yang benar adalah jarak yang ditempuh di
         // jalan, bukan garis lurus yang tersimpan sebelumnya.
         return [...$k, 'rute' => $rute['geometri'], 'jarak_km' => round($rute['km'], 2)];
+    }
+
+    /**
+     * Kiriman milik pemanggil, atau 404.
+     *
+     * Diangkat dari show() supaya endpoint tip memakai penjagaan yang SAMA.
+     * Dua salinan pemeriksaan kepemilikan berarti satu di antaranya bisa
+     * diperbaiki sendirian — dan yang tertinggal membiarkan orang menyentuh
+     * kiriman orang lain.
+     */
+    private function milikSaya(Request $request, string $nomor): Task
+    {
+        $task = Task::where('nomor_invoice', strtoupper(trim($nomor)))
+            ->where('customer_id', $request->user()->id)
+            ->firstOrFail();
+
+        if (($task->detail_layanan['layanan'] ?? null) !== 'kirim') {
+            abort(404);
+        }
+
+        return $task;
     }
 
     private function kirimanPertama(int $userId): bool
