@@ -122,11 +122,20 @@ const router = createRouter({
       meta: { induk: 'task-location', roles: ['customer', 'mitra', 'admin'] as Role[] },
     },
     {
-      // Alur pemesanan enam fase, dibuka dari beranda layanan.
+      // Formulir pemesanan dua langkah, dibuka dari beranda layanan.
       path: '/tasks/new/tukang/pesan',
       name: 'task-tukang-pesan',
       component: () => import('@/views/tukang/TukangPesanView.vue'),
       meta: { induk: 'task-tukang-detail', roles: ['customer', 'mitra', 'admin'] as Role[] },
+    },
+    {
+      // Status pekerjaan; isinya digerakkan tahap dari server. Induknya daftar
+      // pesanan, bukan formulir — kembali ke formulir yang sudah dikirim tidak
+      // ada gunanya, dan yang dicari orang sesudahnya pesanannya sendiri.
+      path: '/tasks/tukang/:nomor',
+      name: 'task-tukang-status',
+      component: () => import('@/views/tukang/TukangStatusView.vue'),
+      meta: { induk: 'task-list', roles: ['customer', 'mitra', 'admin'] as Role[] },
     },
     {
       path: '/tasks/new/bersih/rumah',

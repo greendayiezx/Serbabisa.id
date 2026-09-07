@@ -12,19 +12,20 @@
  * Kategori, keunggulan, dan profil tukang di bawahnya melayani pertanyaan
  * kedua: apa yang bisa dikerjakan, dan kenapa harus lewat sini.
  */
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Icon from '@/components/icons/Icon.vue'
 import { useKembali } from '@/composables/useKembali'
 import { useLocationStore } from '@/stores/location'
 import {
   useTukangStore,
-  KATEGORI_TUKANG,
   KEUNGGULAN_TUKANG,
   MODEL_KERJA,
   TUKANG_PILIHAN,
   type ModelKerja,
 } from '@/stores/tukang'
+import { katalogTukang, type KategoriTukang } from '@/api/tukang'
+import { pesanError } from '@/api/belanja'
 import BisaTukangHeroArt from '@/components/tukang/BisaTukangHeroArt.vue'
 import IkonKategoriTukang from '@/components/tukang/IkonKategoriTukang.vue'
 import AvatarTukang from '@/components/tukang/AvatarTukang.vue'
@@ -49,14 +50,25 @@ const heroTimeOfDay = heroTimeOfDayFromHour(new Date().getHours())
  */
 const CUPLIK = 5
 const semuaKategori = ref(false)
+
+const kategori = ref<KategoriTukang[]>([])
+const galatKatalog = ref<string | null>(null)
+
 const kategoriTampil = computed(() =>
-  semuaKategori.value ? KATEGORI_TUKANG : KATEGORI_TUKANG.slice(0, CUPLIK),
+  semuaKategori.value ? kategori.value : kategori.value.slice(0, CUPLIK),
 )
+
+onMounted(async () => {
+  try {
+    kategori.value = (await katalogTukang()).kategori
+  } catch (e) {
+    galatKatalog.value = pesanError(e)
+  }
+})
 
 /** Model kerja dipilih DI SINI, lalu alur pemesanan tinggal meneruskannya. */
 function pesan(model: ModelKerja['id']) {
   tukangStore.modelKerja = model
-  tukangStore.customerStep = 1
   router.push({ name: 'task-tukang-pesan' })
 }
 
@@ -225,7 +237,7 @@ function pesanKategori(id: string) {
             </p>
           </div>
           <button
-            v-if="KATEGORI_TUKANG.length > CUPLIK"
+            v-if="kategori.length > CUPLIK"
             type="button"
             class="shrink-0 text-[12.5px] font-extrabold text-(--color-azure) flex items-center gap-0.5"
             @click="semuaKategori = !semuaKategori"
@@ -239,7 +251,21 @@ function pesanKategori(id: string) {
           </button>
         </div>
 
-        <div class="mt-3 grid grid-cols-2 gap-2.5">
+        <p
+          v-if="galatKatalog"
+          role="alert"
+          class="mt-3 rounded-2xl bg-(--color-error-container) text-(--color-on-error-container) px-4 py-3 text-[12.5px] font-semibold"
+        >
+          {{ galatKatalog }}
+        </p>
+
+        <!-- Rangka selama katalog belum sampai; daftar kosong terbaca
+             seolah tidak ada layanannya sama sekali. -->
+        <div v-else-if="!kategori.length" class="mt-3 grid grid-cols-2 gap-2.5 animate-pulse">
+          <div v-for="n in 4" :key="n" class="h-28 rounded-2xl bg-(--color-surface-0)"></div>
+        </div>
+
+        <div v-else class="mt-3 grid grid-cols-2 gap-2.5">
           <button
             v-for="(k, i) in kategoriTampil"
             :key="k.id"
