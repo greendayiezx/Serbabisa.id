@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\PesananController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TaskFotoController;
+use App\Http\Controllers\Api\TukangController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
@@ -133,6 +134,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/servis-ac/freon/checkout', [FreonController::class, 'store']);
     Route::post('/servis-ac/freon/{nomor}/setujui', [FreonController::class, 'setujui']);
     Route::post('/servis-ac/freon/{nomor}/tolak', [FreonController::class, 'tolak']);
+
+    // BisaTukang: dua jalur masuk karena uangnya berperilaku berbeda. HARIAN
+    // menagih kunjungannya saja — harga perbaikan menyusul lewat penawaran dan
+    // harus disetujui dulu. BORONGAN tidak menagih apa pun; yang tercatat
+    // permintaan survei bernomor REQ-, dan RAB-nya menyusul setelah disurvei.
+    Route::get('/tukang/katalog', [TukangController::class, 'katalog']);
+    Route::post('/tukang/checkout', [TukangController::class, 'checkout']);
+    Route::post('/tukang/permintaan', [TukangController::class, 'permintaan']);
+    Route::get('/tukang/{nomor}', [TukangController::class, 'show']);
+    Route::post('/tukang/{nomor}/batal', [TukangController::class, 'batal']);
+    // Persetujuan penawaran mengikat, jadi server menuntut pernyataan setuju
+    // yang eksplisit — bukan sekadar halaman yang kebetulan terbuka.
+    Route::post('/tukang/{nomor}/penawaran/setujui', [TukangController::class, 'setujui']);
+    Route::post('/tukang/{nomor}/penawaran/revisi', [TukangController::class, 'revisi']);
+    Route::post('/tukang/{nomor}/tip', [TukangController::class, 'tip']);
+    Route::post('/tukang/{nomor}/nilai', [TukangController::class, 'nilai']);
 
     // BisaBersih Deep Cleaning: dijual per paket; luas & ruangan standar sudah
     // termasuk, kelebihannya dan layanan tambahan dihitung ulang server.
